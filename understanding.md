@@ -248,6 +248,34 @@ The first parser intentionally focuses on common Phase 1 DDL:
 - Live PostgreSQL introspection in Phase 2 should map into the same schema contracts.
 - Parser support should fail clearly rather than silently approximating unsupported DDL.
 
+## Decision: use a dependency graph for generation order
+
+### Question
+
+How should Boom Data decide which table to generate first when schemas contain foreign keys?
+
+### Answer
+
+Build a relationship graph where referenced parent tables point to dependent child tables, then topologically sort that graph. This produces an order where parent rows exist before child rows need to reference them.
+
+### Why This Matters
+
+Foreign-key correctness is the core value of Boom Data. If a child table like `orders` is generated before its parent table `users`, the generator either has to guess IDs or fix data later. Both approaches are risky. A dependency graph makes the correct order explicit before generation starts.
+
+### Details
+
+The graph treats normal foreign keys as parent-to-child dependencies. For example, `users.account_id -> accounts.id` means `accounts` must be generated before `users`.
+
+Self-references are different. A table like `categories` may contain `parent_id` pointing back to `categories.id`. That should not block the whole table from being generated, so self-reference edges are recorded but ignored for cross-table dependency ordering. Later row generation can handle self-references within the table.
+
+Cross-table cycles are not ignored. If table `a` requires table `b` and table `b` requires table `a`, generation needs a more advanced strategy. Phase 1 should fail clearly instead of producing invalid data.
+
+### Follow-Up Notes
+
+- Relationship solving will later use graph edges to choose valid foreign-key values.
+- Self-referential row generation needs its own strategy when the generator reaches that feature.
+- Cycles can be revisited later with deferred constraints or multi-pass generation if the product needs it.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
