@@ -180,6 +180,39 @@ The important design principle is "prepare the runway, but do not build unused m
 - Kafka should only be considered if Boom Data needs durable event streams or integration with external event-driven systems.
 - The Dockerfile should remain simple until production deployment hardening in Phase 5.
 
+## Decision: normalize schemas before parsing, planning, or generation
+
+### Question
+
+Why does Boom Data need explicit schema model contracts instead of passing raw SQL parser output or dictionaries directly into the generator?
+
+### Answer
+
+The engine needs a stable internal schema representation so every later component speaks the same language. Parsers can change, API payloads can change, and future database adapters can change, but planners, relationship solvers, generators, validators, and exporters should all depend on one normalized contract.
+
+### Why This Matters
+
+Synthetic data generation fails quickly when schema details are inconsistent. If one part of the code calls a field `foreign_keys`, another calls it `fks`, and a third leaves it as raw SQL text, bugs become hard to trace. A normalized model catches invalid or incomplete schema data early, before generation starts producing bad output.
+
+### Details
+
+The schema model validates important invariants:
+
+- tables must have columns,
+- column names must be unique within a table,
+- primary keys and unique constraints must reference real columns,
+- foreign keys must reference real local columns,
+- foreign-key local and remote column counts must match,
+- database schemas must not contain duplicate qualified table names.
+
+These checks make later code simpler. The generator should not repeatedly ask, "does this foreign key make sense?" It should receive a schema that has already passed basic structural validation.
+
+### Follow-Up Notes
+
+- The DDL parser should produce these models instead of inventing a separate parser-specific shape.
+- Relationship graph code should use `DatabaseSchema` and `TableSchema` directly.
+- Later adapters for live PostgreSQL introspection, MySQL, SQLite, or other systems can map into the same contracts.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
