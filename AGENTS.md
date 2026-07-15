@@ -28,7 +28,7 @@ Before implementation, read:
 - Preserve deterministic generation through seed-based behavior.
 - Favor streaming exports over full in-memory datasets.
 - Update documentation when behavior, architecture, prompts, or phase scope changes.
-- Update `understanding.md` for every commit with what changed, why it changed, why the approach was chosen, and how it affects performance, reliability, or maintainability.
+- Update `understanding.md` for significant architecture, performance, reliability, product-scope, or non-obvious implementation decisions. Do not add entries for tiny mechanical changes, simple variable additions, or routine API calls.
 - Do not introduce broad abstractions unless they support the documented phase roadmap.
 
 ## Commit Labels

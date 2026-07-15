@@ -11,7 +11,7 @@ This repository is currently in product-definition mode. Do not begin implementa
 - [Product Reasoning and FAQ](docs/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
 - [Technical Design and Roadmap](docs/technical-design-and-roadmap.md): stack, high-level design, low-level design, five-phase technical plan, deployment objectives, and commit sequence.
 - [Agent Operating Guide](AGENTS.md): persistent Codex guidance for this repository, including commit labels, phase discipline, and documentation rules.
-- [Understanding Log](understanding.md): detailed beginner-friendly explanation of what changed, why it changed, and how each commit improves the system.
+- [Understanding Log](understanding.md): detailed beginner-friendly explanations for significant design, architecture, performance, reliability, and product decisions.
 
 ## Confirmed Scope Decisions
 
@@ -51,7 +51,7 @@ Build this project as a clear sequence of small commits. Each commit should repr
 
 Every phase in [Technical Design and Roadmap](docs/technical-design-and-roadmap.md) includes a recommended commit sequence.
 
-Every commit must also update [Understanding Log](understanding.md) with the reasoning behind that change.
+Update [Understanding Log](understanding.md) when a change is significant enough that future contributors should understand the reasoning, tradeoffs, or performance impact.
 
 ## Immediate Next Objective
 

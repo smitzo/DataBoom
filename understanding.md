@@ -1,39 +1,35 @@
 # Boom Data Understanding Log
 
-This file explains what changed, why it changed, and how each change improves the project. Keep it beginner-friendly, but detailed enough that a new engineer can understand the professional reasoning behind every commit.
+This file explains important project decisions: what changed, why it changed, and how the decision improves the project. Keep it beginner-friendly, but detailed enough that a new engineer can understand the professional reasoning behind significant architecture, product, performance, and reliability choices.
 
-Every future commit must update this file.
+Not every commit needs an entry. Add an entry when the change is significant enough that a future contributor should understand the reasoning or tradeoff.
 
 ## How To Update This File
 
-For every commit, add a new entry using this format:
+For significant changes, add a new entry using this format:
 
 ```md
-## Commit: label: short summary
+## Decision: short title
 
-### What Changed
+### Question
 
-- Explain the files, modules, or behavior that changed.
+- What question or tradeoff did this change answer?
 
-### Why It Changed
+### Answer
 
-- Explain the product or engineering reason.
+- Short direct answer.
 
-### Why This Approach
+### Why This Matters
 
-- Explain why this design was chosen over simpler or alternative approaches.
+- Explain the product, architecture, performance, reliability, or maintainability impact.
 
-### Performance, Reliability, or Maintainability Impact
+### Details
 
-- Explain how this affects speed, memory, correctness, scale, readability, deployment, or future work.
-
-### Beginner Explanation
-
-- Explain the concept in simple language for someone new to backend systems.
+- Explain the deeper reasoning in beginner-friendly but professional language.
 
 ### Follow-Up Notes
 
-- Mention anything intentionally deferred.
+- Mention anything intentionally deferred or any future work this decision unlocks.
 ```
 
 ## Commit: docs: split product scope documents
@@ -68,7 +64,7 @@ Think of the project like a building. Before writing code, we created separate b
 
 - Implementation has not started yet.
 - Phase 1 should begin with the backend engine.
-- Future commits must update this file.
+- Future significant decisions should update this file.
 
 ## Commit: docs: add product reasoning and backend implementation discipline
 
@@ -81,17 +77,17 @@ Think of the project like a building. Before writing code, we created separate b
 - Added a careful comparison against Tonic.ai without claiming false universal superiority.
 - Added sensitive-domain positioning for fintech, medical, insurance, and customer-sensitive workflows.
 - Added this `understanding.md` file as a permanent explanation log.
-- Updated `AGENTS.md` so every future commit must update this file.
+- Updated `AGENTS.md` so significant future decisions update this file.
 
 ### Why It Changed
 
 The project needs clear answers to hard questions before implementation begins. People will naturally ask why this engine should exist, why an LLM alone is not enough, why we cannot just use Faker, and why we would build an internal system when commercial tools exist. Capturing those answers early keeps the team aligned.
 
-The project also needs a durable explanation trail. Code tells us what changed, but not always why. `understanding.md` preserves the reasoning behind each decision so future contributors can learn quickly.
+The project also needs a durable explanation trail. Code tells us what changed, but not always why. `understanding.md` preserves the reasoning behind significant decisions so future contributors can learn quickly without turning the file into a noisy changelog.
 
 ### Why This Approach
 
-The FAQ is in `docs/` because it is product and architecture reasoning, not agent instruction. `understanding.md` is at the repository root because it should be visible and updated constantly.
+The FAQ is in `docs/` because it is product and architecture reasoning, not agent instruction. `understanding.md` is at the repository root because it should be visible when decisions are important enough to explain.
 
 The comparison with Faker is framed carefully: Faker is useful, but incomplete. Boom Data should use Faker for fake values while adding schema parsing, relationship solving, streaming, validation, and run management around it.
 
@@ -105,7 +101,7 @@ The reasoning pushes the implementation toward a streaming pipeline. That matter
 
 The documentation also improves reliability. It says schema safety wins over prompt requests, validation is required, and privacy claims should not be made before privacy features exist.
 
-Maintainability improves because every commit must now explain itself. A beginner can read this file and understand why decisions were made instead of reverse-engineering intent from code.
+Maintainability improves because significant decisions now explain themselves. A beginner can read this file and understand why important choices were made instead of reverse-engineering intent from code.
 
 ### Beginner Explanation
 
@@ -118,6 +114,45 @@ For one million records, the factory cannot keep every item in one huge pile. It
 - Phase 1 still starts with backend engine foundations.
 - Privacy is still deferred until Phase 4, but sensitive use cases remain part of the long-term product strategy.
 - A formal 1M-record benchmark should come after the 100k and 500k milestones are stable.
+
+## Decision: keep understanding.md for significant decisions
+
+### Question
+
+Should `understanding.md` explain every commit, or only decisions that are important enough to teach future contributors?
+
+### Answer
+
+Only significant decisions should be explained here. Routine edits, simple variables, basic API calls, and tiny mechanical fixes should stay in the git diff and commit message.
+
+### Why This Matters
+
+If every small change gets a long explanation, this file becomes noisy and people stop reading it. The goal is not to duplicate git history. The goal is to preserve reasoning that is hard to recover later: architecture choices, performance strategy, reliability tradeoffs, product scope decisions, and non-obvious implementation patterns.
+
+### Details
+
+Use `understanding.md` when a change answers a meaningful question, such as:
+
+- Why are we streaming output instead of building one giant list?
+- Why is schema safety more important than prompt freedom?
+- Why are we using local disk before object storage?
+- Why are we using Redis in Compose but not Celery yet?
+- Why did we choose one data structure or algorithm over another?
+
+Do not use it for changes like:
+
+- adding one obvious field,
+- renaming a local variable,
+- adding a straightforward endpoint after the pattern already exists,
+- fixing a typo,
+- moving an import,
+- adjusting formatting.
+
+### Follow-Up Notes
+
+- Entries can use Q&A format when that makes the reasoning easier to scan.
+- Commit messages should still stay clear and scoped.
+- Important performance and architecture commits should almost always update this file.
 
 ## Commit: backend: scaffold python package and settings
 
