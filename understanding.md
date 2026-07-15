@@ -118,3 +118,45 @@ For one million records, the factory cannot keep every item in one huge pile. It
 - Phase 1 still starts with backend engine foundations.
 - Privacy is still deferred until Phase 4, but sensitive use cases remain part of the long-term product strategy.
 - A formal 1M-record benchmark should come after the 100k and 500k milestones are stable.
+
+## Commit: backend: scaffold python package and settings
+
+### What Changed
+
+- Added `pyproject.toml` with the Python package metadata, runtime dependencies, dev dependencies, pytest configuration, Ruff configuration, and the `boom-data` CLI entry point.
+- Added `.gitignore` so local virtual environments, caches, build outputs, coverage files, environment files, and generated artifacts do not get committed accidentally.
+- Added `.env.example` to document the first environment variables.
+- Created the initial `src/boom_data` package layout.
+- Added `boom_data.cli` with an `info` command that prints active configuration.
+- Added `boom_data.core.config` with Pydantic settings for environment, artifact root, and log level.
+- Added `boom_data.core.logging` for shared logging setup.
+- Added `boom_data.core.artifacts` for local artifact directory creation.
+- Added `tests/test_config.py` to verify settings normalization and artifact path resolution.
+
+### Why It Changed
+
+Phase 1 needs a stable Python backend foundation before schema parsing, relationship solving, generation, and validation can be added. Without the package layout, dependency declaration, settings model, and test runner, later features would be built on loose scripts instead of a maintainable backend.
+
+### Why This Approach
+
+The project uses a `src/` layout because it prevents tests from accidentally importing files from the repository root in ways that differ from an installed package. This catches packaging mistakes earlier.
+
+Pydantic settings are used because Boom Data will eventually run as both a CLI and an API service. Both entry points need the same validated configuration. Starting with settings now avoids scattering environment variable reads throughout the codebase.
+
+The artifact helper is intentionally tiny. Phase 1 and Phase 2 store output on local disk, so the first abstraction only creates and resolves the artifact root. More complex storage adapters can wait until object storage is actually needed.
+
+### Performance, Reliability, or Maintainability Impact
+
+This commit does not add data generation performance yet. It improves reliability by making configuration typed and testable. It improves maintainability by giving future modules a predictable place to live and by making tests run through standard pytest discovery.
+
+The `.gitignore` also protects performance work later: large generated artifacts should stay on disk locally, not enter git history.
+
+### Beginner Explanation
+
+This commit builds the empty workshop before building the machine. The package directory is where the engine code will live, the settings file is where runtime knobs are read, the artifact helper is where generated files will be stored, and the test file proves the first small pieces behave correctly.
+
+### Follow-Up Notes
+
+- Schema model contracts come next.
+- Docker and Compose should be committed separately as infrastructure.
+- Redis will be available in Compose for future run coordination, but Phase 1 code should not depend on it yet.
