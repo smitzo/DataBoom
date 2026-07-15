@@ -20,6 +20,11 @@ class Settings(BaseSettings):
 
     environment: str = Field(default="local", alias="ENV")
     artifact_root: Path = Field(default=Path("artifacts"), alias="ARTIFACT_ROOT")
+    database_url: str = Field(
+        default="postgresql+psycopg://boom_data:boom_data@localhost:5432/boom_data",
+        alias="DATABASE_URL",
+    )
+    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     @field_validator("log_level")

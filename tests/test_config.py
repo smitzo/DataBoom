@@ -13,3 +13,10 @@ def test_artifact_root_resolves_to_absolute_path(tmp_path: Path) -> None:
     settings = Settings(ARTIFACT_ROOT=tmp_path / "runs")
 
     assert settings.resolve_artifact_root() == (tmp_path / "runs").resolve()
+
+
+def test_settings_include_local_service_urls() -> None:
+    settings = Settings()
+
+    assert settings.database_url.startswith("postgresql+psycopg://")
+    assert settings.redis_url.startswith("redis://")

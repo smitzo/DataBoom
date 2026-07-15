@@ -154,6 +154,32 @@ Do not use it for changes like:
 - Commit messages should still stay clear and scoped.
 - Important performance and architecture commits should almost always update this file.
 
+## Decision: add Docker, Postgres, and Redis without Celery or Kafka yet
+
+### Question
+
+Should Phase 1 infrastructure include only the application and PostgreSQL, or should it also include Redis, Celery, Kafka, and other future runtime systems?
+
+### Answer
+
+Phase 1 should include Docker, PostgreSQL, and Redis. It should not include Celery or Kafka until the codebase has a real async worker, queue, event-streaming, or distributed orchestration requirement.
+
+### Why This Matters
+
+PostgreSQL is required because Boom Data is PostgreSQL-first. Redis is useful to have early because it is lightweight and will likely support future run state, locks, queues, caching, or progress tracking. Celery and Kafka are heavier architectural commitments. Adding them before there is a concrete workflow would increase operational complexity without improving the Phase 1 backend engine.
+
+### Details
+
+The Compose file should make local infrastructure easy to start while keeping the application image usable for CLI commands and future API work. The app service is therefore a tool/profile service for now instead of a fake long-running worker. This avoids pretending that Phase 1 already has an API server or background job system.
+
+The important design principle is "prepare the runway, but do not build unused machinery." Redis prepares for future orchestration. Celery or Kafka should wait until there is a specific Phase 2 or Phase 3 need, such as long-running generation jobs, progress events, retries, or distributed workers.
+
+### Follow-Up Notes
+
+- When API run management arrives, decide whether Redis alone is enough or whether Celery is needed.
+- Kafka should only be considered if Boom Data needs durable event streams or integration with external event-driven systems.
+- The Dockerfile should remain simple until production deployment hardening in Phase 5.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed

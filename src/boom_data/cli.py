@@ -35,4 +35,6 @@ def info() -> None:
     settings = get_settings()
     typer.echo(f"environment: {settings.environment}")
     typer.echo(f"artifact_root: {settings.artifact_root}")
+    typer.echo(f"database_url: {settings.database_url}")
+    typer.echo(f"redis_url: {settings.redis_url}")
     typer.echo(f"log_level: {settings.log_level}")
