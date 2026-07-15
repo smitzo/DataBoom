@@ -213,6 +213,41 @@ These checks make later code simpler. The generator should not repeatedly ask, "
 - Relationship graph code should use `DatabaseSchema` and `TableSchema` directly.
 - Later adapters for live PostgreSQL introspection, MySQL, SQLite, or other systems can map into the same contracts.
 
+## Decision: use sqlglot for Phase 1 DDL ingestion
+
+### Question
+
+Should Boom Data parse PostgreSQL DDL with a SQL parser dependency or with custom string manipulation?
+
+### Answer
+
+Use `sqlglot` for Phase 1 DDL parsing. It gives us a structured AST for common `CREATE TABLE` statements, which is safer than splitting strings by commas, parentheses, and keywords.
+
+### Why This Matters
+
+DDL looks simple until constraints, defaults, nested type parameters, quoted identifiers, and table-level foreign keys appear. A custom parser can accidentally split `decimal(10, 2)` or `UNIQUE (account_id, email)` incorrectly. That kind of bug would corrupt the schema model before generation even starts.
+
+### Details
+
+The ingestion layer should convert SQL parser output into Boom Data's normalized `DatabaseSchema`. The rest of the engine should not depend directly on `sqlglot` expressions. This keeps the parser replaceable if we later need deeper PostgreSQL coverage, live introspection, or a different parser.
+
+The first parser intentionally focuses on common Phase 1 DDL:
+
+- `CREATE TABLE`,
+- column names and PostgreSQL types,
+- `NOT NULL`,
+- defaults,
+- inline primary keys,
+- table-level composite primary keys,
+- inline and table-level unique constraints,
+- inline and table-level foreign keys.
+
+### Follow-Up Notes
+
+- More advanced PostgreSQL features can be added as test-driven parser cases.
+- Live PostgreSQL introspection in Phase 2 should map into the same schema contracts.
+- Parser support should fail clearly rather than silently approximating unsupported DDL.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed

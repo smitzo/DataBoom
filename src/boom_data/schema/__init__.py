@@ -7,6 +7,7 @@ from boom_data.schema.models import (
     PostgresType,
     PrimaryKeyConstraint,
     TableSchema,
+    TypeFamily,
     UniqueConstraint,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "PostgresType",
     "PrimaryKeyConstraint",
     "TableSchema",
+    "TypeFamily",
     "UniqueConstraint",
 ]
