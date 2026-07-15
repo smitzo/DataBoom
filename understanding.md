@@ -276,6 +276,32 @@ Cross-table cycles are not ignored. If table `a` requires table `b` and table `b
 - Self-referential row generation needs its own strategy when the generator reaches that feature.
 - Cycles can be revisited later with deferred constraints or multi-pass generation if the product needs it.
 
+## Decision: derive deterministic random streams from named namespaces
+
+### Question
+
+How should Boom Data make generated datasets reproducible without forcing every generator to share one global random object?
+
+### Answer
+
+Use a root seed and derive independent child seeds for named namespaces such as table names, column names, and generation steps. Each namespace can create its own `random.Random` stream while still being reproducible from the same root seed.
+
+### Why This Matters
+
+A single global random stream is fragile. If one generator starts consuming one extra random value, every generator after it changes output. Named child streams reduce that coupling. For example, changing how `users.email` is generated should not automatically change unrelated `orders.amount` values.
+
+### Details
+
+The seed manager uses SHA-256 over a stable JSON payload instead of Python's built-in `hash()`. Python intentionally randomizes `hash()` between processes for security, so using it for deterministic generation would make test data change between runs.
+
+The output of the seed manager is still ordinary Python randomness; the important part is that every stream starts from a stable, reproducible seed.
+
+### Follow-Up Notes
+
+- Row generators should request streams through `SeedManager` instead of importing or mutating global `random`.
+- Benchmarks should always record the root seed.
+- If strict cross-language reproducibility is needed later, we may need a specified random algorithm instead of Python's default `random.Random`.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
