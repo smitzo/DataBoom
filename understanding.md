@@ -333,6 +333,39 @@ This gives later row generation a simple job: execute the plan. It also gives dr
 - CLI and API dry-run endpoints can expose this plan before generation.
 - Validation should compare generated artifacts against the plan.
 
+## Decision: start primitive generation with deterministic custom values
+
+### Question
+
+Why does primitive generation use fast custom deterministic values instead of calling Faker for every generated cell?
+
+### Answer
+
+Phase 1 should prioritize correctness, determinism, and throughput. Faker remains useful for richer realism later, but per-cell Faker calls can become expensive at 100k to 500k records. The first primitive generator uses type-family-specific deterministic logic so the row pipeline can scale before realism is expanded.
+
+### Why This Matters
+
+The hardest Phase 1 problem is not producing one fake email. It is producing many rows across related tables without breaking constraints or running out of time and memory. Fast primitive generators let us focus on the engine path: plan execution, primary keys, foreign keys, streaming exports, and validation.
+
+### Details
+
+The primitive generator currently handles:
+
+- numeric values,
+- booleans,
+- datetimes,
+- UUIDs,
+- JSON-like dictionaries,
+- string heuristics for emails, phones, names, statuses, and generic text.
+
+It rejects foreign-key columns because those values must come from the relationship solver, not independent random generation.
+
+### Follow-Up Notes
+
+- Faker can be introduced behind strategy-specific generators once the engine pipeline is stable.
+- Performance benchmarks should compare richer Faker-backed strategies with the custom fast path.
+- Domain realism should be added without sacrificing deterministic seeds.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed

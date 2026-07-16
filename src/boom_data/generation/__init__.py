@@ -10,6 +10,7 @@ from boom_data.generation.plan import (
     create_generation_plan,
 )
 from boom_data.generation.seed import SeedManager
+from boom_data.generation.values import GeneratedValue, ValueGenerator
 
 __all__ = [
     "ColumnPlan",
@@ -17,7 +18,9 @@ __all__ = [
     "ForeignKeySource",
     "GenerationPlan",
     "OutputFormat",
+    "GeneratedValue",
     "SeedManager",
     "TablePlan",
+    "ValueGenerator",
     "create_generation_plan",
 ]
