@@ -302,6 +302,37 @@ The output of the seed manager is still ordinary Python randomness; the importan
 - Benchmarks should always record the root seed.
 - If strict cross-language reproducibility is needed later, we may need a specified random algorithm instead of Python's default `random.Random`.
 
+## Decision: create a generation plan before producing rows
+
+### Question
+
+Why should Boom Data build a generation plan instead of immediately generating rows from a schema and row-count dictionary?
+
+### Answer
+
+The plan separates "what should be generated" from "how rows are produced." It gives the engine a reviewable contract containing table order, row counts, column strategies, foreign-key sources, seed, and output formats.
+
+### Why This Matters
+
+Without a plan, generation logic would mix schema interpretation, dependency ordering, row counts, prompt interpretation, and output choices in one place. That would make later LLM-assisted planning risky because the LLM would have no safe structured target. A plan lets local deterministic logic and future LLM planning produce the same kind of object before execution.
+
+### Details
+
+The first plan builder is deterministic and schema-driven. It uses the relationship graph for table order, resolves row-count overrides, and marks columns as:
+
+- primary keys,
+- foreign keys,
+- default-backed fields,
+- generated fields.
+
+This gives later row generation a simple job: execute the plan. It also gives dry-run mode a natural output in Phase 2 or Phase 3.
+
+### Follow-Up Notes
+
+- LLM-assisted planning should produce or modify this contract, not bypass it.
+- CLI and API dry-run endpoints can expose this plan before generation.
+- Validation should compare generated artifacts against the plan.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
