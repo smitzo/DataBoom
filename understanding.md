@@ -422,6 +422,30 @@ It consumes `RowGenerator` sequentially by table. That preserves dependency orde
 - Future SQL export can batch inserts or use PostgreSQL `COPY` for better load performance.
 - Object storage can be added later behind a separate artifact storage boundary.
 
+## Decision: validate exported artifacts instead of in-memory rows
+
+### Question
+
+Should validation check rows before export, or should it validate the artifact files that users will actually consume?
+
+### Answer
+
+Phase 1 should validate exported artifacts. The validator reads the manifest and CSV files, then checks row counts, required values, primary-key uniqueness, and foreign-key integrity.
+
+### Why This Matters
+
+Validating in-memory rows can miss problems introduced during serialization or file writing. Users care whether the CSV and SQL artifacts are loadable and consistent, so the validation path should inspect the files produced by the exporter.
+
+### Details
+
+The current validator uses CSV artifacts for content checks because CSV is easy to inspect and parse. It verifies that generated child keys exist in parent key sets and that primary keys are unique in each table. This gives Phase 1 a practical correctness loop without needing a live database load yet.
+
+### Follow-Up Notes
+
+- Later phases should add direct PostgreSQL load validation.
+- SQL-only exports currently receive path and manifest checks, but deeper SQL parsing can come later.
+- Privacy validation belongs in Phase 4 once privacy policies exist.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
