@@ -446,6 +446,41 @@ The current validator uses CSV artifacts for content checks because CSV is easy 
 - SQL-only exports currently receive path and manifest checks, but deeper SQL parsing can come later.
 - Privacy validation belongs in Phase 4 once privacy policies exist.
 
+## Decision: establish a Phase 1 100k-record benchmark baseline
+
+### Question
+
+How do we know the Phase 1 engine can generate the target 100k records without relying on guesses?
+
+### Answer
+
+Add a repeatable benchmark script that generates 100k records across related tables, exports CSV artifacts, validates the result, and records elapsed time, peak memory, artifact size, and validation status.
+
+### Why This Matters
+
+Performance goals need measurements. A benchmark gives us a baseline before optimization work, and it prevents future changes from accidentally making generation much slower or more memory-heavy.
+
+### Details
+
+The first measured run in this environment generated 100k records across `accounts`, `users`, and `orders`.
+
+Measured result:
+
+- records: 100,000,
+- tables: 3,
+- elapsed time: 44.691 seconds,
+- peak memory: 50.71 MB,
+- artifact size: 5.312 MB,
+- validation: passed.
+
+This is good enough for a Phase 1 baseline, but it also shows where performance work can improve later. The engine is already memory-bounded reasonably because it streams artifacts and stores key tuples instead of full parent rows.
+
+### Follow-Up Notes
+
+- The benchmark should be rerun after row generation, export, validation, or serialization changes.
+- Phase 2 should target 500k records and compare memory growth against this baseline.
+- Optimization should focus on hot paths only after profiling, not before.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
