@@ -1,0 +1,109 @@
+# Phase 1 Usage
+
+This guide covers the current Phase 1 backend workflow: parse PostgreSQL DDL, create a deterministic plan, generate rows, export CSV/SQL artifacts, and validate the result.
+
+## Local Setup
+
+Create and install the Python 3.12 virtual environment:
+
+```bash
+/home/odoo/.local/bin/python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -e '.[dev]'
+```
+
+Run checks:
+
+```bash
+.venv/bin/python -m pytest
+.venv/bin/python -m ruff check .
+```
+
+## Generate Data
+
+Create a schema file:
+
+```sql
+CREATE TABLE accounts (
+    id bigint PRIMARY KEY,
+    name text NOT NULL
+);
+
+CREATE TABLE users (
+    id bigint PRIMARY KEY,
+    account_id bigint NOT NULL REFERENCES accounts(id),
+    email text NOT NULL
+);
+```
+
+Run generation:
+
+```bash
+.venv/bin/boom-data generate schema.sql \
+  --output-dir artifacts/demo \
+  --rows accounts=10 \
+  --rows users=50 \
+  --format csv \
+  --format sql \
+  --seed demo
+```
+
+Expected outputs:
+
+- `artifacts/demo/manifest.json`
+- `artifacts/demo/validation.json`
+- one CSV file per table
+- one SQL file per table when `--format sql` is used
+
+The command exits with code `1` if validation fails.
+
+## Benchmark
+
+Run the Phase 1 100k-record benchmark:
+
+```bash
+.venv/bin/python benchmarks/phase1_100k.py --overwrite
+```
+
+The benchmark writes generated artifacts under:
+
+```text
+artifacts/benchmarks/phase1_100k
+```
+
+It also writes:
+
+```text
+artifacts/benchmarks/phase1_100k/metrics.json
+```
+
+Current baseline from this environment:
+
+- 100,000 records
+- 3 tables
+- 44.691 seconds
+- 50.71 MB peak memory
+- 5.312 MB artifact size
+- validation passed
+
+## Docker Compose
+
+Validate Compose configuration:
+
+```bash
+docker compose --profile tools config
+```
+
+Start local infrastructure when Docker daemon is available:
+
+```bash
+docker compose up -d postgres redis
+```
+
+Run the app image as a tool container:
+
+```bash
+docker compose --profile tools run --rm app
+```
+
+The current Compose stack includes PostgreSQL and Redis. Celery and Kafka are intentionally not included until a real queue or event-streaming requirement appears.
