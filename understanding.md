@@ -366,6 +366,32 @@ It rejects foreign-key columns because those values must come from the relations
 - Performance benchmarks should compare richer Faker-backed strategies with the custom fast path.
 - Domain realism should be added without sacrificing deterministic seeds.
 
+## Decision: store generated parent keys instead of full parent rows
+
+### Question
+
+How should child rows choose valid foreign-key values without keeping every generated parent row in memory?
+
+### Answer
+
+Store only generated parent key tuples in a foreign-key registry. Child tables can then choose from valid parent keys while the engine avoids retaining complete parent rows.
+
+### Why This Matters
+
+For 100k, 500k, and eventually 1M records, storing full rows for every table would waste memory. Foreign-key generation usually needs only the referenced key columns, not every parent field. A compact key registry supports relationship correctness while keeping the path open for streaming exports.
+
+### Details
+
+The row generator executes tables in dependency order from the generation plan. As each parent row is produced, the registry records its primary-key tuple. When a child row needs a foreign key, it picks a deterministic parent tuple from the registry and maps the tuple back onto the child columns.
+
+This also supports composite keys. For example, `(tenant_id, user_id)` is chosen as one tuple, so the child row does not accidentally combine `tenant_id` from one parent with `user_id` from another.
+
+### Follow-Up Notes
+
+- The current registry stores primary-key tuples. Later phases may need indexes for foreign keys that reference unique non-primary columns.
+- Very large parent key sets may need memory-aware sampling or disk-backed key registries.
+- Exporters should consume generated rows sequentially so the engine does not need to materialize all rows at once.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed

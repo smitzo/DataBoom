@@ -9,6 +9,13 @@ from boom_data.generation.plan import (
     TablePlan,
     create_generation_plan,
 )
+from boom_data.generation.rows import (
+    ForeignKeyRegistry,
+    GeneratedRecord,
+    GeneratedRow,
+    RowGenerationError,
+    RowGenerator,
+)
 from boom_data.generation.seed import SeedManager
 from boom_data.generation.values import GeneratedValue, ValueGenerator
 
@@ -16,9 +23,14 @@ __all__ = [
     "ColumnPlan",
     "ColumnStrategy",
     "ForeignKeySource",
+    "ForeignKeyRegistry",
+    "GeneratedRecord",
+    "GeneratedRow",
     "GenerationPlan",
     "OutputFormat",
     "GeneratedValue",
+    "RowGenerationError",
+    "RowGenerator",
     "SeedManager",
     "TablePlan",
     "ValueGenerator",

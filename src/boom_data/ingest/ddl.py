@@ -61,6 +61,10 @@ def _parse_create_table(statement: exp.Create) -> TableSchema:
             primary_key_name = None
             continue
 
+        if isinstance(expression, exp.ForeignKey):
+            foreign_keys.append(_parse_table_foreign_key(expression, None))
+            continue
+
         if isinstance(expression, exp.Constraint):
             name = _identifier_name(expression.this) if expression.this is not None else None
             for constraint in expression.expressions:
