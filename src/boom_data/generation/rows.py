@@ -88,10 +88,16 @@ class RowGenerator:
         """Yield generated rows in table dependency order."""
 
         for table in self.plan.tables:
-            for row_index in range(table.row_count):
-                row = self._generate_row(table, row_index)
-                self.foreign_keys.register(table, row)
+            for row in self.iter_table_rows(table):
                 yield GeneratedRecord(table_name=table.table_name, row=row)
+
+    def iter_table_rows(self, table: TablePlan) -> Iterator[GeneratedRow]:
+        """Yield generated rows for the next table in dependency order."""
+
+        for row_index in range(table.row_count):
+            row = self._generate_row(table, row_index)
+            self.foreign_keys.register(table, row)
+            yield row
 
     def _generate_row(self, table: TablePlan, row_index: int) -> GeneratedRow:
         row: GeneratedRow = {}

@@ -392,6 +392,36 @@ This also supports composite keys. For example, `(tenant_id, user_id)` is chosen
 - Very large parent key sets may need memory-aware sampling or disk-backed key registries.
 - Exporters should consume generated rows sequentially so the engine does not need to materialize all rows at once.
 
+## Decision: stream local CSV and SQL artifacts table by table
+
+### Question
+
+How should Phase 1 write generated datasets to disk without holding the whole dataset in memory?
+
+### Answer
+
+Export one table at a time and write each row directly to CSV and SQL files as it is generated. Keep only the small manifest and the foreign-key registry in memory.
+
+### Why This Matters
+
+The 100k-record Phase 1 target is much easier to reach if generated rows flow through the engine like a pipeline. Building a giant list of rows first would make memory grow with dataset size and would delay writing until the end of a run. Streaming makes output visible earlier and keeps the design compatible with larger runs.
+
+### Details
+
+The local exporter creates:
+
+- one CSV file per table,
+- one SQL insert file per table when requested,
+- a manifest describing table artifacts and row counts.
+
+It consumes `RowGenerator` sequentially by table. That preserves dependency order and lets the generator register parent keys before child rows are produced.
+
+### Follow-Up Notes
+
+- Validation should read the manifest and artifact files instead of depending on in-memory rows.
+- Future SQL export can batch inserts or use PostgreSQL `COPY` for better load performance.
+- Object storage can be added later behind a separate artifact storage boundary.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed
