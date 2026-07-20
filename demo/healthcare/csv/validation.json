@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checked_tables": [
+    "public.patients",
+    "public.encounters",
+    "public.vitals"
+  ],
+  "issues": []
+}

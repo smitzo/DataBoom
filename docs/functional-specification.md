@@ -91,6 +91,18 @@ The plan should include:
 
 Phase 1 uses deterministic local planning. LLM-assisted planning can be introduced in Phase 2 or Phase 3.
 
+### Domain Profiles
+
+Boom Data should support domain profiles so users can request data optimized for a use case without changing the core engine.
+
+Initial profiles:
+
+- `general`: generic schema-aware data.
+- `financial`: banking and financial data such as accounts, balances, currencies, transaction types, merchants, and statuses.
+- `healthcare`: patient and clinical data such as medical record numbers, blood types, diagnoses, vitals, and insurance providers.
+
+Domain profiles must remain optional overlays. They should improve semantic realism where possible, while schema constraints, relationship solving, deterministic seeds, and validation stay generic.
+
 ### Relationship-Aware Generation
 
 The engine must:
@@ -124,6 +136,7 @@ Phase 1 outputs:
 
 - CSV files per table.
 - SQL insert files.
+- JSON files per table.
 - JSON validation report.
 - Local artifact manifest.
 

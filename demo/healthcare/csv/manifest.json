@@ -1,0 +1,27 @@
+{
+  "output_dir": "demo/healthcare/csv",
+  "manifest_path": "demo/healthcare/csv/manifest.json",
+  "tables": [
+    {
+      "table_name": "public.patients",
+      "row_count": 300,
+      "csv_path": "demo/healthcare/csv/public__patients.csv",
+      "json_path": null,
+      "sql_path": null
+    },
+    {
+      "table_name": "public.encounters",
+      "row_count": 500,
+      "csv_path": "demo/healthcare/csv/public__encounters.csv",
+      "json_path": null,
+      "sql_path": null
+    },
+    {
+      "table_name": "public.vitals",
+      "row_count": 500,
+      "csv_path": "demo/healthcare/csv/public__vitals.csv",
+      "json_path": null,
+      "sql_path": null
+    }
+  ]
+}

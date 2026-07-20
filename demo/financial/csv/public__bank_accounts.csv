@@ -1,0 +1,251 @@
+id,customer_id,account_number,account_type,bank_name,currency,balance,status
+1,36,ACCT70485867,checking,Northstar Bank,EUR,24578.15,failed
+2,18,ACCT84817796,credit_card,Northstar Bank,USD,13417.77,reversed
+3,39,ACCT25743888,loan,Metro Trust,INR,14888.15,pending
+4,17,ACCT57468679,brokerage,Metro Trust,GBP,17772.55,posted
+5,27,ACCT92526273,brokerage,Metro Trust,INR,8915.87,pending
+6,29,ACCT37802593,credit_card,Cedar Credit Union,AED,9763.92,pending
+7,95,ACCT82012257,credit_card,Northstar Bank,AED,4362.64,pending
+8,44,ACCT81343380,brokerage,Cedar Credit Union,EUR,7952.08,reversed
+9,89,ACCT18694055,credit_card,Metro Trust,EUR,22244.53,pending
+10,54,ACCT34033071,savings,Cedar Credit Union,AED,8841.04,failed
+11,65,ACCT88133210,savings,Metro Trust,EUR,17952.98,reversed
+12,71,ACCT77109154,savings,Metro Trust,EUR,4539.52,reversed
+13,75,ACCT16152250,savings,Metro Trust,INR,664.29,pending
+14,85,ACCT51616971,loan,Metro Trust,EUR,9352.19,reversed
+15,5,ACCT85556122,credit_card,Metro Trust,EUR,3361.0,pending
+16,56,ACCT51359337,loan,Northstar Bank,USD,11442.65,failed
+17,85,ACCT72099146,loan,Cedar Credit Union,EUR,2839.99,posted
+18,58,ACCT70404660,loan,Cedar Credit Union,USD,12275.3,reversed
+19,90,ACCT85283554,brokerage,Metro Trust,INR,22748.48,posted
+20,29,ACCT11112222,brokerage,Metro Trust,USD,21450.14,failed
+21,56,ACCT24124664,savings,Northstar Bank,AED,23235.03,posted
+22,99,ACCT70512468,loan,Northstar Bank,AED,7519.96,reversed
+23,80,ACCT64604878,savings,Cedar Credit Union,EUR,15008.47,pending
+24,48,ACCT47361559,credit_card,Northstar Bank,EUR,19463.83,pending
+25,39,ACCT60799335,checking,Northstar Bank,USD,12149.88,pending
+26,59,ACCT41743435,checking,Cedar Credit Union,GBP,19371.24,pending
+27,8,ACCT72424735,savings,Cedar Credit Union,USD,5241.68,failed
+28,10,ACCT10677404,brokerage,Northstar Bank,USD,7499.2,reversed
+29,47,ACCT68345798,credit_card,Cedar Credit Union,GBP,17456.23,reversed
+30,77,ACCT53979931,brokerage,Northstar Bank,AED,15384.31,posted
+31,16,ACCT31700754,loan,Metro Trust,AED,3973.27,posted
+32,22,ACCT32548775,checking,Cedar Credit Union,USD,7821.84,failed
+33,53,ACCT42271953,brokerage,Northstar Bank,GBP,4937.99,pending
+34,60,ACCT63382178,loan,Cedar Credit Union,AED,12167.33,reversed
+35,68,ACCT42696739,checking,Cedar Credit Union,EUR,8143.98,reversed
+36,62,ACCT46481747,loan,Metro Trust,AED,20062.59,failed
+37,78,ACCT98325608,brokerage,Metro Trust,AED,12371.14,posted
+38,61,ACCT42576596,brokerage,Northstar Bank,INR,5838.65,posted
+39,86,ACCT41685736,checking,Metro Trust,AED,2284.38,reversed
+40,54,ACCT97144410,loan,Northstar Bank,GBP,11324.72,failed
+41,27,ACCT99497807,credit_card,Northstar Bank,EUR,19199.16,failed
+42,56,ACCT38476148,credit_card,Cedar Credit Union,USD,16420.95,failed
+43,22,ACCT16380910,loan,Northstar Bank,USD,11309.47,reversed
+44,39,ACCT31780579,brokerage,Northstar Bank,EUR,16330.11,posted
+45,67,ACCT71847413,brokerage,Cedar Credit Union,USD,3598.54,posted
+46,92,ACCT28748765,loan,Metro Trust,INR,7865.69,posted
+47,44,ACCT18438267,brokerage,Metro Trust,INR,24737.11,failed
+48,20,ACCT98523680,loan,Cedar Credit Union,INR,18168.6,failed
+49,84,ACCT74848859,checking,Metro Trust,USD,2435.3,reversed
+50,36,ACCT88545728,savings,Cedar Credit Union,AED,16682.08,pending
+51,33,ACCT50451408,loan,Metro Trust,AED,4173.24,pending
+52,97,ACCT49374151,checking,Cedar Credit Union,GBP,23829.73,posted
+53,58,ACCT15101038,credit_card,Northstar Bank,INR,9805.49,pending
+54,15,ACCT82351695,savings,Northstar Bank,AED,7795.44,reversed
+55,13,ACCT66996851,loan,Metro Trust,USD,5600.71,failed
+56,43,ACCT37114039,checking,Northstar Bank,INR,5437.03,reversed
+57,39,ACCT91101553,credit_card,Northstar Bank,INR,18771.84,failed
+58,15,ACCT66563384,checking,Cedar Credit Union,GBP,1858.49,reversed
+59,15,ACCT84992948,savings,Metro Trust,EUR,18367.21,posted
+60,45,ACCT13652148,savings,Cedar Credit Union,GBP,7428.01,reversed
+61,11,ACCT82223561,credit_card,Cedar Credit Union,USD,16633.44,failed
+62,17,ACCT71300171,brokerage,Cedar Credit Union,AED,20589.74,pending
+63,1,ACCT61851957,checking,Northstar Bank,USD,2067.66,pending
+64,54,ACCT58211599,brokerage,Metro Trust,GBP,8984.24,pending
+65,37,ACCT50215477,savings,Northstar Bank,USD,5277.21,pending
+66,74,ACCT67641734,credit_card,Northstar Bank,GBP,7956.81,failed
+67,65,ACCT59224781,brokerage,Metro Trust,AED,15724.21,failed
+68,6,ACCT28069089,checking,Northstar Bank,EUR,14075.69,reversed
+69,28,ACCT71011910,checking,Northstar Bank,USD,12720.23,reversed
+70,77,ACCT84273396,savings,Metro Trust,AED,13272.71,pending
+71,41,ACCT65152290,brokerage,Cedar Credit Union,USD,24704.28,reversed
+72,89,ACCT70946842,checking,Northstar Bank,AED,16850.46,posted
+73,67,ACCT22536564,checking,Cedar Credit Union,AED,16568.99,reversed
+74,60,ACCT52119791,checking,Cedar Credit Union,INR,14469.16,failed
+75,90,ACCT99258155,credit_card,Northstar Bank,USD,9738.96,reversed
+76,7,ACCT74750685,brokerage,Northstar Bank,EUR,8141.96,posted
+77,71,ACCT64395531,savings,Northstar Bank,AED,18345.82,failed
+78,31,ACCT62813576,savings,Northstar Bank,GBP,13825.72,pending
+79,16,ACCT92595368,checking,Cedar Credit Union,USD,19254.78,reversed
+80,24,ACCT83446513,loan,Metro Trust,GBP,9456.12,reversed
+81,70,ACCT38067034,brokerage,Cedar Credit Union,USD,7369.52,reversed
+82,98,ACCT10852968,credit_card,Metro Trust,USD,8437.49,reversed
+83,63,ACCT97258644,checking,Metro Trust,USD,8675.24,posted
+84,12,ACCT52513711,checking,Northstar Bank,USD,21894.56,reversed
+85,62,ACCT13291020,loan,Metro Trust,GBP,18350.11,reversed
+86,51,ACCT80593892,savings,Cedar Credit Union,GBP,19874.76,failed
+87,64,ACCT19846293,credit_card,Northstar Bank,GBP,19355.98,reversed
+88,82,ACCT64684914,savings,Cedar Credit Union,AED,11082.43,failed
+89,95,ACCT12972822,credit_card,Northstar Bank,INR,1868.9,failed
+90,74,ACCT48180634,loan,Metro Trust,USD,9865.38,posted
+91,81,ACCT89651394,savings,Metro Trust,EUR,14625.07,posted
+92,95,ACCT67661665,checking,Metro Trust,GBP,9536.74,reversed
+93,69,ACCT30914415,savings,Northstar Bank,GBP,22819.52,failed
+94,45,ACCT38889568,brokerage,Cedar Credit Union,EUR,13157.39,failed
+95,12,ACCT38606838,loan,Cedar Credit Union,USD,1874.66,reversed
+96,15,ACCT51671031,brokerage,Cedar Credit Union,GBP,5923.76,reversed
+97,39,ACCT65614756,checking,Metro Trust,EUR,2537.82,failed
+98,60,ACCT38371478,brokerage,Cedar Credit Union,INR,10045.95,reversed
+99,34,ACCT20961721,savings,Metro Trust,GBP,3706.15,pending
+100,84,ACCT96149163,credit_card,Northstar Bank,USD,20393.83,pending
+101,35,ACCT11006583,loan,Northstar Bank,EUR,11458.57,posted
+102,57,ACCT58873441,credit_card,Northstar Bank,INR,14783.61,reversed
+103,84,ACCT17661861,brokerage,Northstar Bank,EUR,15592.28,failed
+104,40,ACCT15882392,credit_card,Cedar Credit Union,INR,4156.41,reversed
+105,87,ACCT66263984,brokerage,Northstar Bank,USD,23684.27,pending
+106,60,ACCT69931588,savings,Cedar Credit Union,EUR,24472.6,posted
+107,83,ACCT56024714,credit_card,Northstar Bank,EUR,6288.57,posted
+108,7,ACCT79072476,brokerage,Cedar Credit Union,EUR,14158.39,failed
+109,52,ACCT71660162,brokerage,Northstar Bank,INR,5589.76,reversed
+110,9,ACCT36641795,checking,Northstar Bank,GBP,15761.62,posted
+111,95,ACCT68334276,brokerage,Cedar Credit Union,AED,5815.67,pending
+112,11,ACCT26595305,loan,Metro Trust,USD,22469.72,failed
+113,75,ACCT53649178,loan,Cedar Credit Union,EUR,6199.93,reversed
+114,88,ACCT42444505,brokerage,Metro Trust,GBP,2508.23,reversed
+115,83,ACCT97903256,brokerage,Metro Trust,USD,4909.03,reversed
+116,8,ACCT65021411,savings,Metro Trust,EUR,6083.15,pending
+117,32,ACCT29686879,loan,Northstar Bank,GBP,23425.04,pending
+118,22,ACCT50844388,loan,Northstar Bank,USD,890.38,pending
+119,35,ACCT43664664,loan,Metro Trust,AED,14377.24,posted
+120,77,ACCT31024050,checking,Cedar Credit Union,EUR,6734.97,failed
+121,85,ACCT78881086,savings,Metro Trust,GBP,18058.9,reversed
+122,17,ACCT48583936,credit_card,Metro Trust,EUR,12106.25,reversed
+123,43,ACCT86982522,loan,Cedar Credit Union,USD,3982.14,pending
+124,14,ACCT19207126,checking,Cedar Credit Union,GBP,12905.51,reversed
+125,34,ACCT96757857,savings,Metro Trust,INR,16036.61,failed
+126,59,ACCT73914098,brokerage,Northstar Bank,EUR,2754.6,reversed
+127,38,ACCT27068068,checking,Metro Trust,GBP,18338.24,failed
+128,99,ACCT33538165,loan,Cedar Credit Union,EUR,8364.61,pending
+129,100,ACCT26514608,brokerage,Metro Trust,EUR,2045.76,posted
+130,81,ACCT40408546,credit_card,Metro Trust,INR,11569.71,reversed
+131,79,ACCT51967758,loan,Northstar Bank,GBP,3235.97,failed
+132,73,ACCT37522993,loan,Metro Trust,EUR,7776.09,posted
+133,5,ACCT13520348,credit_card,Cedar Credit Union,EUR,2591.36,failed
+134,5,ACCT38429273,credit_card,Metro Trust,INR,10521.76,reversed
+135,65,ACCT58642602,credit_card,Metro Trust,USD,15029.1,reversed
+136,26,ACCT25280617,checking,Cedar Credit Union,EUR,8859.71,posted
+137,74,ACCT99988177,checking,Northstar Bank,INR,21228.59,reversed
+138,56,ACCT66458996,credit_card,Cedar Credit Union,INR,22511.65,pending
+139,23,ACCT14618948,loan,Metro Trust,EUR,21595.65,posted
+140,9,ACCT27277951,checking,Cedar Credit Union,AED,20913.82,pending
+141,87,ACCT71189762,loan,Northstar Bank,EUR,11640.88,posted
+142,45,ACCT36050909,brokerage,Cedar Credit Union,AED,16835.63,reversed
+143,89,ACCT39642352,checking,Cedar Credit Union,INR,19178.24,failed
+144,32,ACCT15221009,brokerage,Metro Trust,EUR,448.78,pending
+145,58,ACCT66423971,savings,Cedar Credit Union,INR,20425.19,pending
+146,25,ACCT90340174,checking,Metro Trust,AED,16117.24,posted
+147,66,ACCT91398616,loan,Metro Trust,INR,12784.34,failed
+148,8,ACCT81168242,savings,Cedar Credit Union,INR,8418.01,posted
+149,77,ACCT32727341,brokerage,Northstar Bank,AED,705.49,reversed
+150,93,ACCT17421610,checking,Metro Trust,USD,10515.58,reversed
+151,76,ACCT23775656,brokerage,Northstar Bank,USD,12146.48,failed
+152,4,ACCT99041025,savings,Northstar Bank,AED,22546.98,failed
+153,21,ACCT55885498,loan,Northstar Bank,AED,7444.18,posted
+154,30,ACCT12069691,brokerage,Northstar Bank,EUR,5597.21,failed
+155,21,ACCT28955484,loan,Northstar Bank,EUR,8537.01,pending
+156,42,ACCT37660884,loan,Northstar Bank,INR,12822.79,reversed
+157,15,ACCT92076741,brokerage,Northstar Bank,GBP,22269.35,posted
+158,18,ACCT86833763,brokerage,Cedar Credit Union,INR,19576.67,posted
+159,61,ACCT90189847,savings,Northstar Bank,EUR,8198.63,posted
+160,49,ACCT23119669,credit_card,Cedar Credit Union,GBP,19653.96,pending
+161,34,ACCT28231683,checking,Metro Trust,EUR,15836.8,reversed
+162,33,ACCT13756311,loan,Cedar Credit Union,EUR,20565.4,failed
+163,96,ACCT13894606,brokerage,Northstar Bank,INR,6128.58,reversed
+164,50,ACCT60760226,credit_card,Cedar Credit Union,GBP,6790.57,pending
+165,12,ACCT19293182,loan,Northstar Bank,USD,15183.77,pending
+166,43,ACCT55256432,credit_card,Cedar Credit Union,INR,23774.45,pending
+167,14,ACCT66252914,brokerage,Metro Trust,USD,23163.79,reversed
+168,7,ACCT14160522,credit_card,Cedar Credit Union,AED,7371.65,pending
+169,82,ACCT28609411,brokerage,Metro Trust,AED,2637.35,posted
+170,28,ACCT56698469,credit_card,Cedar Credit Union,INR,21158.55,posted
+171,36,ACCT26203364,brokerage,Cedar Credit Union,GBP,5877.96,posted
+172,53,ACCT80465350,credit_card,Northstar Bank,GBP,3694.78,reversed
+173,18,ACCT33006579,loan,Northstar Bank,GBP,2686.29,failed
+174,51,ACCT91215396,loan,Northstar Bank,USD,1349.94,reversed
+175,97,ACCT91180041,checking,Metro Trust,INR,4195.2,posted
+176,67,ACCT63435968,loan,Metro Trust,AED,20456.59,failed
+177,96,ACCT29379126,savings,Metro Trust,INR,13057.09,reversed
+178,1,ACCT35856123,credit_card,Cedar Credit Union,USD,4255.85,posted
+179,1,ACCT82727580,checking,Cedar Credit Union,EUR,19465.53,posted
+180,91,ACCT53568761,checking,Metro Trust,USD,18835.33,failed
+181,58,ACCT74543763,loan,Northstar Bank,EUR,18922.36,posted
+182,87,ACCT44465299,credit_card,Northstar Bank,AED,5375.08,posted
+183,66,ACCT96688057,checking,Cedar Credit Union,AED,9972.51,reversed
+184,8,ACCT97806421,credit_card,Cedar Credit Union,AED,2695.51,posted
+185,41,ACCT39140349,brokerage,Cedar Credit Union,INR,35.57,failed
+186,73,ACCT45074112,checking,Metro Trust,AED,3881.31,pending
+187,87,ACCT31431221,credit_card,Northstar Bank,INR,2497.89,posted
+188,74,ACCT41631859,brokerage,Metro Trust,AED,634.79,pending
+189,12,ACCT35792614,checking,Northstar Bank,INR,7222.27,pending
+190,29,ACCT76520756,loan,Northstar Bank,USD,17828.87,posted
+191,39,ACCT43114422,credit_card,Northstar Bank,GBP,16142.21,pending
+192,55,ACCT27760101,loan,Cedar Credit Union,GBP,21045.5,failed
+193,41,ACCT46509023,loan,Cedar Credit Union,GBP,12356.85,reversed
+194,84,ACCT68811336,brokerage,Cedar Credit Union,EUR,448.14,posted
+195,95,ACCT51814436,checking,Metro Trust,INR,13409.73,reversed
+196,51,ACCT24304013,checking,Metro Trust,GBP,14045.06,reversed
+197,48,ACCT49495227,credit_card,Cedar Credit Union,EUR,15870.12,pending
+198,84,ACCT13674920,checking,Northstar Bank,GBP,6980.83,pending
+199,70,ACCT32210707,credit_card,Northstar Bank,AED,24274.01,reversed
+200,58,ACCT99050479,brokerage,Metro Trust,AED,732.94,failed
+201,65,ACCT83480214,brokerage,Northstar Bank,USD,12829.14,pending
+202,36,ACCT79780498,loan,Metro Trust,INR,10000.65,posted
+203,15,ACCT25791635,savings,Metro Trust,AED,16982.48,failed
+204,97,ACCT10418145,checking,Cedar Credit Union,AED,11523.49,failed
+205,40,ACCT62963628,checking,Metro Trust,EUR,15917.79,failed
+206,76,ACCT71028432,loan,Metro Trust,GBP,9694.99,posted
+207,12,ACCT52627360,brokerage,Northstar Bank,USD,466.76,failed
+208,44,ACCT13263419,savings,Metro Trust,GBP,15479.74,pending
+209,81,ACCT66941347,loan,Cedar Credit Union,GBP,7098.88,failed
+210,49,ACCT18641837,loan,Cedar Credit Union,USD,57.38,pending
+211,27,ACCT92091927,checking,Cedar Credit Union,USD,1978.17,posted
+212,78,ACCT20162954,brokerage,Metro Trust,INR,17586.85,pending
+213,1,ACCT56186754,credit_card,Metro Trust,USD,7744.86,pending
+214,4,ACCT18783198,credit_card,Cedar Credit Union,EUR,19943.46,posted
+215,7,ACCT30351963,savings,Metro Trust,EUR,7728.03,failed
+216,49,ACCT83111334,loan,Northstar Bank,EUR,2519.96,reversed
+217,81,ACCT29922149,checking,Cedar Credit Union,EUR,9374.98,posted
+218,82,ACCT21860517,credit_card,Metro Trust,INR,4337.29,posted
+219,7,ACCT78931503,savings,Cedar Credit Union,AED,4455.06,posted
+220,30,ACCT71727301,credit_card,Cedar Credit Union,EUR,11681.27,posted
+221,91,ACCT10581724,credit_card,Metro Trust,INR,7891.9,reversed
+222,13,ACCT35879674,savings,Metro Trust,EUR,8377.86,failed
+223,92,ACCT62816021,brokerage,Cedar Credit Union,GBP,17331.49,posted
+224,13,ACCT93534780,credit_card,Metro Trust,GBP,12202.29,pending
+225,42,ACCT58523632,checking,Northstar Bank,EUR,12267.15,failed
+226,86,ACCT90405528,credit_card,Northstar Bank,EUR,2537.78,pending
+227,63,ACCT26574510,checking,Metro Trust,USD,17905.96,pending
+228,68,ACCT66387282,checking,Northstar Bank,AED,14115.54,posted
+229,18,ACCT87609958,credit_card,Northstar Bank,USD,17427.16,failed
+230,20,ACCT39151504,loan,Cedar Credit Union,USD,6072.68,failed
+231,72,ACCT55779600,brokerage,Northstar Bank,AED,10836.24,reversed
+232,82,ACCT35532056,brokerage,Cedar Credit Union,AED,6884.69,pending
+233,93,ACCT46833274,checking,Northstar Bank,AED,6022.44,pending
+234,5,ACCT97633636,checking,Metro Trust,USD,7951.87,failed
+235,70,ACCT75349454,loan,Northstar Bank,GBP,18201.29,posted
+236,68,ACCT10491309,savings,Metro Trust,USD,17577.24,reversed
+237,41,ACCT31614255,credit_card,Northstar Bank,AED,18951.68,posted
+238,13,ACCT75920026,credit_card,Metro Trust,INR,19313.67,pending
+239,81,ACCT30659262,loan,Northstar Bank,INR,11705.93,failed
+240,93,ACCT65776231,loan,Metro Trust,GBP,14366.44,posted
+241,30,ACCT98757423,loan,Metro Trust,GBP,10580.5,posted
+242,37,ACCT20007067,savings,Metro Trust,AED,22273.27,posted
+243,8,ACCT74449154,checking,Northstar Bank,EUR,6303.84,reversed
+244,59,ACCT19066518,loan,Cedar Credit Union,EUR,9567.67,posted
+245,22,ACCT52072400,brokerage,Metro Trust,USD,23338.96,posted
+246,94,ACCT14953224,checking,Metro Trust,USD,24255.74,posted
+247,94,ACCT56390660,credit_card,Northstar Bank,GBP,1542.59,posted
+248,87,ACCT25110876,loan,Cedar Credit Union,AED,23264.18,posted
+249,74,ACCT60093647,checking,Cedar Credit Union,EUR,16437.53,reversed
+250,24,ACCT53190628,credit_card,Cedar Credit Union,EUR,18581.69,failed

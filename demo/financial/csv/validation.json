@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checked_tables": [
+    "public.customers",
+    "public.bank_accounts",
+    "public.transactions"
+  ],
+  "issues": []
+}

@@ -45,6 +45,7 @@ Run generation:
   --rows users=50 \
   --format csv \
   --format sql \
+  --domain general \
   --seed demo
 ```
 
@@ -53,7 +54,19 @@ Expected outputs:
 - `artifacts/demo/manifest.json`
 - `artifacts/demo/validation.json`
 - one CSV file per table
+- one JSON file per table when `--format json` is used
 - one SQL file per table when `--format sql` is used
+
+Use `--domain financial` or `--domain healthcare` when you want semantic values optimized for those use cases.
+
+## Demo Datasets
+
+This repository includes generated CSV demos under `demo/`:
+
+- `demo/financial/csv`
+- `demo/healthcare/csv`
+
+These are generated through the CLI from the schemas in each demo folder.
 
 The command exits with code `1` if validation fails.
 

@@ -1,0 +1,501 @@
+id,patient_id,diagnosis_code,diagnosis,status,visit_at
+1,245,I10,asthma,checked_in,2024-01-01T00:00:42+00:00
+2,54,R51.9,hypertension,follow_up,2024-01-01T00:01:19+00:00
+3,45,I10,back pain,follow_up,2024-01-01T00:02:55+00:00
+4,80,I10,hypertension,follow_up,2024-01-01T00:03:45+00:00
+5,140,E11.9,migraine,follow_up,2024-01-01T00:04:00+00:00
+6,208,M54.5,migraine,follow_up,2024-01-01T00:05:15+00:00
+7,230,E11.9,back pain,scheduled,2024-01-01T00:06:02+00:00
+8,196,M54.5,asthma,follow_up,2024-01-01T00:07:22+00:00
+9,61,M54.5,hypertension,discharged,2024-01-01T00:08:15+00:00
+10,117,J45.909,hypertension,discharged,2024-01-01T00:09:29+00:00
+11,76,J45.909,diabetes,follow_up,2024-01-01T00:10:25+00:00
+12,204,J45.909,back pain,scheduled,2024-01-01T00:11:16+00:00
+13,24,I10,hypertension,checked_in,2024-01-01T00:12:43+00:00
+14,158,E11.9,asthma,discharged,2024-01-01T00:13:38+00:00
+15,33,J45.909,diabetes,follow_up,2024-01-01T00:14:03+00:00
+16,53,R51.9,migraine,checked_in,2024-01-01T00:15:53+00:00
+17,108,E11.9,hypertension,follow_up,2024-01-01T00:16:24+00:00
+18,218,R51.9,diabetes,discharged,2024-01-01T00:17:02+00:00
+19,172,J45.909,diabetes,checked_in,2024-01-01T00:18:37+00:00
+20,95,M54.5,migraine,discharged,2024-01-01T00:19:06+00:00
+21,124,I10,asthma,checked_in,2024-01-01T00:20:36+00:00
+22,198,R51.9,back pain,checked_in,2024-01-01T00:21:10+00:00
+23,246,J45.909,hypertension,follow_up,2024-01-01T00:22:10+00:00
+24,254,M54.5,migraine,follow_up,2024-01-01T00:23:05+00:00
+25,96,M54.5,back pain,checked_in,2024-01-01T00:24:42+00:00
+26,122,R51.9,hypertension,follow_up,2024-01-01T00:25:26+00:00
+27,238,J45.909,back pain,checked_in,2024-01-01T00:26:18+00:00
+28,16,J45.909,asthma,checked_in,2024-01-01T00:27:54+00:00
+29,5,I10,asthma,checked_in,2024-01-01T00:28:08+00:00
+30,272,J45.909,diabetes,follow_up,2024-01-01T00:29:20+00:00
+31,55,E11.9,hypertension,checked_in,2024-01-01T00:30:56+00:00
+32,282,I10,asthma,follow_up,2024-01-01T00:31:16+00:00
+33,9,R51.9,diabetes,follow_up,2024-01-01T00:32:14+00:00
+34,204,E11.9,migraine,discharged,2024-01-01T00:33:35+00:00
+35,65,M54.5,migraine,checked_in,2024-01-01T00:34:25+00:00
+36,118,M54.5,diabetes,checked_in,2024-01-01T00:35:48+00:00
+37,274,J45.909,diabetes,checked_in,2024-01-01T00:36:41+00:00
+38,223,J45.909,migraine,checked_in,2024-01-01T00:37:46+00:00
+39,69,J45.909,hypertension,follow_up,2024-01-01T00:38:59+00:00
+40,152,R51.9,diabetes,checked_in,2024-01-01T00:39:17+00:00
+41,201,I10,diabetes,follow_up,2024-01-01T00:40:16+00:00
+42,203,I10,hypertension,follow_up,2024-01-01T00:41:41+00:00
+43,146,E11.9,back pain,follow_up,2024-01-01T00:42:56+00:00
+44,140,E11.9,diabetes,scheduled,2024-01-01T00:43:23+00:00
+45,173,M54.5,hypertension,discharged,2024-01-01T00:44:07+00:00
+46,260,E11.9,diabetes,discharged,2024-01-01T00:45:29+00:00
+47,255,M54.5,migraine,checked_in,2024-01-01T00:46:22+00:00
+48,279,J45.909,asthma,follow_up,2024-01-01T00:47:05+00:00
+49,17,E11.9,migraine,follow_up,2024-01-01T00:48:55+00:00
+50,128,R51.9,hypertension,follow_up,2024-01-01T00:49:25+00:00
+51,89,R51.9,hypertension,follow_up,2024-01-01T00:50:26+00:00
+52,129,I10,back pain,follow_up,2024-01-01T00:51:21+00:00
+53,173,J45.909,back pain,scheduled,2024-01-01T00:52:28+00:00
+54,266,J45.909,diabetes,follow_up,2024-01-01T00:53:24+00:00
+55,116,I10,asthma,follow_up,2024-01-01T00:54:53+00:00
+56,216,R51.9,diabetes,follow_up,2024-01-01T00:55:51+00:00
+57,141,R51.9,back pain,scheduled,2024-01-01T00:56:43+00:00
+58,289,I10,asthma,follow_up,2024-01-01T00:57:51+00:00
+59,21,J45.909,migraine,scheduled,2024-01-01T00:58:52+00:00
+60,73,I10,hypertension,checked_in,2024-01-01T00:59:25+00:00
+61,203,R51.9,asthma,discharged,2024-01-01T01:00:05+00:00
+62,9,I10,migraine,discharged,2024-01-01T01:01:20+00:00
+63,173,E11.9,diabetes,scheduled,2024-01-01T01:02:18+00:00
+64,261,J45.909,migraine,checked_in,2024-01-01T01:03:52+00:00
+65,40,M54.5,migraine,follow_up,2024-01-01T01:04:13+00:00
+66,216,E11.9,diabetes,discharged,2024-01-01T01:05:49+00:00
+67,86,J45.909,back pain,checked_in,2024-01-01T01:06:52+00:00
+68,144,I10,migraine,follow_up,2024-01-01T01:07:44+00:00
+69,67,R51.9,hypertension,follow_up,2024-01-01T01:08:37+00:00
+70,213,I10,asthma,discharged,2024-01-01T01:09:26+00:00
+71,227,M54.5,back pain,follow_up,2024-01-01T01:10:35+00:00
+72,239,M54.5,asthma,checked_in,2024-01-01T01:11:03+00:00
+73,179,I10,hypertension,scheduled,2024-01-01T01:12:14+00:00
+74,153,M54.5,hypertension,checked_in,2024-01-01T01:13:52+00:00
+75,210,R51.9,diabetes,follow_up,2024-01-01T01:14:17+00:00
+76,129,E11.9,asthma,checked_in,2024-01-01T01:15:24+00:00
+77,157,I10,hypertension,follow_up,2024-01-01T01:16:31+00:00
+78,108,R51.9,back pain,follow_up,2024-01-01T01:17:38+00:00
+79,55,J45.909,asthma,checked_in,2024-01-01T01:18:19+00:00
+80,151,I10,migraine,follow_up,2024-01-01T01:19:02+00:00
+81,289,I10,back pain,follow_up,2024-01-01T01:20:24+00:00
+82,13,J45.909,migraine,checked_in,2024-01-01T01:21:27+00:00
+83,282,E11.9,hypertension,follow_up,2024-01-01T01:22:08+00:00
+84,282,J45.909,diabetes,checked_in,2024-01-01T01:23:51+00:00
+85,114,J45.909,asthma,discharged,2024-01-01T01:24:51+00:00
+86,45,J45.909,asthma,follow_up,2024-01-01T01:25:35+00:00
+87,87,M54.5,asthma,follow_up,2024-01-01T01:26:33+00:00
+88,28,M54.5,hypertension,follow_up,2024-01-01T01:27:51+00:00
+89,292,M54.5,diabetes,checked_in,2024-01-01T01:28:11+00:00
+90,216,I10,diabetes,checked_in,2024-01-01T01:29:55+00:00
+91,64,R51.9,back pain,discharged,2024-01-01T01:30:11+00:00
+92,220,J45.909,asthma,follow_up,2024-01-01T01:31:59+00:00
+93,293,R51.9,hypertension,checked_in,2024-01-01T01:32:27+00:00
+94,184,R51.9,hypertension,follow_up,2024-01-01T01:33:52+00:00
+95,82,E11.9,diabetes,discharged,2024-01-01T01:34:08+00:00
+96,15,J45.909,hypertension,discharged,2024-01-01T01:35:09+00:00
+97,208,M54.5,migraine,checked_in,2024-01-01T01:36:38+00:00
+98,52,R51.9,migraine,follow_up,2024-01-01T01:37:15+00:00
+99,137,M54.5,back pain,scheduled,2024-01-01T01:38:17+00:00
+100,178,R51.9,asthma,discharged,2024-01-01T01:39:39+00:00
+101,37,M54.5,asthma,checked_in,2024-01-01T01:40:55+00:00
+102,62,I10,asthma,scheduled,2024-01-01T01:41:12+00:00
+103,276,J45.909,hypertension,discharged,2024-01-01T01:42:39+00:00
+104,20,I10,migraine,discharged,2024-01-01T01:43:08+00:00
+105,244,R51.9,back pain,checked_in,2024-01-01T01:44:56+00:00
+106,241,I10,asthma,follow_up,2024-01-01T01:45:16+00:00
+107,272,M54.5,migraine,checked_in,2024-01-01T01:46:55+00:00
+108,49,E11.9,asthma,discharged,2024-01-01T01:47:43+00:00
+109,7,J45.909,asthma,discharged,2024-01-01T01:48:31+00:00
+110,255,R51.9,diabetes,checked_in,2024-01-01T01:49:21+00:00
+111,272,M54.5,diabetes,scheduled,2024-01-01T01:50:40+00:00
+112,44,R51.9,asthma,scheduled,2024-01-01T01:51:20+00:00
+113,111,R51.9,back pain,discharged,2024-01-01T01:52:46+00:00
+114,179,J45.909,back pain,scheduled,2024-01-01T01:53:43+00:00
+115,173,I10,migraine,follow_up,2024-01-01T01:54:16+00:00
+116,88,M54.5,diabetes,follow_up,2024-01-01T01:55:36+00:00
+117,224,I10,back pain,checked_in,2024-01-01T01:56:55+00:00
+118,214,J45.909,hypertension,discharged,2024-01-01T01:57:52+00:00
+119,258,M54.5,migraine,checked_in,2024-01-01T01:58:09+00:00
+120,282,I10,back pain,checked_in,2024-01-01T01:59:24+00:00
+121,123,I10,migraine,discharged,2024-01-01T02:00:59+00:00
+122,151,R51.9,back pain,discharged,2024-01-01T02:01:07+00:00
+123,13,E11.9,back pain,checked_in,2024-01-01T02:02:14+00:00
+124,254,J45.909,diabetes,scheduled,2024-01-01T02:03:04+00:00
+125,194,I10,migraine,discharged,2024-01-01T02:04:25+00:00
+126,122,I10,diabetes,discharged,2024-01-01T02:05:16+00:00
+127,283,M54.5,hypertension,discharged,2024-01-01T02:06:13+00:00
+128,213,J45.909,asthma,follow_up,2024-01-01T02:07:32+00:00
+129,74,I10,migraine,checked_in,2024-01-01T02:08:36+00:00
+130,221,M54.5,diabetes,follow_up,2024-01-01T02:09:13+00:00
+131,110,E11.9,hypertension,scheduled,2024-01-01T02:10:45+00:00
+132,245,E11.9,migraine,scheduled,2024-01-01T02:11:41+00:00
+133,226,J45.909,diabetes,follow_up,2024-01-01T02:12:22+00:00
+134,88,M54.5,hypertension,scheduled,2024-01-01T02:13:26+00:00
+135,60,J45.909,asthma,checked_in,2024-01-01T02:14:27+00:00
+136,299,R51.9,migraine,discharged,2024-01-01T02:15:13+00:00
+137,225,R51.9,hypertension,follow_up,2024-01-01T02:16:41+00:00
+138,174,R51.9,diabetes,scheduled,2024-01-01T02:17:03+00:00
+139,65,J45.909,diabetes,discharged,2024-01-01T02:18:48+00:00
+140,149,E11.9,hypertension,follow_up,2024-01-01T02:19:33+00:00
+141,56,M54.5,back pain,follow_up,2024-01-01T02:20:56+00:00
+142,290,E11.9,asthma,scheduled,2024-01-01T02:21:58+00:00
+143,181,I10,hypertension,follow_up,2024-01-01T02:22:26+00:00
+144,81,R51.9,asthma,checked_in,2024-01-01T02:23:48+00:00
+145,20,J45.909,asthma,follow_up,2024-01-01T02:24:28+00:00
+146,13,J45.909,hypertension,follow_up,2024-01-01T02:25:17+00:00
+147,100,I10,migraine,checked_in,2024-01-01T02:26:39+00:00
+148,229,I10,asthma,scheduled,2024-01-01T02:27:33+00:00
+149,107,E11.9,diabetes,discharged,2024-01-01T02:28:49+00:00
+150,144,J45.909,back pain,discharged,2024-01-01T02:29:49+00:00
+151,88,M54.5,asthma,discharged,2024-01-01T02:30:15+00:00
+152,232,R51.9,diabetes,discharged,2024-01-01T02:31:32+00:00
+153,199,M54.5,back pain,checked_in,2024-01-01T02:32:22+00:00
+154,231,J45.909,hypertension,scheduled,2024-01-01T02:33:38+00:00
+155,268,I10,asthma,checked_in,2024-01-01T02:34:40+00:00
+156,279,J45.909,back pain,checked_in,2024-01-01T02:35:32+00:00
+157,127,M54.5,asthma,scheduled,2024-01-01T02:36:38+00:00
+158,125,E11.9,back pain,discharged,2024-01-01T02:37:20+00:00
+159,105,I10,diabetes,discharged,2024-01-01T02:38:41+00:00
+160,109,J45.909,hypertension,discharged,2024-01-01T02:39:58+00:00
+161,298,E11.9,hypertension,checked_in,2024-01-01T02:40:32+00:00
+162,187,M54.5,hypertension,follow_up,2024-01-01T02:41:46+00:00
+163,199,J45.909,asthma,discharged,2024-01-01T02:42:54+00:00
+164,31,E11.9,migraine,scheduled,2024-01-01T02:43:10+00:00
+165,297,E11.9,back pain,follow_up,2024-01-01T02:44:36+00:00
+166,65,R51.9,asthma,scheduled,2024-01-01T02:45:15+00:00
+167,103,M54.5,migraine,follow_up,2024-01-01T02:46:40+00:00
+168,122,I10,asthma,checked_in,2024-01-01T02:47:18+00:00
+169,298,R51.9,diabetes,checked_in,2024-01-01T02:48:34+00:00
+170,57,M54.5,migraine,follow_up,2024-01-01T02:49:36+00:00
+171,228,E11.9,asthma,checked_in,2024-01-01T02:50:50+00:00
+172,27,I10,back pain,scheduled,2024-01-01T02:51:03+00:00
+173,221,M54.5,back pain,checked_in,2024-01-01T02:52:22+00:00
+174,39,E11.9,migraine,checked_in,2024-01-01T02:53:56+00:00
+175,8,J45.909,back pain,follow_up,2024-01-01T02:54:29+00:00
+176,226,E11.9,migraine,discharged,2024-01-01T02:55:27+00:00
+177,36,I10,asthma,follow_up,2024-01-01T02:56:52+00:00
+178,244,E11.9,diabetes,scheduled,2024-01-01T02:57:52+00:00
+179,34,E11.9,asthma,discharged,2024-01-01T02:58:03+00:00
+180,267,M54.5,hypertension,discharged,2024-01-01T02:59:56+00:00
+181,269,M54.5,migraine,checked_in,2024-01-01T03:00:53+00:00
+182,243,E11.9,asthma,scheduled,2024-01-01T03:01:05+00:00
+183,66,R51.9,diabetes,scheduled,2024-01-01T03:02:35+00:00
+184,258,E11.9,back pain,follow_up,2024-01-01T03:03:02+00:00
+185,127,I10,migraine,discharged,2024-01-01T03:04:56+00:00
+186,249,M54.5,asthma,follow_up,2024-01-01T03:05:44+00:00
+187,178,R51.9,asthma,discharged,2024-01-01T03:06:31+00:00
+188,172,E11.9,hypertension,follow_up,2024-01-01T03:07:42+00:00
+189,227,M54.5,migraine,discharged,2024-01-01T03:08:23+00:00
+190,177,J45.909,asthma,discharged,2024-01-01T03:09:54+00:00
+191,66,J45.909,migraine,checked_in,2024-01-01T03:10:29+00:00
+192,278,E11.9,diabetes,follow_up,2024-01-01T03:11:10+00:00
+193,287,R51.9,hypertension,discharged,2024-01-01T03:12:51+00:00
+194,261,M54.5,hypertension,follow_up,2024-01-01T03:13:47+00:00
+195,226,R51.9,migraine,checked_in,2024-01-01T03:14:58+00:00
+196,58,E11.9,hypertension,discharged,2024-01-01T03:15:08+00:00
+197,116,M54.5,back pain,checked_in,2024-01-01T03:16:43+00:00
+198,172,E11.9,migraine,scheduled,2024-01-01T03:17:12+00:00
+199,140,I10,diabetes,discharged,2024-01-01T03:18:55+00:00
+200,108,I10,hypertension,checked_in,2024-01-01T03:19:34+00:00
+201,77,E11.9,migraine,discharged,2024-01-01T03:20:24+00:00
+202,17,M54.5,asthma,checked_in,2024-01-01T03:21:31+00:00
+203,180,R51.9,diabetes,scheduled,2024-01-01T03:22:06+00:00
+204,244,I10,asthma,follow_up,2024-01-01T03:23:03+00:00
+205,273,I10,asthma,follow_up,2024-01-01T03:24:48+00:00
+206,87,R51.9,diabetes,follow_up,2024-01-01T03:25:50+00:00
+207,93,M54.5,migraine,follow_up,2024-01-01T03:26:59+00:00
+208,156,R51.9,asthma,follow_up,2024-01-01T03:27:13+00:00
+209,299,I10,migraine,discharged,2024-01-01T03:28:22+00:00
+210,240,M54.5,back pain,scheduled,2024-01-01T03:29:41+00:00
+211,18,I10,back pain,follow_up,2024-01-01T03:30:54+00:00
+212,219,R51.9,back pain,discharged,2024-01-01T03:31:17+00:00
+213,143,E11.9,migraine,checked_in,2024-01-01T03:32:18+00:00
+214,105,R51.9,asthma,discharged,2024-01-01T03:33:29+00:00
+215,69,I10,migraine,scheduled,2024-01-01T03:34:21+00:00
+216,129,I10,hypertension,checked_in,2024-01-01T03:35:50+00:00
+217,214,I10,migraine,checked_in,2024-01-01T03:36:39+00:00
+218,84,M54.5,migraine,follow_up,2024-01-01T03:37:45+00:00
+219,242,R51.9,hypertension,follow_up,2024-01-01T03:38:19+00:00
+220,188,R51.9,hypertension,scheduled,2024-01-01T03:39:45+00:00
+221,272,R51.9,asthma,checked_in,2024-01-01T03:40:13+00:00
+222,207,I10,back pain,follow_up,2024-01-01T03:41:06+00:00
+223,284,I10,back pain,scheduled,2024-01-01T03:42:25+00:00
+224,248,M54.5,hypertension,scheduled,2024-01-01T03:43:54+00:00
+225,30,I10,migraine,checked_in,2024-01-01T03:44:16+00:00
+226,50,R51.9,asthma,checked_in,2024-01-01T03:45:56+00:00
+227,219,E11.9,migraine,scheduled,2024-01-01T03:46:42+00:00
+228,74,E11.9,hypertension,follow_up,2024-01-01T03:47:51+00:00
+229,71,R51.9,diabetes,discharged,2024-01-01T03:48:06+00:00
+230,115,E11.9,migraine,follow_up,2024-01-01T03:49:01+00:00
+231,299,M54.5,back pain,discharged,2024-01-01T03:50:14+00:00
+232,178,I10,asthma,scheduled,2024-01-01T03:51:07+00:00
+233,25,I10,hypertension,checked_in,2024-01-01T03:52:17+00:00
+234,142,I10,asthma,discharged,2024-01-01T03:53:11+00:00
+235,26,M54.5,asthma,discharged,2024-01-01T03:54:44+00:00
+236,99,R51.9,hypertension,follow_up,2024-01-01T03:55:10+00:00
+237,125,R51.9,diabetes,discharged,2024-01-01T03:56:55+00:00
+238,113,E11.9,hypertension,follow_up,2024-01-01T03:57:34+00:00
+239,115,R51.9,asthma,discharged,2024-01-01T03:58:14+00:00
+240,285,R51.9,diabetes,checked_in,2024-01-01T03:59:08+00:00
+241,130,M54.5,migraine,checked_in,2024-01-01T04:00:38+00:00
+242,142,I10,hypertension,discharged,2024-01-01T04:01:29+00:00
+243,166,E11.9,hypertension,checked_in,2024-01-01T04:02:08+00:00
+244,182,M54.5,diabetes,checked_in,2024-01-01T04:03:31+00:00
+245,119,R51.9,hypertension,follow_up,2024-01-01T04:04:02+00:00
+246,114,E11.9,back pain,scheduled,2024-01-01T04:05:22+00:00
+247,19,E11.9,migraine,follow_up,2024-01-01T04:06:02+00:00
+248,294,I10,migraine,checked_in,2024-01-01T04:07:30+00:00
+249,117,M54.5,migraine,follow_up,2024-01-01T04:08:23+00:00
+250,260,J45.909,back pain,discharged,2024-01-01T04:09:45+00:00
+251,165,M54.5,migraine,follow_up,2024-01-01T04:10:57+00:00
+252,268,I10,diabetes,scheduled,2024-01-01T04:11:19+00:00
+253,142,R51.9,hypertension,discharged,2024-01-01T04:12:20+00:00
+254,63,M54.5,diabetes,checked_in,2024-01-01T04:13:00+00:00
+255,117,J45.909,migraine,checked_in,2024-01-01T04:14:16+00:00
+256,240,M54.5,back pain,discharged,2024-01-01T04:15:54+00:00
+257,26,J45.909,hypertension,scheduled,2024-01-01T04:16:18+00:00
+258,81,J45.909,diabetes,scheduled,2024-01-01T04:17:03+00:00
+259,62,E11.9,migraine,discharged,2024-01-01T04:18:31+00:00
+260,251,J45.909,asthma,discharged,2024-01-01T04:19:10+00:00
+261,188,I10,back pain,scheduled,2024-01-01T04:20:04+00:00
+262,83,R51.9,back pain,checked_in,2024-01-01T04:21:36+00:00
+263,132,I10,hypertension,discharged,2024-01-01T04:22:48+00:00
+264,218,R51.9,diabetes,scheduled,2024-01-01T04:23:33+00:00
+265,20,I10,migraine,scheduled,2024-01-01T04:24:22+00:00
+266,153,J45.909,migraine,checked_in,2024-01-01T04:25:40+00:00
+267,134,J45.909,diabetes,scheduled,2024-01-01T04:26:50+00:00
+268,175,R51.9,back pain,follow_up,2024-01-01T04:27:46+00:00
+269,95,I10,hypertension,scheduled,2024-01-01T04:28:39+00:00
+270,134,R51.9,hypertension,checked_in,2024-01-01T04:29:16+00:00
+271,83,I10,migraine,follow_up,2024-01-01T04:30:00+00:00
+272,228,R51.9,migraine,discharged,2024-01-01T04:31:14+00:00
+273,270,M54.5,diabetes,scheduled,2024-01-01T04:32:00+00:00
+274,147,J45.909,hypertension,checked_in,2024-01-01T04:33:34+00:00
+275,103,M54.5,back pain,discharged,2024-01-01T04:34:17+00:00
+276,273,R51.9,migraine,discharged,2024-01-01T04:35:11+00:00
+277,68,M54.5,diabetes,checked_in,2024-01-01T04:36:31+00:00
+278,85,E11.9,migraine,follow_up,2024-01-01T04:37:25+00:00
+279,102,E11.9,back pain,discharged,2024-01-01T04:38:05+00:00
+280,59,M54.5,asthma,discharged,2024-01-01T04:39:09+00:00
+281,139,J45.909,migraine,scheduled,2024-01-01T04:40:50+00:00
+282,263,R51.9,migraine,scheduled,2024-01-01T04:41:55+00:00
+283,227,J45.909,diabetes,follow_up,2024-01-01T04:42:26+00:00
+284,169,M54.5,migraine,discharged,2024-01-01T04:43:53+00:00
+285,23,M54.5,diabetes,follow_up,2024-01-01T04:44:40+00:00
+286,152,R51.9,migraine,checked_in,2024-01-01T04:45:25+00:00
+287,13,E11.9,asthma,discharged,2024-01-01T04:46:39+00:00
+288,264,E11.9,diabetes,follow_up,2024-01-01T04:47:39+00:00
+289,90,J45.909,hypertension,checked_in,2024-01-01T04:48:30+00:00
+290,47,E11.9,diabetes,checked_in,2024-01-01T04:49:07+00:00
+291,57,M54.5,hypertension,follow_up,2024-01-01T04:50:31+00:00
+292,147,I10,diabetes,discharged,2024-01-01T04:51:00+00:00
+293,83,R51.9,back pain,discharged,2024-01-01T04:52:45+00:00
+294,295,I10,migraine,discharged,2024-01-01T04:53:28+00:00
+295,141,I10,back pain,follow_up,2024-01-01T04:54:36+00:00
+296,179,R51.9,hypertension,discharged,2024-01-01T04:55:58+00:00
+297,121,J45.909,back pain,scheduled,2024-01-01T04:56:17+00:00
+298,206,J45.909,back pain,scheduled,2024-01-01T04:57:24+00:00
+299,298,J45.909,asthma,follow_up,2024-01-01T04:58:59+00:00
+300,266,I10,diabetes,discharged,2024-01-01T04:59:09+00:00
+301,192,M54.5,asthma,discharged,2024-01-01T05:00:51+00:00
+302,32,M54.5,diabetes,discharged,2024-01-01T05:01:00+00:00
+303,278,J45.909,migraine,follow_up,2024-01-01T05:02:09+00:00
+304,295,R51.9,back pain,checked_in,2024-01-01T05:03:39+00:00
+305,70,I10,hypertension,scheduled,2024-01-01T05:04:00+00:00
+306,18,E11.9,migraine,checked_in,2024-01-01T05:05:24+00:00
+307,205,E11.9,migraine,scheduled,2024-01-01T05:06:10+00:00
+308,14,E11.9,diabetes,checked_in,2024-01-01T05:07:49+00:00
+309,179,R51.9,migraine,scheduled,2024-01-01T05:08:27+00:00
+310,63,M54.5,asthma,follow_up,2024-01-01T05:09:50+00:00
+311,217,I10,hypertension,checked_in,2024-01-01T05:10:26+00:00
+312,231,J45.909,diabetes,discharged,2024-01-01T05:11:26+00:00
+313,226,M54.5,hypertension,scheduled,2024-01-01T05:12:21+00:00
+314,105,I10,asthma,discharged,2024-01-01T05:13:15+00:00
+315,108,J45.909,asthma,scheduled,2024-01-01T05:14:58+00:00
+316,279,M54.5,migraine,checked_in,2024-01-01T05:15:32+00:00
+317,129,M54.5,back pain,scheduled,2024-01-01T05:16:35+00:00
+318,201,J45.909,diabetes,scheduled,2024-01-01T05:17:56+00:00
+319,128,M54.5,asthma,follow_up,2024-01-01T05:18:11+00:00
+320,148,E11.9,back pain,scheduled,2024-01-01T05:19:08+00:00
+321,232,J45.909,asthma,discharged,2024-01-01T05:20:50+00:00
+322,227,I10,diabetes,scheduled,2024-01-01T05:21:16+00:00
+323,141,I10,diabetes,checked_in,2024-01-01T05:22:56+00:00
+324,226,I10,back pain,checked_in,2024-01-01T05:23:26+00:00
+325,123,M54.5,migraine,scheduled,2024-01-01T05:24:57+00:00
+326,4,E11.9,hypertension,scheduled,2024-01-01T05:25:49+00:00
+327,287,R51.9,asthma,discharged,2024-01-01T05:26:03+00:00
+328,146,J45.909,diabetes,scheduled,2024-01-01T05:27:04+00:00
+329,122,I10,back pain,follow_up,2024-01-01T05:28:51+00:00
+330,221,J45.909,diabetes,scheduled,2024-01-01T05:29:26+00:00
+331,218,R51.9,migraine,scheduled,2024-01-01T05:30:39+00:00
+332,164,I10,back pain,discharged,2024-01-01T05:31:57+00:00
+333,148,R51.9,migraine,checked_in,2024-01-01T05:32:06+00:00
+334,269,J45.909,diabetes,scheduled,2024-01-01T05:33:41+00:00
+335,12,R51.9,migraine,checked_in,2024-01-01T05:34:15+00:00
+336,261,M54.5,back pain,scheduled,2024-01-01T05:35:54+00:00
+337,177,M54.5,back pain,checked_in,2024-01-01T05:36:12+00:00
+338,151,J45.909,back pain,scheduled,2024-01-01T05:37:52+00:00
+339,84,J45.909,back pain,follow_up,2024-01-01T05:38:56+00:00
+340,297,I10,migraine,checked_in,2024-01-01T05:39:05+00:00
+341,154,M54.5,diabetes,discharged,2024-01-01T05:40:59+00:00
+342,195,R51.9,migraine,follow_up,2024-01-01T05:41:18+00:00
+343,90,I10,hypertension,checked_in,2024-01-01T05:42:24+00:00
+344,273,E11.9,asthma,checked_in,2024-01-01T05:43:31+00:00
+345,284,E11.9,migraine,discharged,2024-01-01T05:44:33+00:00
+346,149,E11.9,diabetes,checked_in,2024-01-01T05:45:06+00:00
+347,89,I10,asthma,checked_in,2024-01-01T05:46:15+00:00
+348,141,R51.9,asthma,follow_up,2024-01-01T05:47:30+00:00
+349,59,I10,hypertension,discharged,2024-01-01T05:48:25+00:00
+350,240,I10,migraine,checked_in,2024-01-01T05:49:09+00:00
+351,247,E11.9,back pain,checked_in,2024-01-01T05:50:06+00:00
+352,231,E11.9,diabetes,scheduled,2024-01-01T05:51:21+00:00
+353,279,R51.9,asthma,checked_in,2024-01-01T05:52:27+00:00
+354,22,I10,hypertension,follow_up,2024-01-01T05:53:28+00:00
+355,180,I10,back pain,follow_up,2024-01-01T05:54:08+00:00
+356,265,R51.9,diabetes,checked_in,2024-01-01T05:55:35+00:00
+357,17,R51.9,asthma,scheduled,2024-01-01T05:56:07+00:00
+358,52,R51.9,diabetes,discharged,2024-01-01T05:57:12+00:00
+359,32,M54.5,migraine,discharged,2024-01-01T05:58:02+00:00
+360,290,E11.9,diabetes,follow_up,2024-01-01T05:59:03+00:00
+361,220,I10,back pain,scheduled,2024-01-01T06:00:33+00:00
+362,175,R51.9,migraine,discharged,2024-01-01T06:01:30+00:00
+363,215,E11.9,asthma,discharged,2024-01-01T06:02:42+00:00
+364,10,E11.9,hypertension,scheduled,2024-01-01T06:03:33+00:00
+365,227,R51.9,diabetes,discharged,2024-01-01T06:04:02+00:00
+366,121,J45.909,back pain,checked_in,2024-01-01T06:05:57+00:00
+367,144,I10,hypertension,discharged,2024-01-01T06:06:01+00:00
+368,215,R51.9,back pain,checked_in,2024-01-01T06:07:05+00:00
+369,113,M54.5,hypertension,scheduled,2024-01-01T06:08:50+00:00
+370,48,M54.5,diabetes,follow_up,2024-01-01T06:09:48+00:00
+371,128,I10,back pain,discharged,2024-01-01T06:10:04+00:00
+372,156,M54.5,back pain,scheduled,2024-01-01T06:11:39+00:00
+373,90,E11.9,back pain,checked_in,2024-01-01T06:12:52+00:00
+374,183,J45.909,diabetes,checked_in,2024-01-01T06:13:41+00:00
+375,40,E11.9,migraine,checked_in,2024-01-01T06:14:00+00:00
+376,145,R51.9,asthma,follow_up,2024-01-01T06:15:10+00:00
+377,292,R51.9,asthma,checked_in,2024-01-01T06:16:39+00:00
+378,30,E11.9,hypertension,follow_up,2024-01-01T06:17:26+00:00
+379,200,E11.9,migraine,scheduled,2024-01-01T06:18:06+00:00
+380,90,E11.9,back pain,checked_in,2024-01-01T06:19:37+00:00
+381,52,J45.909,back pain,follow_up,2024-01-01T06:20:47+00:00
+382,56,J45.909,migraine,follow_up,2024-01-01T06:21:41+00:00
+383,236,M54.5,hypertension,scheduled,2024-01-01T06:22:02+00:00
+384,42,J45.909,diabetes,checked_in,2024-01-01T06:23:26+00:00
+385,292,I10,back pain,checked_in,2024-01-01T06:24:55+00:00
+386,93,E11.9,asthma,follow_up,2024-01-01T06:25:02+00:00
+387,118,R51.9,hypertension,follow_up,2024-01-01T06:26:02+00:00
+388,134,J45.909,back pain,follow_up,2024-01-01T06:27:09+00:00
+389,133,I10,hypertension,discharged,2024-01-01T06:28:05+00:00
+390,290,M54.5,migraine,checked_in,2024-01-01T06:29:17+00:00
+391,55,M54.5,back pain,discharged,2024-01-01T06:30:22+00:00
+392,246,J45.909,migraine,follow_up,2024-01-01T06:31:10+00:00
+393,146,J45.909,migraine,checked_in,2024-01-01T06:32:24+00:00
+394,93,J45.909,diabetes,checked_in,2024-01-01T06:33:05+00:00
+395,271,J45.909,hypertension,follow_up,2024-01-01T06:34:56+00:00
+396,247,J45.909,back pain,discharged,2024-01-01T06:35:28+00:00
+397,54,J45.909,back pain,scheduled,2024-01-01T06:36:12+00:00
+398,211,M54.5,asthma,scheduled,2024-01-01T06:37:07+00:00
+399,1,R51.9,migraine,checked_in,2024-01-01T06:38:06+00:00
+400,23,R51.9,migraine,scheduled,2024-01-01T06:39:07+00:00
+401,184,J45.909,migraine,checked_in,2024-01-01T06:40:06+00:00
+402,21,E11.9,back pain,discharged,2024-01-01T06:41:45+00:00
+403,164,J45.909,diabetes,follow_up,2024-01-01T06:42:00+00:00
+404,293,E11.9,hypertension,follow_up,2024-01-01T06:43:08+00:00
+405,134,E11.9,hypertension,follow_up,2024-01-01T06:44:54+00:00
+406,232,I10,diabetes,checked_in,2024-01-01T06:45:14+00:00
+407,90,M54.5,migraine,checked_in,2024-01-01T06:46:34+00:00
+408,209,M54.5,diabetes,scheduled,2024-01-01T06:47:47+00:00
+409,243,I10,hypertension,scheduled,2024-01-01T06:48:55+00:00
+410,30,E11.9,hypertension,follow_up,2024-01-01T06:49:34+00:00
+411,8,I10,migraine,checked_in,2024-01-01T06:50:22+00:00
+412,285,J45.909,migraine,checked_in,2024-01-01T06:51:45+00:00
+413,46,E11.9,asthma,scheduled,2024-01-01T06:52:57+00:00
+414,209,R51.9,migraine,discharged,2024-01-01T06:53:41+00:00
+415,78,J45.909,hypertension,checked_in,2024-01-01T06:54:48+00:00
+416,158,I10,diabetes,follow_up,2024-01-01T06:55:50+00:00
+417,295,I10,hypertension,discharged,2024-01-01T06:56:40+00:00
+418,28,R51.9,migraine,scheduled,2024-01-01T06:57:28+00:00
+419,132,E11.9,back pain,follow_up,2024-01-01T06:58:25+00:00
+420,63,J45.909,hypertension,follow_up,2024-01-01T06:59:48+00:00
+421,122,M54.5,diabetes,scheduled,2024-01-01T07:00:36+00:00
+422,175,R51.9,diabetes,scheduled,2024-01-01T07:01:56+00:00
+423,117,J45.909,hypertension,follow_up,2024-01-01T07:02:27+00:00
+424,179,M54.5,back pain,scheduled,2024-01-01T07:03:49+00:00
+425,13,J45.909,hypertension,scheduled,2024-01-01T07:04:42+00:00
+426,136,R51.9,hypertension,discharged,2024-01-01T07:05:32+00:00
+427,125,E11.9,migraine,discharged,2024-01-01T07:06:03+00:00
+428,267,E11.9,diabetes,scheduled,2024-01-01T07:07:07+00:00
+429,290,J45.909,hypertension,follow_up,2024-01-01T07:08:29+00:00
+430,297,I10,diabetes,checked_in,2024-01-01T07:09:06+00:00
+431,175,R51.9,back pain,follow_up,2024-01-01T07:10:48+00:00
+432,38,J45.909,migraine,checked_in,2024-01-01T07:11:09+00:00
+433,112,E11.9,asthma,scheduled,2024-01-01T07:12:02+00:00
+434,232,R51.9,hypertension,checked_in,2024-01-01T07:13:41+00:00
+435,109,J45.909,diabetes,discharged,2024-01-01T07:14:12+00:00
+436,10,I10,diabetes,scheduled,2024-01-01T07:15:36+00:00
+437,148,R51.9,diabetes,checked_in,2024-01-01T07:16:28+00:00
+438,119,R51.9,asthma,scheduled,2024-01-01T07:17:19+00:00
+439,63,M54.5,diabetes,follow_up,2024-01-01T07:18:28+00:00
+440,14,E11.9,hypertension,checked_in,2024-01-01T07:19:12+00:00
+441,112,E11.9,migraine,discharged,2024-01-01T07:20:15+00:00
+442,281,M54.5,hypertension,discharged,2024-01-01T07:21:31+00:00
+443,109,R51.9,asthma,discharged,2024-01-01T07:22:08+00:00
+444,63,E11.9,back pain,checked_in,2024-01-01T07:23:06+00:00
+445,159,I10,hypertension,follow_up,2024-01-01T07:24:50+00:00
+446,231,E11.9,asthma,follow_up,2024-01-01T07:25:32+00:00
+447,257,M54.5,asthma,checked_in,2024-01-01T07:26:11+00:00
+448,186,R51.9,back pain,follow_up,2024-01-01T07:27:28+00:00
+449,3,I10,back pain,checked_in,2024-01-01T07:28:26+00:00
+450,37,M54.5,diabetes,discharged,2024-01-01T07:29:43+00:00
+451,162,M54.5,diabetes,follow_up,2024-01-01T07:30:03+00:00
+452,257,R51.9,back pain,checked_in,2024-01-01T07:31:02+00:00
+453,138,J45.909,asthma,scheduled,2024-01-01T07:32:09+00:00
+454,25,J45.909,asthma,follow_up,2024-01-01T07:33:59+00:00
+455,43,I10,diabetes,discharged,2024-01-01T07:34:33+00:00
+456,165,E11.9,migraine,checked_in,2024-01-01T07:35:59+00:00
+457,25,E11.9,asthma,discharged,2024-01-01T07:36:18+00:00
+458,7,J45.909,hypertension,checked_in,2024-01-01T07:37:47+00:00
+459,74,J45.909,back pain,follow_up,2024-01-01T07:38:02+00:00
+460,203,E11.9,hypertension,discharged,2024-01-01T07:39:20+00:00
+461,46,I10,hypertension,checked_in,2024-01-01T07:40:55+00:00
+462,193,J45.909,asthma,follow_up,2024-01-01T07:41:26+00:00
+463,279,I10,back pain,discharged,2024-01-01T07:42:14+00:00
+464,120,J45.909,diabetes,checked_in,2024-01-01T07:43:56+00:00
+465,200,I10,migraine,scheduled,2024-01-01T07:44:33+00:00
+466,168,M54.5,diabetes,scheduled,2024-01-01T07:45:33+00:00
+467,50,J45.909,migraine,discharged,2024-01-01T07:46:18+00:00
+468,162,E11.9,migraine,follow_up,2024-01-01T07:47:47+00:00
+469,134,J45.909,hypertension,checked_in,2024-01-01T07:48:25+00:00
+470,202,R51.9,hypertension,follow_up,2024-01-01T07:49:24+00:00
+471,2,J45.909,diabetes,follow_up,2024-01-01T07:50:46+00:00
+472,147,E11.9,migraine,follow_up,2024-01-01T07:51:46+00:00
+473,142,E11.9,back pain,discharged,2024-01-01T07:52:13+00:00
+474,238,J45.909,migraine,checked_in,2024-01-01T07:53:53+00:00
+475,88,I10,back pain,follow_up,2024-01-01T07:54:34+00:00
+476,119,M54.5,hypertension,scheduled,2024-01-01T07:55:00+00:00
+477,244,J45.909,hypertension,follow_up,2024-01-01T07:56:37+00:00
+478,119,E11.9,asthma,scheduled,2024-01-01T07:57:05+00:00
+479,278,I10,diabetes,follow_up,2024-01-01T07:58:50+00:00
+480,11,I10,back pain,checked_in,2024-01-01T07:59:48+00:00
+481,187,R51.9,diabetes,follow_up,2024-01-01T08:00:05+00:00
+482,219,E11.9,hypertension,discharged,2024-01-01T08:01:42+00:00
+483,175,R51.9,asthma,checked_in,2024-01-01T08:02:42+00:00
+484,19,E11.9,back pain,scheduled,2024-01-01T08:03:37+00:00
+485,262,M54.5,diabetes,follow_up,2024-01-01T08:04:37+00:00
+486,33,M54.5,asthma,discharged,2024-01-01T08:05:19+00:00
+487,150,E11.9,diabetes,checked_in,2024-01-01T08:06:42+00:00
+488,46,I10,hypertension,follow_up,2024-01-01T08:07:29+00:00
+489,92,M54.5,hypertension,checked_in,2024-01-01T08:08:01+00:00
+490,136,E11.9,asthma,follow_up,2024-01-01T08:09:48+00:00
+491,184,I10,back pain,discharged,2024-01-01T08:10:01+00:00
+492,189,J45.909,back pain,checked_in,2024-01-01T08:11:02+00:00
+493,261,E11.9,back pain,checked_in,2024-01-01T08:12:36+00:00
+494,251,J45.909,back pain,discharged,2024-01-01T08:13:27+00:00
+495,107,J45.909,diabetes,follow_up,2024-01-01T08:14:57+00:00
+496,152,E11.9,migraine,scheduled,2024-01-01T08:15:15+00:00
+497,15,I10,migraine,scheduled,2024-01-01T08:16:03+00:00
+498,270,J45.909,diabetes,checked_in,2024-01-01T08:17:44+00:00
+499,253,M54.5,diabetes,discharged,2024-01-01T08:18:57+00:00
+500,210,I10,asthma,scheduled,2024-01-01T08:19:19+00:00

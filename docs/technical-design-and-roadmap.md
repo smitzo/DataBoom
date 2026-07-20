@@ -106,6 +106,7 @@ sequenceDiagram
 - `schema_model`: stores normalized tables, columns, constraints, and relationships.
 - `relationship_solver`: computes dependency order and foreign-key mappings.
 - `prompt_planner`: converts prompt intent into a structured generation plan.
+- `domain_profiles`: provides optional semantic value generation for domains such as financial and healthcare.
 - `generator`: streams generated rows table by table.
 - `validator`: checks generated data against schema and plan.
 - `exporter`: writes CSV, SQL, manifests, and reports.
@@ -125,8 +126,9 @@ Technical objectives:
 - Implement deterministic seed handling.
 - Implement local generation plans from simple prompt/row-count inputs.
 - Generate primitive values for common PostgreSQL types.
+- Support extensible domain profiles for financial and healthcare demo use cases.
 - Preserve primary keys and foreign keys.
-- Stream CSV and SQL output to local disk.
+- Stream CSV, JSON, and SQL output to local disk.
 - Produce validation reports.
 - Target 100k generated records with streaming-friendly memory behavior.
 
