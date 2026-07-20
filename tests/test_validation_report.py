@@ -19,7 +19,7 @@ def test_validate_export_passes_for_generated_artifacts(tmp_path) -> None:
         database,
         row_counts={"accounts": 2, "users": 3},
         seed=42,
-        output_formats=(OutputFormat.CSV, OutputFormat.SQL),
+        output_formats=(OutputFormat.CSV, OutputFormat.JSON, OutputFormat.SQL),
     )
     manifest = ArtifactExporter(plan, tmp_path).export()
 

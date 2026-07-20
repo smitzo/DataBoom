@@ -16,6 +16,7 @@ class OutputFormat(StrEnum):
     """Artifact formats supported by the generation plan."""
 
     CSV = "csv"
+    JSON = "json"
     SQL = "sql"
 
 

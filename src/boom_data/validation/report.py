@@ -90,6 +90,8 @@ def _validate_artifact_paths(
         )
     if artifact.csv_path is not None and not artifact.csv_path.exists():
         issues.append(_issue("missing_csv", "CSV artifact is missing", artifact.table_name))
+    if artifact.json_path is not None and not artifact.json_path.exists():
+        issues.append(_issue("missing_json", "JSON artifact is missing", artifact.table_name))
     if artifact.sql_path is not None and not artifact.sql_path.exists():
         issues.append(_issue("missing_sql", "SQL artifact is missing", artifact.table_name))
     return issues

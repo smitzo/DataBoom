@@ -49,6 +49,25 @@ def test_artifact_exporter_writes_csv_sql_and_manifest(tmp_path) -> None:
     assert manifest_data["tables"][1]["csv_path"].endswith("public__users.csv")
 
 
+def test_artifact_exporter_writes_json_format(tmp_path) -> None:
+    database = parse_postgres_ddl("CREATE TABLE users (id bigint PRIMARY KEY, email text);")
+    plan = create_generation_plan(
+        database,
+        row_counts={"users": 2},
+        seed=42,
+        output_formats=(OutputFormat.JSON,),
+    )
+
+    manifest = ArtifactExporter(plan, tmp_path).export()
+    users_json = tmp_path / "public__users.json"
+
+    rows = json.loads(users_json.read_text(encoding="utf-8"))
+
+    assert len(rows) == 2
+    assert rows[0]["id"] == 1
+    assert manifest.tables[0].json_path == users_json
+
+
 def test_artifact_exporter_writes_empty_table_headers(tmp_path) -> None:
     database = parse_postgres_ddl("CREATE TABLE users (id bigint PRIMARY KEY, email text);")
     plan = create_generation_plan(database, row_counts={"users": 0}, seed=42)
