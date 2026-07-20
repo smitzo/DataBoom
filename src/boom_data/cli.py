@@ -10,7 +10,7 @@ import typer
 from boom_data.core.config import get_settings
 from boom_data.core.logging import configure_logging
 from boom_data.export import ArtifactExporter
-from boom_data.generation import OutputFormat, create_generation_plan
+from boom_data.generation import DomainProfile, OutputFormat, create_generation_plan
 from boom_data.ingest import parse_postgres_ddl
 from boom_data.validation import validate_export
 
@@ -88,6 +88,13 @@ def generate(
             help="Deterministic seed used for generation.",
         ),
     ] = "0",
+    domain: Annotated[
+        DomainProfile,
+        typer.Option(
+            "--domain",
+            help="Semantic domain profile for generated values.",
+        ),
+    ] = DomainProfile.GENERAL,
     formats: Annotated[
         list[OutputFormat] | None,
         typer.Option(
@@ -104,6 +111,7 @@ def generate(
         row_counts=_parse_row_counts(rows),
         default_row_count=default_row_count,
         seed=seed,
+        domain=domain,
         output_formats=tuple(formats or [OutputFormat.CSV]),
     )
     manifest = ArtifactExporter(plan, output_dir).export()

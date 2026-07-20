@@ -481,6 +481,36 @@ This is good enough for a Phase 1 baseline, but it also shows where performance 
 - Phase 2 should target 500k records and compare memory growth against this baseline.
 - Optimization should focus on hot paths only after profiling, not before.
 
+## Decision: use domain profiles as semantic overlays
+
+### Question
+
+How should Boom Data support use cases like financial data, banking data, healthcare patients, and future domains without turning the core generator into a pile of hard-coded column checks?
+
+### Answer
+
+Use domain profiles as semantic overlays. The generic engine still owns schema parsing, planning, relationships, seeding, exporting, and validation. Domain providers only improve values for columns they understand, then fall back to the generic generator for everything else.
+
+### Why This Matters
+
+Different users need different kinds of realism. A banking team cares about account types, transaction statuses, currencies, balances, and merchants. A healthcare team cares about medical record numbers, diagnosis codes, blood types, vitals, and insurance providers. These should not require separate engines.
+
+### Details
+
+The first profiles are:
+
+- `general`: generic type-family generation,
+- `financial`: financial and banking semantics,
+- `healthcare`: patient and clinical semantics.
+
+This keeps the engine extensible: a future `retail`, `education`, `logistics`, or `telecom` profile can be added as another provider without changing the relationship solver or exporter.
+
+### Follow-Up Notes
+
+- Domain profiles should remain deterministic through `SeedManager`.
+- Profiles should never override foreign keys; relationships still come from the solver.
+- Richer domain realism can later come from configuration files or prompt-planned column strategies.
+
 ## Commit: backend: scaffold python package and settings
 
 ### What Changed

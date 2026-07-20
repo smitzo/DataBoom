@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from boom_data.generation.domains import DomainProfile, DomainValueProvider, provider_for
 from boom_data.generation.plan import ColumnPlan, ColumnStrategy
 from boom_data.generation.seed import SeedManager
 from boom_data.schema.models import TypeFamily
@@ -19,11 +20,14 @@ class ValueGenerator:
     """Generate deterministic primitive values for column plans."""
 
     seed_manager: SeedManager
+    domain: DomainProfile = DomainProfile.GENERAL
     null_probability: float = 0.0
+    provider: DomainValueProvider = field(init=False)
 
     def __post_init__(self) -> None:
         if not 0 <= self.null_probability <= 1:
             raise ValueError("null probability must be between 0 and 1")
+        object.__setattr__(self, "provider", provider_for(self.domain))
 
     def value_for(self, table_name: str, column: ColumnPlan, row_index: int) -> GeneratedValue:
         """Generate one type-compatible value for a table column and row index."""
@@ -60,6 +64,16 @@ class ValueGenerator:
         column: ColumnPlan,
         row_index: int,
     ) -> GeneratedValue:
+        domain_value = self.provider.value_for(
+            table_name=table_name,
+            column_name=column.name,
+            type_family=column.type_family,
+            row_index=row_index,
+            seed_manager=self.seed_manager,
+        )
+        if domain_value is not None:
+            return domain_value
+
         stream = self.seed_manager.stream("value", table_name, column.name, row_index)
 
         match column.type_family:

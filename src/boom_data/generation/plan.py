@@ -7,6 +7,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from boom_data.generation.domains import DomainProfile
 from boom_data.schema import ColumnSchema, DatabaseSchema, TableSchema, build_relationship_graph
 from boom_data.schema.models import TypeFamily
 
@@ -80,6 +81,7 @@ class GenerationPlan(PlanModel):
     """Full deterministic generation plan for a database schema."""
 
     seed: int | str
+    domain: DomainProfile = DomainProfile.GENERAL
     output_formats: tuple[OutputFormat, ...]
     tables: tuple[TablePlan, ...]
 
@@ -107,6 +109,7 @@ def create_generation_plan(
     row_counts: dict[str, int] | None = None,
     default_row_count: int = 10,
     seed: int | str = 0,
+    domain: DomainProfile = DomainProfile.GENERAL,
     output_formats: tuple[OutputFormat, ...] = (OutputFormat.CSV,),
 ) -> GenerationPlan:
     """Create a deterministic generation plan from schema metadata."""
@@ -122,7 +125,12 @@ def create_generation_plan(
         _build_table_plan(table, graph.parents_for(table), row_counts, default_row_count)
         for table in graph.dependency_order()
     )
-    return GenerationPlan(seed=seed, output_formats=output_formats, tables=table_plans)
+    return GenerationPlan(
+        seed=seed,
+        domain=domain,
+        output_formats=output_formats,
+        tables=table_plans,
+    )
 
 
 def _build_table_plan(

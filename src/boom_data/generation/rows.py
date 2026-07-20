@@ -81,7 +81,7 @@ class RowGenerator:
         return cls(
             plan=plan,
             seed_manager=seed_manager,
-            value_generator=ValueGenerator(seed_manager),
+            value_generator=ValueGenerator(seed_manager, domain=plan.domain),
         )
 
     def iter_records(self) -> Iterator[GeneratedRecord]:
