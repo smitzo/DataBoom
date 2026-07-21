@@ -11,6 +11,7 @@ This repository is currently in product-definition mode. Do not begin implementa
 - [Product Reasoning and FAQ](docs/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
 - [Technical Design and Roadmap](docs/technical-design-and-roadmap.md): stack, high-level design, low-level design, five-phase technical plan, deployment objectives, and commit sequence.
 - [Phase 1 Usage](docs/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
+- [Synthetic Data Inspiration Notes](docs/synthetic-data-inspiration.md): lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
 - [Agent Operating Guide](AGENTS.md): persistent Codex guidance for this repository, including commit labels, phase discipline, and documentation rules.
 - [Understanding Log](understanding.md): detailed beginner-friendly explanations for significant design, architecture, performance, reliability, and product decisions.
 
