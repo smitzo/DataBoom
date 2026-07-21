@@ -20,6 +20,8 @@ The frontend should evolve in phases that match backend capability. It should be
 - Make domain profiles visible and easy to understand.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
+- Keep shared display data in one data module so roadmap steps, metrics, and
+  profile cards can be updated without digging through page markup.
 - Prefer scannable operational UI over decorative hero content.
 
 ## Phase F1: Static Workbench Foundation
@@ -31,9 +33,13 @@ Goals:
 - Create a Next.js app under `frontend/`.
 - Add Tailwind.
 - Build a polished static single-page workbench shell.
+- Split the page into reusable components under `frontend/src/components`.
+- Keep product UI data under `frontend/src/data/workbench.ts`.
 - Keep the first viewport uncluttered, but use the full desktop width with a
   left product story and right generation-control preview.
 - Show domain profiles, output formats, pipeline steps, validation summary, and demo datasets.
+- Add a roadmap section where major completed functionality is moved into
+  achieved steps and future phase work stays visible.
 - Keep the UI ready for API wiring without requiring the API to exist yet.
 
 ## Phase F2: Local API Integration
