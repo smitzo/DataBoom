@@ -15,6 +15,8 @@ The frontend should evolve in phases that match backend capability. It should be
 - Use Tailwind utility classes, not raw handwritten CSS.
 - Keep the first screen calm and focused on one primary generation path.
 - Use a single-page, scrollable workbench with progressive disclosure.
+- Use wide desktop space intentionally with a product-led hero and an embedded
+  control-center preview.
 - Make domain profiles visible and easy to understand.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
@@ -29,7 +31,8 @@ Goals:
 - Create a Next.js app under `frontend/`.
 - Add Tailwind.
 - Build a polished static single-page workbench shell.
-- Keep the first viewport uncluttered with deeper sections below the fold.
+- Keep the first viewport uncluttered, but use the full desktop width with a
+  left product story and right generation-control preview.
 - Show domain profiles, output formats, pipeline steps, validation summary, and demo datasets.
 - Keep the UI ready for API wiring without requiring the API to exist yet.
 
