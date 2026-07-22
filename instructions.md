@@ -1,8 +1,8 @@
 # Boom Data Project Instructions
 
-Boom Data is a production-grade synthetic data engine for generating realistic, relationally consistent datasets from prompts, PostgreSQL schemas, and optional database profiling.
+Boom Data is a production-grade synthetic data engine for generating realistic datasets from prompts, PostgreSQL schemas, optional database profiling, and later document and graph data specifications.
 
-This repository is currently in product-definition mode. Do not begin implementation until the documentation below is agreed enough to drive commit-by-commit work.
+This repository is in active implementation. Keep documentation, roadmap status, and `understanding.md` aligned with significant product or architecture changes.
 
 ## Documentation Map
 
@@ -23,16 +23,18 @@ This repository is currently in product-definition mode. Do not begin implementa
 - Phase 1 and Phase 2 store generated artifacts on local disk.
 - Phase 1 should target at least 100k generated records through streaming-friendly design.
 - Phase 2 should harden scale toward 500k generated records.
+- Phase 2 should add NoSQL/document-style data support after the relational API and scale foundation are stable.
+- Phase 3 should add graph data support for nodes, edges, properties, and graph exports.
 - Privacy and field-level masking are intentionally deferred until later phases.
 - LLM-assisted planning should be introduced in Phase 2 or Phase 3 behind a replaceable interface.
-- PostgreSQL is the first supported database.
+- PostgreSQL is the first supported relational database.
 - Deployment readiness is required, not optional.
 
 ## Five-Phase Product Plan
 
 1. Backend engine foundation.
-2. Scale, API, CLI, profiling, and local artifact workflows.
-3. LLM-assisted planning and operator-facing experience.
+2. Scale, API, CLI, profiling, NoSQL document data, and local artifact workflows.
+3. LLM-assisted planning, graph data, and operator-facing experience.
 4. Privacy, policy engine, security, and production hardening.
 5. Production release, deployment automation, observability, and extensibility.
 
@@ -58,4 +60,4 @@ Update [Understanding Log](understanding.md) when a change is significant enough
 
 ## Immediate Next Objective
 
-After this documentation pass is accepted, start Phase 1 by scaffolding the backend engine and committing work in small, reviewable increments.
+Continue Phase 2 planning and implementation with scale, API workflows, profiling, and NoSQL document data support while keeping commits small and reviewable.

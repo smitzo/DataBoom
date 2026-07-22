@@ -6,7 +6,7 @@ This document explains why Boom Data exists, where it fits, and how to answer co
 
 Boom Data is not just a fake-value generator and not just a chat prompt. It is a schema-aware, relationship-aware, validation-first data generation engine for teams that need large, repeatable, safe, and useful datasets.
 
-The engine should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 and Phase 2 focus on the generation engine first; privacy, masking, hashing, and policy enforcement are intentionally added later once the relational engine is reliable.
+The engine should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on the relational generation engine first. Phase 2 expands into NoSQL document data, Phase 3 adds graph data, and privacy, masking, hashing, and policy enforcement are intentionally added later once the core generation paths are reliable.
 
 ## 4W1H Product Questions
 
@@ -63,6 +63,16 @@ Boom Data splits the problem into specialized components:
 - validators prove the result can be loaded,
 - prompt planners translate intent into controlled generation plans,
 - later privacy policies protect sensitive fields.
+
+### Where do NoSQL and graph data fit?
+
+PostgreSQL relational generation is the first foundation because foreign keys, dependency ordering, and validation are the hardest core problems to prove early. Phase 2 should add NoSQL document data once the API, scaling, and profiling foundations are stronger. Phase 3 should add graph data once planning and operator review are mature enough to reason about nodes, edges, properties, and cardinality.
+
+This keeps scope disciplined:
+
+- Phase 1 proves relational correctness.
+- Phase 2 adds document-style generation for JSON, NDJSON, and MongoDB-like use cases.
+- Phase 3 adds connected graph generation for node and edge datasets.
 
 ## Why Not Just Use Faker?
 

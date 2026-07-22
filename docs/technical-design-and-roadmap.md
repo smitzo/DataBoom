@@ -7,7 +7,9 @@
 - CLI: Typer.
 - Data validation/configuration: Pydantic.
 - Database access: SQLAlchemy and psycopg.
-- First database: PostgreSQL.
+- First relational database: PostgreSQL.
+- Phase 2 data family: NoSQL document data, starting with JSON/NDJSON and MongoDB-style nested records.
+- Phase 3 data family: graph data with nodes, edges, labels, properties, and graph exports.
 - Synthetic values: Faker plus custom generators.
 - Tests: pytest.
 - Deployment: Docker and Docker Compose.
@@ -24,9 +26,13 @@ flowchart LR
     DDL[PostgreSQL DDL] --> SchemaIngestor[Schema Ingestor]
     SourceDB[(PostgreSQL Source DB)] --> SchemaIngestor
     SourceDB --> Profiler[Profiler Phase 2]
+    NoSQLSpec[NoSQL Document Spec Phase 2] --> DocumentModel[Document Model]
+    GraphSpec[Graph Model Phase 3] --> GraphModel[Graph Model]
     SchemaIngestor --> SchemaModel[Normalized Schema Model]
     Profiler --> SchemaModel
     SchemaModel --> Planner
+    DocumentModel --> Planner
+    GraphModel --> Planner
     Planner --> Solver[Relationship Solver]
     Solver --> Generator[Data Generator]
     Generator --> Validator[Validator]
@@ -105,6 +111,8 @@ sequenceDiagram
 - `schema_ingestor`: parses DDL and reads PostgreSQL metadata.
 - `schema_model`: stores normalized tables, columns, constraints, and relationships.
 - `relationship_solver`: computes dependency order and foreign-key mappings.
+- `document_model`: future Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
+- `graph_model`: future Phase 3 contract for node labels, edge types, properties, and graph cardinality.
 - `prompt_planner`: converts prompt intent into a structured generation plan.
 - `domain_profiles`: provides optional semantic value generation for domains such as financial and healthcare.
 - `generator`: streams generated rows table by table.
@@ -264,9 +272,9 @@ Why tenth: the CLI is the fastest way to use the backend locally and in CI.
 
 Why eleventh: performance goals must be measured, not assumed.
 
-## Phase 2: Scale, API, CLI, and Profiling
+## Phase 2: Scale, API, CLI, Profiling, and NoSQL Documents
 
-Goal: harden the engine for larger local runs and expose API/CLI workflows.
+Goal: harden the engine for larger local runs, expose API/CLI workflows, and add the first NoSQL/document data generation path.
 
 Technical objectives:
 
@@ -280,6 +288,9 @@ Technical objectives:
 - Keep artifacts on local disk.
 - Introduce optional local prompt-plan DSL.
 - Prepare LLM planner interface without requiring LLM usage.
+- Add a document data model for NoSQL collections, nested fields, arrays, object IDs, and optional references.
+- Export NoSQL-oriented JSON and NDJSON artifacts.
+- Validate document shape, configured counts, required fields, and reference consistency where references exist.
 
 Recommended commits:
 
@@ -293,11 +304,14 @@ Recommended commits:
 8. `infra: add docker compose api and postgres`
 9. `optimization: reduce memory use for large exports`
 10. `performance: benchmark 500k record generation`
-11. `docs: document api and cli workflows`
+11. `backend: add nosql document model`
+12. `backend: generate nested document artifacts`
+13. `backend: validate nosql document artifacts`
+14. `docs: document api cli and nosql workflows`
 
-## Phase 3: LLM-Assisted Planning and Operator Experience
+## Phase 3: LLM-Assisted Planning, Graph Data, and Operator Experience
 
-Goal: add LLM-assisted planning behind a safe, replaceable interface and create the first operator-facing experience.
+Goal: add LLM-assisted planning behind a safe, replaceable interface, add graph data generation, and create the first operator-facing experience.
 
 Technical objectives:
 
@@ -309,6 +323,10 @@ Technical objectives:
 - Add a lightweight frontend or dashboard only if it improves run visibility.
 - Show run status, artifacts, validation errors, and plan review.
 - Keep local deterministic planner as fallback.
+- Add a graph data model for nodes, edges, labels, properties, and cardinality.
+- Generate graph node and edge artifacts.
+- Validate edge references, node counts, edge counts, and property shapes.
+- Add graph preview and graph plan review concepts to the frontend.
 
 Recommended commits:
 
@@ -318,9 +336,12 @@ Recommended commits:
 4. `optimization: add prompt cache key generation`
 5. `test: add golden planner prompt cases`
 6. `api: expose dry run plan review`
-7. `frontend: build generation run dashboard`
-8. `frontend: add plan review view`
-9. `docs: document prompt pack maintenance`
+7. `backend: add graph data model`
+8. `backend: generate graph node and edge artifacts`
+9. `backend: validate graph data artifacts`
+10. `frontend: build generation run dashboard`
+11. `frontend: add plan and graph review views`
+12. `docs: document prompt pack and graph model maintenance`
 
 ## Phase 4: Privacy, Policies, and Security Hardening
 
@@ -361,7 +382,7 @@ Technical objectives:
 - Add structured JSON logs with run IDs.
 - Add configurable artifact retention.
 - Add deployment documentation.
-- Add adapter boundaries for future MySQL, SQLite, SQL Server, BigQuery, and object storage.
+- Add adapter boundaries for future MySQL, SQLite, SQL Server, BigQuery, NoSQL stores, graph stores, and object storage.
 - Add release process and versioning.
 
 Recommended commits:
@@ -396,6 +417,8 @@ Production deployment should include:
 
 - Phase 1: generate 100k total records across related tables.
 - Phase 2: generate 500k total records across related tables.
+- Phase 2: add validated NoSQL document generation with JSON/NDJSON artifacts.
+- Phase 3: add validated graph data generation with node and edge artifacts.
 - Generation should stream rows and avoid holding full datasets in memory.
 - Validation should be chunk-aware where possible.
 - Performance benchmarks must report record count, table count, elapsed time, peak memory, output size, and validation time.

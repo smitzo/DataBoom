@@ -586,3 +586,29 @@ This makes future phases straightforward. Phase F2 can replace static values wit
 - Keep frontend phases documented in `docs/frontend-development.md`.
 - Avoid building disconnected decorative pages until the workbench flow is useful.
 - When API endpoints arrive, preserve the same component boundaries and wire data through typed interfaces.
+
+## Decision: stage relational, document, and graph data support by phase
+
+### Question
+
+Should Boom Data try to support relational databases, NoSQL documents, and graph data all at once?
+
+### Answer
+
+No. The roadmap should keep PostgreSQL relational generation in Phase 1, add NoSQL document data in Phase 2, and add graph data in Phase 3.
+
+### Why This Matters
+
+Each data family has different correctness rules. Relational data depends on tables, primary keys, foreign keys, and dependency ordering. Document data depends on nested shapes, arrays, object identifiers, and optional references. Graph data depends on nodes, edges, labels, properties, and cardinality. Combining all of that too early would make the engine harder to validate and harder for new contributors to understand.
+
+### Details
+
+Relational generation is first because it proves the hardest foundational engine behavior: parse a schema, compute dependency order, preserve references, stream artifacts, and validate the result. Once that is stable, Phase 2 can add NoSQL document generation on top of the same planning, artifact, and validation ideas, but with document-specific contracts. Phase 3 can then add graph data once the planner and operator review experience are strong enough to explain node and edge plans before execution.
+
+This also keeps the frontend roadmap honest. The visible roadmap should move major shipped capabilities into achieved steps, while future data-family work remains visible as upcoming milestones.
+
+### Follow-Up Notes
+
+- Phase 2 should start with JSON/NDJSON and MongoDB-style nested records before claiming broad NoSQL coverage.
+- Phase 3 graph support should start with node and edge artifacts before deeper database-specific graph adapters.
+- Privacy and policy enforcement still belong later, after the generation paths are reliable.

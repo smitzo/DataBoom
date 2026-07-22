@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "boom-data"
 version = "0.1.0"
 description = "Relationship-aware synthetic data generation engine for PostgreSQL schemas."
-readme = "instructions.md"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.124,<1.0",
