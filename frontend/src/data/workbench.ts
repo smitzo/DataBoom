@@ -171,7 +171,7 @@ export const roadmap: RoadmapItem[] = [
     title: "Scale, API, profiling, and NoSQL data",
     description:
       "The next phase expands scale and access patterns, then adds document-style generation for NoSQL use cases.",
-    achieved: [],
+    achieved: ["FastAPI app scaffold with health and readiness endpoints."],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",
       "Expose FastAPI run, status, validation, and artifact endpoints.",

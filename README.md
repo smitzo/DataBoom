@@ -14,6 +14,7 @@ The current implementation is Phase 1: a Python backend engine that reads Postgr
 - CSV, JSON, and SQL local artifact exports.
 - Validation reports and artifact manifests.
 - CLI generation workflow.
+- FastAPI app scaffold with health and readiness endpoints.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
 
@@ -63,6 +64,19 @@ Run the Phase 1 benchmark:
 .venv/bin/python benchmarks/phase1_100k.py --overwrite
 ```
 
+Run the API locally:
+
+```bash
+.venv/bin/uvicorn boom_data.api:create_app --factory --reload
+```
+
+Health checks:
+
+```text
+http://localhost:8000/health
+http://localhost:8000/ready
+```
+
 ## Frontend Setup
 
 ```bash
@@ -102,6 +116,7 @@ docker compose --profile tools run --rm app
 ## Folder Guide
 
 - `src/boom_data`: Python backend package.
+- `src/boom_data/api`: FastAPI app factory, response models, and HTTP routes.
 - `src/boom_data/ingest`: PostgreSQL DDL ingestion.
 - `src/boom_data/schema`: normalized schema models and relationship graph code.
 - `src/boom_data/generation`: plans, seeds, domain profiles, row generation, and values.

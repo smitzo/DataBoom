@@ -612,3 +612,29 @@ This also keeps the frontend roadmap honest. The visible roadmap should move maj
 - Phase 2 should start with JSON/NDJSON and MongoDB-style nested records before claiming broad NoSQL coverage.
 - Phase 3 graph support should start with node and edge artifacts before deeper database-specific graph adapters.
 - Privacy and policy enforcement still belong later, after the generation paths are reliable.
+
+## Decision: expose Phase 2 API through an app factory
+
+### Question
+
+How should the first FastAPI code be introduced without tangling API concerns into the existing CLI?
+
+### Answer
+
+Use a dedicated `boom_data.api` package with a `create_app()` factory, typed response models, and small system routes for `/health` and `/ready`.
+
+### Why This Matters
+
+The API will soon own generation run creation, run status, artifact downloads, and validation report access. Starting with an app factory gives tests and deployment code a clean way to construct the service with explicit settings. It also keeps the CLI as a local workflow instead of making it responsible for HTTP behavior.
+
+### Details
+
+The app stores the active `Settings` object on `app.state`, then routes can read the same configuration the CLI already uses. The first endpoints intentionally return runtime context only: service name, version, environment, and resolved artifact root. This proves the API can be tested and configured before adding long-running generation endpoints.
+
+The test suite uses FastAPI's `TestClient`, which currently requires the `httpx2` package in this environment, so `httpx2` is declared as a development dependency.
+
+### Follow-Up Notes
+
+- Next API work should add generation run request and status models.
+- Artifact download endpoints should reuse the existing manifest and validation report structure.
+- The frontend roadmap should list significant Phase 2 API milestones as achieved when they land.
