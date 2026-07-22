@@ -23,34 +23,37 @@ const statusCopy: Record<RoadmapStatus, { label: string; className: string }> = 
 };
 
 export function Roadmap() {
-  const itemRefs = useRef<Array<HTMLElement | null>>([]);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const updateActiveIndex = () => {
-      const activationLine = window.innerHeight * 0.58;
-      let nextIndex = 0;
+    const updateProgress = () => {
+      if (!sectionRef.current) {
+        return;
+      }
 
-      itemRefs.current.forEach((node, index) => {
-        if (!node) {
-          return;
-        }
+      const rect = sectionRef.current.getBoundingClientRect();
+      const startLine = window.innerHeight * 0.72;
+      const endLine = window.innerHeight * 0.28;
+      const travel = Math.max(rect.height - (startLine - endLine), 1);
+      const nextProgress = Math.min(Math.max((startLine - rect.top) / travel, 0), 1);
+      const nextActiveIndex = Math.min(
+        Math.floor(nextProgress * (roadmap.length - 1) + 0.001),
+        roadmap.length - 1,
+      );
 
-        if (node.getBoundingClientRect().top <= activationLine) {
-          nextIndex = index;
-        }
-      });
-
-      setActiveIndex(nextIndex);
+      setProgress(nextProgress);
+      setActiveIndex(nextActiveIndex);
     };
 
-    updateActiveIndex();
-    window.addEventListener("scroll", updateActiveIndex, { passive: true });
-    window.addEventListener("resize", updateActiveIndex);
+    updateProgress();
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    window.addEventListener("resize", updateProgress);
 
     return () => {
-      window.removeEventListener("scroll", updateActiveIndex);
-      window.removeEventListener("resize", updateActiveIndex);
+      window.removeEventListener("scroll", updateProgress);
+      window.removeEventListener("resize", updateProgress);
     };
   }, []);
 
@@ -61,7 +64,7 @@ export function Roadmap() {
       title="Every major capability becomes a visible milestone."
       subtitle="As each phase lands, important functionality moves from upcoming work into achieved steps so the product story stays current."
     >
-      <div className="relative">
+      <div ref={sectionRef} className="relative">
         <div className="space-y-6">
           {roadmap.map((item, index) => (
             <RoadmapTimelineItem
@@ -70,9 +73,7 @@ export function Roadmap() {
               index={index}
               activeIndex={activeIndex}
               isLast={index === roadmap.length - 1}
-              setNode={(node) => {
-                itemRefs.current[index] = node;
-              }}
+              progress={progress}
             />
           ))}
         </div>
@@ -86,28 +87,31 @@ function RoadmapTimelineItem({
   index,
   activeIndex,
   isLast,
-  setNode,
+  progress,
 }: {
   item: RoadmapItem;
   index: number;
   activeIndex: number;
   isLast: boolean;
-  setNode: (node: HTMLElement | null) => void;
+  progress: number;
 }) {
   const isActive = index <= activeIndex;
-  const segmentActive = index < activeIndex;
+  const totalSegments = Math.max(roadmap.length - 1, 1);
+  const segmentStart = index / totalSegments;
+  const segmentEnd = (index + 1) / totalSegments;
+  const segmentProgress = Math.min(
+    Math.max((progress - segmentStart) / (segmentEnd - segmentStart), 0),
+    1,
+  );
 
   return (
-    <article ref={setNode} className="relative grid gap-4 md:grid-cols-[72px_1fr]">
+    <article className="relative grid gap-4 md:grid-cols-[72px_1fr]">
       <div className="relative flex justify-center">
         {!isLast ? (
-          <span
-            className={`absolute top-16 bottom-[-1.5rem] w-px transition-colors duration-500 ${
-              segmentActive
-                ? "bg-gradient-to-b from-cyan-300 via-indigo-400 to-fuchsia-500 shadow-[0_0_24px_rgba(34,211,238,0.75)]"
-                : "bg-white/10"
-            }`}
-          />
+          <>
+            <TimelineSegment progress={segmentProgress} />
+            <span className="absolute top-16 bottom-[-1.5rem] w-px bg-white/10 md:hidden" />
+          </>
         ) : null}
         <span
           className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-lg border transition duration-500 ${
@@ -153,6 +157,30 @@ function RoadmapTimelineItem({
         </div>
       </div>
     </article>
+  );
+}
+
+function TimelineSegment({ progress }: { progress: number }) {
+  return (
+    <svg
+      className="pointer-events-none absolute left-1/2 top-16 bottom-[-1.5rem] hidden w-1 -translate-x-1/2 md:block"
+      preserveAspectRatio="none"
+      viewBox="0 0 2 100"
+      aria-hidden="true"
+    >
+      <line x1="1" y1="0" x2="1" y2="100" stroke="rgba(255,255,255,0.12)" />
+      <line
+        x1="1"
+        y1="0"
+        x2="1"
+        y2="100"
+        stroke="rgb(34,211,238)"
+        strokeLinecap="round"
+        strokeDasharray="100"
+        strokeDashoffset={100 - progress * 100}
+        pathLength="100"
+      />
+    </svg>
   );
 }
 
