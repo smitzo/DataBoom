@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,7 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+    api_key: SecretStr | None = Field(default=None, alias="API_KEY")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     @field_validator("log_level")
@@ -33,6 +34,15 @@ class Settings(BaseSettings):
         """Store log levels consistently for logging configuration."""
 
         return value.upper()
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def empty_api_key_is_unset(cls, value: object) -> object:
+        """Treat empty environment values as disabled API-key authentication."""
+
+        if value == "":
+            return None
+        return value
 
     def resolve_artifact_root(self) -> Path:
         """Return the artifact root as an absolute path without creating it."""

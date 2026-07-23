@@ -96,6 +96,25 @@ def test_create_generation_run_rejects_invalid_schema(tmp_path: Path) -> None:
     assert response.status_code == 400
 
 
+def test_generation_run_routes_require_configured_api_key(tmp_path: Path) -> None:
+    settings = Settings(
+        ENV="test",
+        ARTIFACT_ROOT=tmp_path / "artifacts",
+        API_KEY="test-secret",
+    )
+    client = TestClient(create_app(settings=settings))
+
+    health_response = client.get("/health")
+    missing_key_response = client.get("/runs")
+    invalid_key_response = client.get("/runs", headers={"X-API-Key": "wrong"})
+    valid_key_response = client.get("/runs", headers={"X-API-Key": "test-secret"})
+
+    assert health_response.status_code == 200
+    assert missing_key_response.status_code == 401
+    assert invalid_key_response.status_code == 401
+    assert valid_key_response.status_code == 200
+
+
 def _create_generation_run(client: TestClient):
     return client.post(
         "/runs",

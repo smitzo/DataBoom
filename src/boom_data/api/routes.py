@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 
 from boom_data import __version__
@@ -19,9 +19,11 @@ from boom_data.api.runs import (
     list_generation_run_artifacts,
     resolve_generation_run_artifact,
 )
+from boom_data.api.security import require_api_key
 from boom_data.core.config import Settings
 
 router = APIRouter()
+protected_route = Depends(require_api_key)
 
 
 @router.get("/health", response_model=HealthResponse, tags=["system"])
@@ -50,6 +52,7 @@ def ready(request: Request) -> HealthResponse:
     response_model=GenerationRunResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["runs"],
+    dependencies=[protected_route],
 )
 def create_run(request: Request, payload: GenerationRunRequest) -> GenerationRunResponse:
     """Execute a local relational generation run and store the run result."""
@@ -64,14 +67,24 @@ def create_run(request: Request, payload: GenerationRunRequest) -> GenerationRun
     return run
 
 
-@router.get("/runs", response_model=tuple[GenerationRunResponse, ...], tags=["runs"])
+@router.get(
+    "/runs",
+    response_model=tuple[GenerationRunResponse, ...],
+    tags=["runs"],
+    dependencies=[protected_route],
+)
 def list_runs(request: Request) -> tuple[GenerationRunResponse, ...]:
     """Return known generation runs for the current API process."""
 
     return tuple(_run_store(request).values())
 
 
-@router.get("/runs/{run_id}", response_model=GenerationRunResponse, tags=["runs"])
+@router.get(
+    "/runs/{run_id}",
+    response_model=GenerationRunResponse,
+    tags=["runs"],
+    dependencies=[protected_route],
+)
 def get_run(request: Request, run_id: str) -> GenerationRunResponse:
     """Return one generation run by ID."""
 
@@ -82,6 +95,7 @@ def get_run(request: Request, run_id: str) -> GenerationRunResponse:
     "/runs/{run_id}/artifacts",
     response_model=RunArtifactListResponse,
     tags=["runs"],
+    dependencies=[protected_route],
 )
 def list_run_artifacts(request: Request, run_id: str) -> RunArtifactListResponse:
     """Return downloadable artifacts for one generation run."""
@@ -90,7 +104,11 @@ def list_run_artifacts(request: Request, run_id: str) -> RunArtifactListResponse
     return list_generation_run_artifacts(run)
 
 
-@router.get("/runs/{run_id}/artifacts/{artifact_path:path}", tags=["runs"])
+@router.get(
+    "/runs/{run_id}/artifacts/{artifact_path:path}",
+    tags=["runs"],
+    dependencies=[protected_route],
+)
 def download_run_artifact(request: Request, run_id: str, artifact_path: str) -> FileResponse:
     """Download one generated artifact from a run directory."""
 

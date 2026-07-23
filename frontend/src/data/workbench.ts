@@ -176,6 +176,7 @@ export const roadmap: RoadmapItem[] = [
       "Synchronous API generation runs with in-process status lookup.",
       "Frontend API bridge for health checks and demo generation runs.",
       "Artifact listing and download endpoints for completed local runs.",
+      "Optional API-key protection for run and artifact routes.",
     ],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",

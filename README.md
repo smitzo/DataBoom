@@ -99,6 +99,12 @@ curl http://localhost:8000/runs/<run_id>/artifacts
 curl -L -o users.csv http://localhost:8000/runs/<run_id>/artifacts/public__users.csv
 ```
 
+Set `BOOM_DATA_API_KEY` to require `X-API-Key` on run and artifact routes:
+
+```bash
+curl -H "X-API-Key: $BOOM_DATA_API_KEY" http://localhost:8000/runs
+```
+
 ## Frontend Setup
 
 ```bash

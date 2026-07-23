@@ -68,6 +68,8 @@ GET /runs/{run_id}/artifacts
 GET /runs/{run_id}/artifacts/{relative_artifact_path}
 ```
 
+When `BOOM_DATA_API_KEY` is configured, include `X-API-Key` on run and artifact requests. Health and readiness endpoints remain open for local orchestration checks.
+
 ## Demo Datasets
 
 This repository includes generated CSV demos under `demo/`:

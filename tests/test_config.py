@@ -20,3 +20,9 @@ def test_settings_include_local_service_urls() -> None:
 
     assert settings.database_url.startswith("postgresql+psycopg://")
     assert settings.redis_url.startswith("redis://")
+
+
+def test_empty_api_key_disables_api_key_authentication() -> None:
+    settings = Settings(API_KEY="")
+
+    assert settings.api_key is None

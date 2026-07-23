@@ -716,3 +716,29 @@ The endpoint still uses the in-process run store, so it only knows about runs cr
 - Add authentication before exposing artifact downloads beyond a trusted local environment.
 - Add persistent run metadata so artifacts survive API process restarts.
 - Add retention policies before artifact storage can grow without bounds.
+
+## Decision: make API-key authentication opt-in for run routes
+
+### Question
+
+How should authentication enter the project without making local development painful?
+
+### Answer
+
+Add `BOOM_DATA_API_KEY` as an optional setting. When it is absent or empty, the API behaves like the current local developer service. When it is set, generation run and artifact routes require the `X-API-Key` header. Health and readiness remain open so Docker, orchestration tools, and uptime checks can still verify that the service is alive.
+
+### Why This Matters
+
+The project is still early, but run creation and artifact downloads already touch local files and generate data. Protecting those routes behind a simple shared secret is a pragmatic production-grade step before the service grows into background jobs, persisted run metadata, and downloadable artifacts in a deployed environment.
+
+### Implementation Detail
+
+The key comparison uses constant-time comparison through `secrets.compare_digest`, which avoids leaking information through simple timing differences. Empty environment values are normalized to `None`, so copying `.env.example` does not accidentally require an empty `X-API-Key` header.
+
+This is not the final authorization model. Later phases can add users, projects, scoped tokens, audit logs, and per-artifact policies. The important choice right now is the boundary: system health is public, while anything that creates or retrieves generated data can be protected.
+
+### Follow-Up Notes
+
+- Add scoped API tokens before multi-user deployment.
+- Add audit logging before artifact downloads are exposed in shared environments.
+- Make the frontend send an API key only after the product has a safe local settings pattern.
