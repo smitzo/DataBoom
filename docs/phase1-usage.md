@@ -39,7 +39,7 @@ CREATE TABLE users (
 Run generation:
 
 ```bash
-.venv/bin/boom-data generate schema.sql \
+.venv/bin/databoom generate schema.sql \
   --output-dir artifacts/demo \
   --rows accounts=10 \
   --rows users=50 \
@@ -52,7 +52,7 @@ Run generation:
 Preview the deterministic plan without writing artifacts:
 
 ```bash
-.venv/bin/boom-data plan schema.sql \
+.venv/bin/databoom plan schema.sql \
   --rows accounts=10 \
   --rows users=50 \
   --format csv \
@@ -62,7 +62,7 @@ Preview the deterministic plan without writing artifacts:
 Re-validate an existing artifact directory:
 
 ```bash
-.venv/bin/boom-data validate schema.sql artifacts/demo \
+.venv/bin/databoom validate schema.sql artifacts/demo \
   --rows accounts=10 \
   --rows users=50 \
   --format csv \
@@ -89,14 +89,14 @@ GET /runs/{run_id}/artifacts
 GET /runs/{run_id}/artifacts/{relative_artifact_path}
 ```
 
-When `BOOM_DATA_API_KEY` is configured, include `X-API-Key` on run and artifact requests. Health and readiness endpoints remain open for local orchestration checks.
+When `DATABOOM_API_KEY` is configured, include `X-API-Key` on run and artifact requests. Health and readiness endpoints remain open for local orchestration checks.
 
 ## Live PostgreSQL Introspection
 
 Phase 2 adds a backend ingestion helper for reading schema metadata from a live PostgreSQL database through SQLAlchemy:
 
 ```python
-from boom_data.ingest import load_postgres_schema
+from databoom.ingest import load_postgres_schema
 
 schema = load_postgres_schema("postgresql+psycopg://user:password@localhost:5432/app")
 ```

@@ -1,7 +1,7 @@
 import pytest
 
-from boom_data.ingest import parse_postgres_ddl
-from boom_data.schema import TypeFamily
+from databoom.ingest import parse_postgres_ddl
+from databoom.schema import TypeFamily
 
 
 def test_parse_postgres_ddl_with_inline_and_table_constraints() -> None:

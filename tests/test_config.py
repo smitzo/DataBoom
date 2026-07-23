@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from boom_data.core.config import Settings
+from databoom.core.config import Settings
 
 
 def test_settings_normalize_log_level() -> None:

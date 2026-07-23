@@ -43,7 +43,7 @@ const demoRequest = {
 
 export function ApiRunPanel() {
   const apiBaseUrl = useMemo(
-    () => process.env.NEXT_PUBLIC_BOOM_DATA_API_URL ?? "http://localhost:8000",
+    () => process.env.NEXT_PUBLIC_DATABOOM_API_URL ?? "http://localhost:8000",
     [],
   );
   const [health, setHealth] = useState<ApiHealth | null>(null);

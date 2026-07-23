@@ -1,6 +1,6 @@
-from boom_data.generation import DomainProfile, SeedManager, ValueGenerator
-from boom_data.generation.plan import ColumnPlan, ColumnStrategy
-from boom_data.schema import TypeFamily
+from databoom.generation import DomainProfile, SeedManager, ValueGenerator
+from databoom.generation.plan import ColumnPlan, ColumnStrategy
+from databoom.schema import TypeFamily
 
 
 def column(name: str, family: TypeFamily = TypeFamily.STRING) -> ColumnPlan:
@@ -58,8 +58,8 @@ def test_healthcare_profile_generates_domain_specific_values() -> None:
 
 
 def test_generation_plan_carries_domain_profile() -> None:
-    from boom_data.generation import create_generation_plan
-    from boom_data.ingest import parse_postgres_ddl
+    from databoom.generation import create_generation_plan
+    from databoom.ingest import parse_postgres_ddl
 
     database = parse_postgres_ddl("CREATE TABLE accounts (id bigint PRIMARY KEY);")
     plan = create_generation_plan(database, domain=DomainProfile.FINANCIAL)

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Boom Data",
+  title: "DataBoom",
   description: "Relationship-aware synthetic data generation workbench.",
 };
 

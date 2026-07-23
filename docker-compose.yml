@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: boom_data
-      POSTGRES_USER: boom_data
-      POSTGRES_PASSWORD: boom_data
+      POSTGRES_DB: databoom
+      POSTGRES_USER: databoom
+      POSTGRES_PASSWORD: databoom
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U boom_data -d boom_data"]
+      test: ["CMD-SHELL", "pg_isready -U databoom -d databoom"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,10 +34,10 @@ services:
     profiles:
       - tools
     environment:
-      BOOM_DATA_ENV: docker
-      BOOM_DATA_ARTIFACT_ROOT: /app/artifacts
-      BOOM_DATA_DATABASE_URL: postgresql+psycopg://boom_data:boom_data@postgres:5432/boom_data
-      BOOM_DATA_REDIS_URL: redis://redis:6379/0
+      DATABOOM_ENV: docker
+      DATABOOM_ARTIFACT_ROOT: /app/artifacts
+      DATABOOM_DATABASE_URL: postgresql+psycopg://databoom:databoom@postgres:5432/databoom
+      DATABOOM_REDIS_URL: redis://redis:6379/0
     volumes:
       - ./artifacts:/app/artifacts
     depends_on:

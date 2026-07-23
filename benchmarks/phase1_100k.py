@@ -9,10 +9,10 @@ import time
 import tracemalloc
 from pathlib import Path
 
-from boom_data.export import ArtifactExporter
-from boom_data.generation import OutputFormat, create_generation_plan
-from boom_data.ingest import parse_postgres_ddl
-from boom_data.validation import validate_export
+from databoom.export import ArtifactExporter
+from databoom.generation import OutputFormat, create_generation_plan
+from databoom.ingest import parse_postgres_ddl
+from databoom.validation import validate_export
 
 DDL = """
 CREATE TABLE accounts (

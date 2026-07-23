@@ -1,10 +1,10 @@
 # Agent Operating Guide
 
-This file is persistent guidance for Codex in the Boom Data repository.
+This file is persistent guidance for Codex in the DataBoom repository.
 
 ## Project Identity
 
-Boom Data is a Python, FastAPI, Typer, PostgreSQL-first synthetic data engine. The core product value is relationship-aware synthetic data generation for multi-table schemas.
+DataBoom is a Python, FastAPI, Typer, PostgreSQL-first synthetic data engine. The core product value is relationship-aware synthetic data generation for multi-table schemas.
 
 ## Current Phase
 

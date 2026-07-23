@@ -1,4 +1,4 @@
-# Boom Data Understanding Log
+# DataBoom Understanding Log
 
 This file explains important project decisions: what changed, why it changed, and how the decision improves the project. Keep it beginner-friendly, but detailed enough that a new engineer can understand the professional reasoning behind significant architecture, product, performance, and reliability choices.
 
@@ -44,7 +44,7 @@ For significant changes, add a new entry using this format:
 
 ### Why It Changed
 
-The project was too important to leave as a single rough paragraph. Boom Data needs to become a production-grade synthetic data engine, so the planning documents need separation of concerns. Product behavior, technical design, prompt strategy, and agent rules all change at different speeds and are read by different audiences.
+The project was too important to leave as a single rough paragraph. DataBoom needs to become a production-grade synthetic data engine, so the planning documents need separation of concerns. Product behavior, technical design, prompt strategy, and agent rules all change at different speeds and are read by different audiences.
 
 ### Why This Approach
 
@@ -71,7 +71,7 @@ Think of the project like a building. Before writing code, we created separate b
 ### What Changed
 
 - Added `docs/product-reasoning-faq.md` to answer strategic questions using 4W1H reasoning.
-- Added reasoning for why Boom Data is more than Faker.
+- Added reasoning for why DataBoom is more than Faker.
 - Added reasoning for why ChatGPT should not directly generate one million records.
 - Added reasoning for how a streaming engine can eventually handle one million records.
 - Added a careful comparison against Tonic.ai without claiming false universal superiority.
@@ -89,9 +89,9 @@ The project also needs a durable explanation trail. Code tells us what changed, 
 
 The FAQ is in `docs/` because it is product and architecture reasoning, not agent instruction. `understanding.md` is at the repository root because it should be visible when decisions are important enough to explain.
 
-The comparison with Faker is framed carefully: Faker is useful, but incomplete. Boom Data should use Faker for fake values while adding schema parsing, relationship solving, streaming, validation, and run management around it.
+The comparison with Faker is framed carefully: Faker is useful, but incomplete. DataBoom should use Faker for fake values while adding schema parsing, relationship solving, streaming, validation, and run management around it.
 
-The comparison with Tonic.ai is also framed carefully. Tonic.ai is a mature commercial platform. Boom Data's argument is not "Tonic is bad"; it is "we need an owned, inspectable, local-first, PostgreSQL-focused engine that we can evolve commit by commit."
+The comparison with Tonic.ai is also framed carefully. Tonic.ai is a mature commercial platform. DataBoom's argument is not "Tonic is bad"; it is "we need an owned, inspectable, local-first, PostgreSQL-focused engine that we can evolve commit by commit."
 
 The ChatGPT reasoning separates planning from execution. LLMs are strong at interpreting intent and producing plans. They are not the right execution layer for directly emitting huge relational datasets with guaranteed constraints.
 
@@ -105,7 +105,7 @@ Maintainability improves because significant decisions now explain themselves. A
 
 ### Beginner Explanation
 
-Faker is like a box of fake names and addresses. ChatGPT is like a smart planner that can describe what data should look like. Boom Data needs to be the factory: it reads the database blueprint, decides which tables come first, creates rows in the right order, writes files without running out of memory, and checks that everything fits.
+Faker is like a box of fake names and addresses. ChatGPT is like a smart planner that can describe what data should look like. DataBoom needs to be the factory: it reads the database blueprint, decides which tables come first, creates rows in the right order, writes files without running out of memory, and checks that everything fits.
 
 For one million records, the factory cannot keep every item in one huge pile. It needs a conveyor belt. That is why the roadmap emphasizes chunking, streaming, manifests, and validation.
 
@@ -166,7 +166,7 @@ Phase 1 should include Docker, PostgreSQL, and Redis. It should not include Cele
 
 ### Why This Matters
 
-PostgreSQL is required because Boom Data is PostgreSQL-first. Redis is useful to have early because it is lightweight and will likely support future run state, locks, queues, caching, or progress tracking. Celery and Kafka are heavier architectural commitments. Adding them before there is a concrete workflow would increase operational complexity without improving the Phase 1 backend engine.
+PostgreSQL is required because DataBoom is PostgreSQL-first. Redis is useful to have early because it is lightweight and will likely support future run state, locks, queues, caching, or progress tracking. Celery and Kafka are heavier architectural commitments. Adding them before there is a concrete workflow would increase operational complexity without improving the Phase 1 backend engine.
 
 ### Details
 
@@ -177,14 +177,14 @@ The important design principle is "prepare the runway, but do not build unused m
 ### Follow-Up Notes
 
 - When API run management arrives, decide whether Redis alone is enough or whether Celery is needed.
-- Kafka should only be considered if Boom Data needs durable event streams or integration with external event-driven systems.
+- Kafka should only be considered if DataBoom needs durable event streams or integration with external event-driven systems.
 - The Dockerfile should remain simple until production deployment hardening in Phase 5.
 
 ## Decision: normalize schemas before parsing, planning, or generation
 
 ### Question
 
-Why does Boom Data need explicit schema model contracts instead of passing raw SQL parser output or dictionaries directly into the generator?
+Why does DataBoom need explicit schema model contracts instead of passing raw SQL parser output or dictionaries directly into the generator?
 
 ### Answer
 
@@ -217,7 +217,7 @@ These checks make later code simpler. The generator should not repeatedly ask, "
 
 ### Question
 
-Should Boom Data parse PostgreSQL DDL with a SQL parser dependency or with custom string manipulation?
+Should DataBoom parse PostgreSQL DDL with a SQL parser dependency or with custom string manipulation?
 
 ### Answer
 
@@ -229,7 +229,7 @@ DDL looks simple until constraints, defaults, nested type parameters, quoted ide
 
 ### Details
 
-The ingestion layer should convert SQL parser output into Boom Data's normalized `DatabaseSchema`. The rest of the engine should not depend directly on `sqlglot` expressions. This keeps the parser replaceable if we later need deeper PostgreSQL coverage, live introspection, or a different parser.
+The ingestion layer should convert SQL parser output into DataBoom's normalized `DatabaseSchema`. The rest of the engine should not depend directly on `sqlglot` expressions. This keeps the parser replaceable if we later need deeper PostgreSQL coverage, live introspection, or a different parser.
 
 The first parser intentionally focuses on common Phase 1 DDL:
 
@@ -252,7 +252,7 @@ The first parser intentionally focuses on common Phase 1 DDL:
 
 ### Question
 
-How should Boom Data decide which table to generate first when schemas contain foreign keys?
+How should DataBoom decide which table to generate first when schemas contain foreign keys?
 
 ### Answer
 
@@ -260,7 +260,7 @@ Build a relationship graph where referenced parent tables point to dependent chi
 
 ### Why This Matters
 
-Foreign-key correctness is the core value of Boom Data. If a child table like `orders` is generated before its parent table `users`, the generator either has to guess IDs or fix data later. Both approaches are risky. A dependency graph makes the correct order explicit before generation starts.
+Foreign-key correctness is the core value of DataBoom. If a child table like `orders` is generated before its parent table `users`, the generator either has to guess IDs or fix data later. Both approaches are risky. A dependency graph makes the correct order explicit before generation starts.
 
 ### Details
 
@@ -280,7 +280,7 @@ Cross-table cycles are not ignored. If table `a` requires table `b` and table `b
 
 ### Question
 
-How should Boom Data make generated datasets reproducible without forcing every generator to share one global random object?
+How should DataBoom make generated datasets reproducible without forcing every generator to share one global random object?
 
 ### Answer
 
@@ -306,7 +306,7 @@ The output of the seed manager is still ordinary Python randomness; the importan
 
 ### Question
 
-Why should Boom Data build a generation plan instead of immediately generating rows from a schema and row-count dictionary?
+Why should DataBoom build a generation plan instead of immediately generating rows from a schema and row-count dictionary?
 
 ### Answer
 
@@ -485,7 +485,7 @@ This is good enough for a Phase 1 baseline, but it also shows where performance 
 
 ### Question
 
-How should Boom Data support use cases like financial data, banking data, healthcare patients, and future domains without turning the core generator into a pile of hard-coded column checks?
+How should DataBoom support use cases like financial data, banking data, healthcare patients, and future domains without turning the core generator into a pile of hard-coded column checks?
 
 ### Answer
 
@@ -515,14 +515,14 @@ This keeps the engine extensible: a future `retail`, `education`, `logistics`, o
 
 ### What Changed
 
-- Added `pyproject.toml` with the Python package metadata, runtime dependencies, dev dependencies, pytest configuration, Ruff configuration, and the `boom-data` CLI entry point.
+- Added `pyproject.toml` with the Python package metadata, runtime dependencies, dev dependencies, pytest configuration, Ruff configuration, and the `databoom` CLI entry point.
 - Added `.gitignore` so local virtual environments, caches, build outputs, coverage files, environment files, and generated artifacts do not get committed accidentally.
 - Added `.env.example` to document the first environment variables.
-- Created the initial `src/boom_data` package layout.
-- Added `boom_data.cli` with an `info` command that prints active configuration.
-- Added `boom_data.core.config` with Pydantic settings for environment, artifact root, and log level.
-- Added `boom_data.core.logging` for shared logging setup.
-- Added `boom_data.core.artifacts` for local artifact directory creation.
+- Created the initial `src/databoom` package layout.
+- Added `databoom.cli` with an `info` command that prints active configuration.
+- Added `databoom.core.config` with Pydantic settings for environment, artifact root, and log level.
+- Added `databoom.core.logging` for shared logging setup.
+- Added `databoom.core.artifacts` for local artifact directory creation.
 - Added `tests/test_config.py` to verify settings normalization and artifact path resolution.
 
 ### Why It Changed
@@ -533,7 +533,7 @@ Phase 1 needs a stable Python backend foundation before schema parsing, relation
 
 The project uses a `src/` layout because it prevents tests from accidentally importing files from the repository root in ways that differ from an installed package. This catches packaging mistakes earlier.
 
-Pydantic settings are used because Boom Data will eventually run as both a CLI and an API service. Both entry points need the same validated configuration. Starting with settings now avoids scattering environment variable reads throughout the codebase.
+Pydantic settings are used because DataBoom will eventually run as both a CLI and an API service. Both entry points need the same validated configuration. Starting with settings now avoids scattering environment variable reads throughout the codebase.
 
 The artifact helper is intentionally tiny. Phase 1 and Phase 2 store output on local disk, so the first abstraction only creates and resolves the artifact root. More complex storage adapters can wait until object storage is actually needed.
 
@@ -565,7 +565,7 @@ Start with an operational workbench. The first screen should show generation con
 
 ### Why This Matters
 
-Boom Data is an engine product. Users need confidence that it can plan, generate, export, and validate datasets. A landing page might look polished, but it would not teach us much about the real product workflow. A workbench layout gives the backend phases a visible target and keeps frontend work aligned with generation capability.
+DataBoom is an engine product. Users need confidence that it can plan, generate, export, and validate datasets. A landing page might look polished, but it would not teach us much about the real product workflow. A workbench layout gives the backend phases a visible target and keeps frontend work aligned with generation capability.
 
 ### Details
 
@@ -591,7 +591,7 @@ This makes future phases straightforward. Phase F2 can replace static values wit
 
 ### Question
 
-Should Boom Data try to support relational databases, NoSQL documents, and graph data all at once?
+Should DataBoom try to support relational databases, NoSQL documents, and graph data all at once?
 
 ### Answer
 
@@ -621,7 +621,7 @@ How should the first FastAPI code be introduced without tangling API concerns in
 
 ### Answer
 
-Use a dedicated `boom_data.api` package with a `create_app()` factory, typed response models, and small system routes for `/health` and `/ready`.
+Use a dedicated `databoom.api` package with a `create_app()` factory, typed response models, and small system routes for `/health` and `/ready`.
 
 ### Why This Matters
 
@@ -681,7 +681,7 @@ This proves that the frontend and backend can communicate through the real HTTP 
 
 ### Details
 
-The bridge defaults to `http://localhost:8000` and can be configured with `NEXT_PUBLIC_BOOM_DATA_API_URL`. It intentionally uses a tiny built-in schema so local demo runs finish quickly and do not require file upload UI yet.
+The bridge defaults to `http://localhost:8000` and can be configured with `NEXT_PUBLIC_DATABOOM_API_URL`. It intentionally uses a tiny built-in schema so local demo runs finish quickly and do not require file upload UI yet.
 
 This is not the final generation workflow. Later Phase 2 screens should let users paste or upload DDL, choose row counts, select formats, review validation, and download artifacts. The bridge is a low-risk step that verifies connectivity and response contracts first.
 
@@ -725,7 +725,7 @@ How should authentication enter the project without making local development pai
 
 ### Answer
 
-Add `BOOM_DATA_API_KEY` as an optional setting. When it is absent or empty, the API behaves like the current local developer service. When it is set, generation run and artifact routes require the `X-API-Key` header. Health and readiness remain open so Docker, orchestration tools, and uptime checks can still verify that the service is alive.
+Add `DATABOOM_API_KEY` as an optional setting. When it is absent or empty, the API behaves like the current local developer service. When it is set, generation run and artifact routes require the `X-API-Key` header. Health and readiness remain open so Docker, orchestration tools, and uptime checks can still verify that the service is alive.
 
 ### Why This Matters
 
@@ -751,7 +751,7 @@ Why add separate `plan` and `validate` commands when `generate` already creates 
 
 ### Answer
 
-Separate commands make the backend workflow easier to inspect and automate. `boom-data plan` lets a user or CI job review the exact table order, row counts, column strategies, dependencies, seed, domain, and output formats before any files are generated. `boom-data validate` lets a user re-check an artifact directory later without spending time regenerating data.
+Separate commands make the backend workflow easier to inspect and automate. `databoom plan` lets a user or CI job review the exact table order, row counts, column strategies, dependencies, seed, domain, and output formats before any files are generated. `databoom validate` lets a user re-check an artifact directory later without spending time regenerating data.
 
 ### Why This Matters
 
@@ -794,3 +794,27 @@ The helper disposes the SQLAlchemy engine after loading schema metadata. That ma
 - Add CLI/API commands that call `load_postgres_schema()` once the workflow shape is clear.
 - Add integration tests against the Docker PostgreSQL service when CI infrastructure is ready.
 - Extend type mapping as real-world schemas reveal more PostgreSQL-specific types.
+
+## Decision: rename the product and package surface to DataBoom
+
+### Question
+
+Why rename the repository's public surface from Boom Data to DataBoom?
+
+### Answer
+
+DataBoom works better as the parent platform name because it can hold multiple products without making every feature sound like the same single engine. The code package, CLI command, environment prefix, Docker defaults, frontend metadata, and documentation now use `databoom`/`DATABOOM`/`DataBoom` consistently.
+
+### Why This Matters
+
+Naming is architecture when a product is becoming a platform. A single generic name was fine while the project was only a generator, but the roadmap now has two large product families: generation and masking. DataBoom gives those families a shared umbrella while leaving space for whacky product names below it.
+
+### Implementation Detail
+
+The Python package moved from `src/boom_data` to `src/databoom`, the CLI script moved from `boom-data` to `databoom`, and configuration now reads `DATABOOM_` environment variables. The workspace folder itself is still `/home/odoo/boom-data` so the active development session and git checkout are not disrupted.
+
+### Follow-Up Notes
+
+- Update any external scripts that still invoke `boom-data`.
+- Reinstall the editable package after pulling this change so `.venv/bin/databoom` is available.
+- Keep product-family naming separate from engine internals so sub-products do not leak into every module name.

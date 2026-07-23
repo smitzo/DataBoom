@@ -2,7 +2,7 @@
 
 ## Product Summary
 
-Boom Data generates realistic synthetic data from prompts and PostgreSQL schemas while preserving relational integrity across tables. PostgreSQL-backed relational generation is first; NoSQL document data is planned for Phase 2, and graph data is planned for Phase 3.
+DataBoom generates realistic synthetic data from prompts and PostgreSQL schemas while preserving relational integrity across tables. PostgreSQL-backed relational generation is first; NoSQL document data is planned for Phase 2, and graph data is planned for Phase 3.
 
 The product should help engineers, QA teams, data teams, and demo teams create useful datasets without hand-writing fragile fixtures.
 
@@ -10,7 +10,7 @@ The product should help engineers, QA teams, data teams, and demo teams create u
 
 Teams need realistic data for development, QA, demos, CI, analytics, and automation. Production data is risky to copy, and simple fixture generators often fail when data must respect primary keys, foreign keys, unique constraints, nullable fields, enums, date ranges, and realistic table relationships.
 
-Boom Data solves this by understanding schema structure, planning generation, producing relationally valid data, validating the result, and exporting it in formats that can be loaded or inspected.
+DataBoom solves this by understanding schema structure, planning generation, producing relationally valid data, validating the result, and exporting it in formats that can be loaded or inspected.
 
 ## Target Users
 
@@ -23,7 +23,7 @@ Boom Data solves this by understanding schema structure, planning generation, pr
 
 ## Product Reasoning
 
-See [Product Reasoning and FAQ](product-reasoning-faq.md) for deeper answers to common questions such as why Boom Data needs an engine, why Faker alone is not enough, how this differs from direct ChatGPT generation, how large datasets can be streamed, and how this compares with commercial synthetic data platforms.
+See [Product Reasoning and FAQ](product-reasoning-faq.md) for deeper answers to common questions such as why DataBoom needs an engine, why Faker alone is not enough, how this differs from direct ChatGPT generation, how large datasets can be streamed, and how this compares with commercial synthetic data platforms.
 
 ## Core User Workflows
 
@@ -31,26 +31,26 @@ See [Product Reasoning and FAQ](product-reasoning-faq.md) for deeper answers to 
 
 1. User provides PostgreSQL DDL or a live PostgreSQL connection.
 2. User provides a generation prompt, row counts, and a seed.
-3. Boom Data parses the schema and builds a relationship graph.
-4. Boom Data creates a generation plan.
+3. DataBoom parses the schema and builds a relationship graph.
+4. DataBoom creates a generation plan.
 5. User runs the generator.
-6. Boom Data validates the generated dataset.
+6. DataBoom validates the generated dataset.
 7. User exports SQL or CSV files from local disk.
 
 ### Workflow 2: Generate From Existing Database
 
 1. User connects to an existing PostgreSQL database.
-2. Boom Data reads schema metadata.
-3. Boom Data profiles structural statistics in Phase 2.
-4. Boom Data generates synthetic data based on schema and safe summaries.
-5. Boom Data validates and exports artifacts.
+2. DataBoom reads schema metadata.
+3. DataBoom profiles structural statistics in Phase 2.
+4. DataBoom generates synthetic data based on schema and safe summaries.
+5. DataBoom validates and exports artifacts.
 
 Privacy-safe replacement is not a Phase 1 or Phase 2 requirement. Field-level privacy policies arrive in Phase 4.
 
 ### Workflow 3: CI Fixture Generation
 
 1. CI invokes the CLI with schema, prompt, seed, and output path.
-2. Boom Data generates deterministic SQL or CSV artifacts.
+2. DataBoom generates deterministic SQL or CSV artifacts.
 3. Validation must pass.
 4. CI loads artifacts into a test PostgreSQL database.
 
@@ -67,24 +67,24 @@ Privacy-safe replacement is not a Phase 1 or Phase 2 requirement. Field-level pr
 Planned for Phase 2.
 
 1. User provides a document collection specification, inferred profile, or NoSQL-oriented prompt.
-2. Boom Data builds a document generation plan with nested objects, arrays, identifiers, and references.
-3. Boom Data generates JSON or NDJSON artifacts.
-4. Boom Data validates document shape, required fields, configured counts, and reference consistency where references exist.
+2. DataBoom builds a document generation plan with nested objects, arrays, identifiers, and references.
+3. DataBoom generates JSON or NDJSON artifacts.
+4. DataBoom validates document shape, required fields, configured counts, and reference consistency where references exist.
 
 ### Workflow 6: Graph Data Generation
 
 Planned for Phase 3.
 
 1. User provides a graph model, graph-oriented prompt, or table-to-graph mapping.
-2. Boom Data plans node labels, edge types, properties, and cardinality.
-3. Boom Data generates node and edge artifacts.
-4. Boom Data validates edge references, property shape, counts, and export readiness.
+2. DataBoom plans node labels, edge types, properties, and cardinality.
+3. DataBoom generates node and edge artifacts.
+4. DataBoom validates edge references, property shape, counts, and export readiness.
 
 ## Functional Requirements
 
 ### Schema Intake
 
-Boom Data must support:
+DataBoom must support:
 
 - PostgreSQL DDL files in Phase 1.
 - Live PostgreSQL metadata introspection in Phase 1 or Phase 2.
@@ -96,7 +96,7 @@ Boom Data must support:
 
 ### Generation Planning
 
-Boom Data must create a plan before generating data.
+DataBoom must create a plan before generating data.
 
 The plan should include:
 
@@ -114,7 +114,7 @@ Phase 1 uses deterministic local planning. LLM-assisted planning can be introduc
 
 ### Domain Profiles
 
-Boom Data should support domain profiles so users can request data optimized for a use case without changing the core engine.
+DataBoom should support domain profiles so users can request data optimized for a use case without changing the core engine.
 
 Initial profiles:
 
@@ -197,7 +197,7 @@ Out of scope until later:
 
 ## Acceptance Criteria
 
-Boom Data is useful when:
+DataBoom is useful when:
 
 - A user can point it at a PostgreSQL schema and generate a valid multi-table dataset.
 - Generated foreign keys are valid.

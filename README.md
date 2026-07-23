@@ -1,6 +1,6 @@
-# Boom Data
+# DataBoom
 
-Boom Data is a synthetic data engine for generating realistic, repeatable datasets from schemas, prompts, and future data-family specifications.
+DataBoom is a synthetic data engine for generating realistic, repeatable datasets from schemas, prompts, and future data-family specifications.
 
 The current implementation is Phase 1: a Python backend engine that reads PostgreSQL DDL, plans dependency-aware relational generation, writes local CSV/JSON/SQL artifacts, and produces validation reports. The frontend is a Next.js workbench that presents the product, current benchmark status, domain profiles, roadmap, and demo datasets.
 
@@ -49,7 +49,7 @@ Run backend checks:
 Generate a dataset:
 
 ```bash
-.venv/bin/boom-data generate demo/financial/schema.sql \
+.venv/bin/databoom generate demo/financial/schema.sql \
   --output-dir artifacts/demo-financial \
   --rows customers=100 \
   --rows bank_accounts=250 \
@@ -64,7 +64,7 @@ Generate a dataset:
 Preview the deterministic plan before generation:
 
 ```bash
-.venv/bin/boom-data plan demo/financial/schema.sql \
+.venv/bin/databoom plan demo/financial/schema.sql \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
@@ -76,7 +76,7 @@ Preview the deterministic plan before generation:
 Validate an existing artifact directory without regenerating it:
 
 ```bash
-.venv/bin/boom-data validate demo/financial/schema.sql artifacts/demo-financial \
+.venv/bin/databoom validate demo/financial/schema.sql artifacts/demo-financial \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
@@ -96,7 +96,7 @@ Run the Phase 1 benchmark:
 Run the API locally:
 
 ```bash
-.venv/bin/uvicorn boom_data.api:create_app --factory --reload
+.venv/bin/uvicorn databoom.api:create_app --factory --reload
 ```
 
 Health checks:
@@ -127,10 +127,10 @@ curl http://localhost:8000/runs/<run_id>/artifacts
 curl -L -o users.csv http://localhost:8000/runs/<run_id>/artifacts/public__users.csv
 ```
 
-Set `BOOM_DATA_API_KEY` to require `X-API-Key` on run and artifact routes:
+Set `DATABOOM_API_KEY` to require `X-API-Key` on run and artifact routes:
 
 ```bash
-curl -H "X-API-Key: $BOOM_DATA_API_KEY" http://localhost:8000/runs
+curl -H "X-API-Key: $DATABOOM_API_KEY" http://localhost:8000/runs
 ```
 
 ## Frontend Setup
@@ -140,7 +140,7 @@ cd frontend
 npm install
 npm run typecheck
 npm run build
-NEXT_PUBLIC_BOOM_DATA_API_URL=http://localhost:8000 npm run dev -- --hostname 0.0.0.0 --port 3000
+NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8000 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
 Open:
@@ -171,13 +171,13 @@ docker compose --profile tools run --rm app
 
 ## Folder Guide
 
-- `src/boom_data`: Python backend package.
-- `src/boom_data/api`: FastAPI app factory, response models, and HTTP routes.
-- `src/boom_data/ingest`: PostgreSQL DDL ingestion.
-- `src/boom_data/schema`: normalized schema models and relationship graph code.
-- `src/boom_data/generation`: plans, seeds, domain profiles, row generation, and values.
-- `src/boom_data/export`: local artifact writers.
-- `src/boom_data/validation`: validation report logic.
+- `src/databoom`: Python backend package.
+- `src/databoom/api`: FastAPI app factory, response models, and HTTP routes.
+- `src/databoom/ingest`: PostgreSQL DDL ingestion.
+- `src/databoom/schema`: normalized schema models and relationship graph code.
+- `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
+- `src/databoom/export`: local artifact writers.
+- `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.
 - `benchmarks`: repeatable benchmark scripts.
 - `demo`: checked-in financial and healthcare CSV demo datasets plus schemas.

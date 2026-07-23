@@ -1,6 +1,6 @@
-# Boom Data Project Instructions
+# DataBoom Project Instructions
 
-Boom Data is a production-grade synthetic data engine for generating realistic datasets from prompts, PostgreSQL schemas, optional database profiling, and later document and graph data specifications.
+DataBoom is a production-grade synthetic data engine for generating realistic datasets from prompts, PostgreSQL schemas, optional database profiling, and later document and graph data specifications.
 
 This repository is in active implementation. Keep documentation, roadmap status, and `understanding.md` aligned with significant product or architecture changes.
 

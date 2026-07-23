@@ -1,4 +1,4 @@
-from boom_data.generation import SeedManager
+from databoom.generation import SeedManager
 
 
 def test_seed_manager_derives_repeatable_child_seeds() -> None:

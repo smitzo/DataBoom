@@ -3,7 +3,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from boom_data.cli import app
+from databoom.cli import app
 
 
 def _write_schema(tmp_path: Path) -> Path:

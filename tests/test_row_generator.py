@@ -1,7 +1,7 @@
 import pytest
 
-from boom_data.generation import RowGenerationError, RowGenerator, create_generation_plan
-from boom_data.ingest import parse_postgres_ddl
+from databoom.generation import RowGenerationError, RowGenerator, create_generation_plan
+from databoom.ingest import parse_postgres_ddl
 
 
 def rows_by_table(records):

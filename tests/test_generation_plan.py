@@ -1,7 +1,7 @@
 import pytest
 
-from boom_data.generation import ColumnStrategy, OutputFormat, create_generation_plan
-from boom_data.ingest import parse_postgres_ddl
+from databoom.generation import ColumnStrategy, OutputFormat, create_generation_plan
+from databoom.ingest import parse_postgres_ddl
 
 
 def test_generation_plan_orders_tables_and_marks_column_strategies() -> None:

@@ -1,12 +1,12 @@
 from sqlalchemy import BigInteger, Boolean, DateTime, Numeric, String
 
-from boom_data.ingest.postgres import inspect_postgres_schema, load_postgres_schema
-from boom_data.schema.models import TypeFamily
+from databoom.ingest.postgres import inspect_postgres_schema, load_postgres_schema
+from databoom.schema.models import TypeFamily
 
 
 def test_inspect_postgres_schema_builds_normalized_schema(monkeypatch) -> None:
     fake_inspector = _FakePostgresInspector()
-    monkeypatch.setattr("boom_data.ingest.postgres.inspect", lambda connectable: fake_inspector)
+    monkeypatch.setattr("databoom.ingest.postgres.inspect", lambda connectable: fake_inspector)
 
     schema = inspect_postgres_schema(object())
 
@@ -26,8 +26,8 @@ def test_inspect_postgres_schema_builds_normalized_schema(monkeypatch) -> None:
 def test_load_postgres_schema_disposes_engine(monkeypatch) -> None:
     fake_engine = _FakeEngine()
     fake_inspector = _FakePostgresInspector()
-    monkeypatch.setattr("boom_data.ingest.postgres.create_engine", lambda url: fake_engine)
-    monkeypatch.setattr("boom_data.ingest.postgres.inspect", lambda connectable: fake_inspector)
+    monkeypatch.setattr("databoom.ingest.postgres.create_engine", lambda url: fake_engine)
+    monkeypatch.setattr("databoom.ingest.postgres.inspect", lambda connectable: fake_inspector)
 
     schema = load_postgres_schema("postgresql+psycopg://example")
 

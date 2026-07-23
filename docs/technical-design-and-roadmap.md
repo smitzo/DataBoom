@@ -255,7 +255,7 @@ Why ninth: generation without validation is not trustworthy.
 
 ### Step 10: CLI
 
-- Add `boom-data generate`.
+- Add `databoom generate`.
 - Accept schema path, prompt, seed, output path, and row targets.
 - Print artifact paths and validation summary.
 - Exit non-zero on validation failure.
@@ -374,7 +374,7 @@ Recommended commits:
 
 ## Phase 5: Production Release and Extensibility
 
-Goal: make Boom Data production-grade for deployment, operations, and future adapters.
+Goal: make DataBoom production-grade for deployment, operations, and future adapters.
 
 Technical objectives:
 

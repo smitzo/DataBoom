@@ -13,7 +13,7 @@ This document captures product and implementation lessons from adjacent tools. T
 
 ### Domain-Specific Datasets
 
-Tonic frames synthetic data around use cases such as software testing, AI training, mock APIs, financial services, and healthcare. Boom Data should similarly treat domain use cases as first-class product concepts.
+Tonic frames synthetic data around use cases such as software testing, AI training, mock APIs, financial services, and healthcare. DataBoom should similarly treat domain use cases as first-class product concepts.
 
 Current application:
 
@@ -50,7 +50,7 @@ Future direction:
 
 ### Modular Generation Engines
 
-Gretel Synthetics separates different model families and generation approaches. Boom Data should follow that modular idea at an engine level: local rule-based generation first, optional LLM planning later, and specialized providers for domain semantics.
+Gretel Synthetics separates different model families and generation approaches. DataBoom should follow that modular idea at an engine level: local rule-based generation first, optional LLM planning later, and specialized providers for domain semantics.
 
 Current application:
 
@@ -71,7 +71,7 @@ Future direction:
 
 ### Simple User Flow
 
-generatedata.com is useful as a workflow reference: choose data types, choose output format, generate data. Boom Data is more relational and production-oriented, but the frontend should preserve this simplicity.
+generatedata.com is useful as a workflow reference: choose data types, choose output format, generate data. DataBoom is more relational and production-oriented, but the frontend should preserve this simplicity.
 
 Frontend implication:
 
@@ -82,7 +82,7 @@ Frontend implication:
 
 ## Product Guardrails
 
-- Do not claim Boom Data is already a privacy platform in Phase 1.
-- Do not position Boom Data as universally better than Tonic or Gretel.
+- Do not claim DataBoom is already a privacy platform in Phase 1.
+- Do not position DataBoom as universally better than Tonic or Gretel.
 - Keep the differentiator focused on owned, local-first, inspectable, PostgreSQL-first relational generation.
 - Use commercial tools as inspiration for workflow clarity, not as implementation dependencies.

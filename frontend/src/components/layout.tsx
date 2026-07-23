@@ -27,7 +27,7 @@ export function Header() {
           <span className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-950 text-emerald-300 ring-1 ring-white/10">
             <Database className="h-5 w-5" />
           </span>
-          <span className="text-sm font-semibold uppercase text-white">Boom Data</span>
+          <span className="text-sm font-semibold uppercase text-white">DataBoom</span>
         </a>
 
         <nav className="hidden items-center gap-2 lg:flex">

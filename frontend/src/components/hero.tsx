@@ -28,7 +28,7 @@ export function Hero() {
 
           <div className="mt-8 max-w-2xl border-l border-white/20 pl-5">
             <p className="text-xl font-semibold leading-8 text-white">
-              Boom Data turns PostgreSQL schemas into validated CSV, JSON, and SQL
+              DataBoom turns PostgreSQL schemas into validated CSV, JSON, and SQL
               artifacts for fintech, healthcare, and customer-sensitive workflows.
             </p>
           </div>

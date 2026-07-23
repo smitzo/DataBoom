@@ -1,6 +1,6 @@
 # Prompt Caching and Instructions
 
-This document defines how Boom Data should structure prompts, reusable instructions, and agent context so OpenAI requests can benefit from prompt caching while remaining maintainable.
+This document defines how DataBoom should structure prompts, reusable instructions, and agent context so OpenAI requests can benefit from prompt caching while remaining maintainable.
 
 ## Objectives
 
@@ -14,7 +14,7 @@ This document defines how Boom Data should structure prompts, reusable instructi
 
 OpenAI prompt caching works best when repeated requests share an exact prompt prefix. Recent OpenAI models support automatic prompt caching for eligible prompts, and cache hits require stable content at the beginning of the request.
 
-Boom Data should structure LLM-assisted planning requests in this order:
+DataBoom should structure LLM-assisted planning requests in this order:
 
 1. Stable system and developer instructions.
 2. Stable planner contract and output schema.
@@ -44,10 +44,10 @@ The planner should return a structured generation plan. It should not directly g
 
 ## Prompt Cache Keys
 
-When using OpenAI API support for prompt cache keys, Boom Data should derive keys from stable non-sensitive identifiers:
+When using OpenAI API support for prompt cache keys, DataBoom should derive keys from stable non-sensitive identifiers:
 
 ```text
-boom-data:{planner_version}:{schema_fingerprint}:{prompt_pack_version}
+databoom:{planner_version}:{schema_fingerprint}:{prompt_pack_version}
 ```
 
 Rules:

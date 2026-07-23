@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from boom_data.schema import (
+from databoom.schema import (
     ColumnSchema,
     DatabaseSchema,
     ForeignKeyConstraint,
@@ -10,7 +10,7 @@ from boom_data.schema import (
     TableSchema,
     UniqueConstraint,
 )
-from boom_data.schema.models import TypeFamily
+from databoom.schema.models import TypeFamily
 
 
 def pg_type(name: str, family: TypeFamily = TypeFamily.UNKNOWN) -> PostgresType:

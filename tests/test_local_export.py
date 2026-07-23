@@ -1,9 +1,9 @@
 import csv
 import json
 
-from boom_data.export import ArtifactExporter, load_export_manifest
-from boom_data.generation import OutputFormat, create_generation_plan
-from boom_data.ingest import parse_postgres_ddl
+from databoom.export import ArtifactExporter, load_export_manifest
+from databoom.generation import OutputFormat, create_generation_plan
+from databoom.ingest import parse_postgres_ddl
 
 
 def test_artifact_exporter_writes_csv_sql_and_manifest(tmp_path) -> None:

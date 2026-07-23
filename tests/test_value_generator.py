@@ -2,9 +2,9 @@ from datetime import datetime
 
 import pytest
 
-from boom_data.generation import ColumnStrategy, ForeignKeySource, SeedManager, ValueGenerator
-from boom_data.generation.plan import ColumnPlan
-from boom_data.schema import TypeFamily
+from databoom.generation import ColumnStrategy, ForeignKeySource, SeedManager, ValueGenerator
+from databoom.generation.plan import ColumnPlan
+from databoom.schema import TypeFamily
 
 
 def column(

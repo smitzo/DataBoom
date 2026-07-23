@@ -1,16 +1,16 @@
 # Product Reasoning and FAQ
 
-This document explains why Boom Data exists, where it fits, and how to answer common strategic and technical questions. Use it when pitching, reviewing scope, onboarding engineers, or deciding whether a feature belongs in the engine.
+This document explains why DataBoom exists, where it fits, and how to answer common strategic and technical questions. Use it when pitching, reviewing scope, onboarding engineers, or deciding whether a feature belongs in the engine.
 
 ## Short Positioning
 
-Boom Data is not just a fake-value generator and not just a chat prompt. It is a schema-aware, relationship-aware, validation-first data generation engine for teams that need large, repeatable, safe, and useful datasets.
+DataBoom is not just a fake-value generator and not just a chat prompt. It is a schema-aware, relationship-aware, validation-first data generation engine for teams that need large, repeatable, safe, and useful datasets.
 
 The engine should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on the relational generation engine first. Phase 2 expands into NoSQL document data, Phase 3 adds graph data, and privacy, masking, hashing, and policy enforcement are intentionally added later once the core generation paths are reliable.
 
 ## 4W1H Product Questions
 
-### Who needs Boom Data?
+### Who needs DataBoom?
 
 - Backend teams that need realistic local and staging databases.
 - QA teams that need repeatable edge cases and large test runs.
@@ -21,7 +21,7 @@ The engine should eventually serve sensitive domains such as fintech, healthcare
 
 ### What problem does it solve?
 
-Boom Data solves the gap between simple fake-data scripts and production-like databases. Most teams can create random names, dates, and emails. The hard part is creating many tables where every row still obeys schema constraints, foreign keys, unique keys, cardinality rules, and business-like distributions.
+DataBoom solves the gap between simple fake-data scripts and production-like databases. Most teams can create random names, dates, and emails. The hard part is creating many tables where every row still obeys schema constraints, foreign keys, unique keys, cardinality rules, and business-like distributions.
 
 ### Where is it useful?
 
@@ -36,7 +36,7 @@ Boom Data solves the gap between simple fake-data scripts and production-like da
 
 ### When should teams use it?
 
-Use Boom Data when data must be:
+Use DataBoom when data must be:
 
 - relationally valid,
 - reproducible,
@@ -52,9 +52,9 @@ Do not use it as the first solution when a team only needs five simple records f
 
 A dedicated engine is needed because large relational data generation is a systems problem, not only a text-generation problem. The engine must parse schemas, solve dependency order, generate values, preserve foreign keys, stream output, validate constraints, store artifacts, expose API/CLI workflows, and produce repeatable results under operational limits.
 
-### How does Boom Data solve it?
+### How does DataBoom solve it?
 
-Boom Data splits the problem into specialized components:
+DataBoom splits the problem into specialized components:
 
 - schema ingestion understands database structure,
 - relationship solving computes table order and foreign-key sources,
@@ -76,7 +76,7 @@ This keeps scope disciplined:
 
 ## Why Not Just Use Faker?
 
-Faker is useful, and Boom Data should use Faker where it helps. But Faker is a value library, not a complete relational data engine.
+Faker is useful, and DataBoom should use Faker where it helps. But Faker is a value library, not a complete relational data engine.
 
 Faker can generate:
 
@@ -102,7 +102,7 @@ Faker does not, by itself, solve:
 - large artifact handling,
 - privacy policy enforcement.
 
-Boom Data should use Faker as one ingredient inside the generator, then add the missing engine layer around it.
+DataBoom should use Faker as one ingredient inside the generator, then add the missing engine layer around it.
 
 ## Why Not Just Ask ChatGPT To Generate 1 Million Records?
 
@@ -121,11 +121,11 @@ Direct LLM generation is the wrong tool for million-row output because:
 
 The better architecture is to let the LLM help create or refine a generation plan, then let the deterministic engine execute that plan.
 
-## How Can Boom Data Handle 1 Million Records?
+## How Can DataBoom Handle 1 Million Records?
 
 One million records is achievable when generation is treated as a streaming data pipeline.
 
-Boom Data should handle large runs through:
+DataBoom should handle large runs through:
 
 - dependency-ordered table generation,
 - deterministic primary-key ranges,
@@ -150,7 +150,7 @@ The key is that the engine should never require all rows for all tables to live 
 
 Tonic.ai is a mature commercial synthetic data platform. Its public product pages describe capabilities such as generating synthetic data from scratch, sanitizing production data for testing, relational synthetic databases, prompt/schema/sample-driven generation, de-identification, and specialized products for structured and unstructured data.
 
-Boom Data should not claim to be universally better than Tonic.ai. The better claim is that Boom Data is being built for different control points:
+DataBoom should not claim to be universally better than Tonic.ai. The better claim is that DataBoom is being built for different control points:
 
 - open, inspectable architecture,
 - commit-by-commit ownership,
@@ -162,7 +162,7 @@ Boom Data should not claim to be universally better than Tonic.ai. The better cl
 - ability to tune performance for our exact database and CI workflows,
 - no dependency on a closed vendor workflow for core test-data generation.
 
-Tonic.ai may be the better choice for teams that need a complete commercial data de-identification platform immediately. Boom Data is valuable when the team wants an owned engine, transparent internals, local deployment, and a roadmap tailored to PostgreSQL-first synthetic generation.
+Tonic.ai may be the better choice for teams that need a complete commercial data de-identification platform immediately. DataBoom is valuable when the team wants an owned engine, transparent internals, local deployment, and a roadmap tailored to PostgreSQL-first synthetic generation.
 
 References:
 
@@ -205,7 +205,7 @@ Schema safety wins. The planner can explain that the request cannot be fulfilled
 
 ### How is this different from database seeding scripts?
 
-Seed scripts are usually application-specific and hand-maintained. Boom Data should be schema-driven, reusable across projects, prompt-guided, exportable, validated, and eventually API-driven.
+Seed scripts are usually application-specific and hand-maintained. DataBoom should be schema-driven, reusable across projects, prompt-guided, exportable, validated, and eventually API-driven.
 
 ### Why not start with the frontend?
 

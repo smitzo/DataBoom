@@ -1,6 +1,6 @@
 import pytest
 
-from boom_data.schema import (
+from databoom.schema import (
     ColumnSchema,
     DatabaseSchema,
     ForeignKeyConstraint,
@@ -8,7 +8,7 @@ from boom_data.schema import (
     TableSchema,
     build_relationship_graph,
 )
-from boom_data.schema.graph import SchemaCycleError, SchemaGraphError
+from databoom.schema.graph import SchemaCycleError, SchemaGraphError
 
 
 def column(name: str) -> ColumnSchema:

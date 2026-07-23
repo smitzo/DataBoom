@@ -2,8 +2,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from boom_data.api import create_app
-from boom_data.core.config import Settings
+from databoom.api import create_app
+from databoom.core.config import Settings
 
 
 def test_create_generation_run_writes_artifacts(tmp_path: Path) -> None:
