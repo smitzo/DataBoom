@@ -177,6 +177,7 @@ export const roadmap: RoadmapItem[] = [
       "Frontend API bridge for health checks and demo generation runs.",
       "Artifact listing and download endpoints for completed local runs.",
       "Optional API-key protection for run and artifact routes.",
+      "CLI plan preview and artifact re-validation commands.",
     ],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",

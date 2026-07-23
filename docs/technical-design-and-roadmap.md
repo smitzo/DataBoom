@@ -285,6 +285,7 @@ Technical objectives:
 - Add FastAPI run endpoints.
 - Add FastAPI artifact listing and download endpoints.
 - Add API-key authentication.
+- Add CLI plan and validate commands for reviewable local workflows.
 - Add Docker Compose for API plus PostgreSQL.
 - Keep artifacts on local disk.
 - Introduce optional local prompt-plan DSL.

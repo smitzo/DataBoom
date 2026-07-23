@@ -742,3 +742,29 @@ This is not the final authorization model. Later phases can add users, projects,
 - Add scoped API tokens before multi-user deployment.
 - Add audit logging before artifact downloads are exposed in shared environments.
 - Make the frontend send an API key only after the product has a safe local settings pattern.
+
+## Decision: split CLI planning and validation from generation
+
+### Question
+
+Why add separate `plan` and `validate` commands when `generate` already creates artifacts and validates them?
+
+### Answer
+
+Separate commands make the backend workflow easier to inspect and automate. `boom-data plan` lets a user or CI job review the exact table order, row counts, column strategies, dependencies, seed, domain, and output formats before any files are generated. `boom-data validate` lets a user re-check an artifact directory later without spending time regenerating data.
+
+### Why This Matters
+
+Large synthetic datasets are expensive enough that repeatability matters. If a 100k or 500k record run already exists, a developer should be able to validate the outputs after moving files, changing tests, or debugging a failed load step. Likewise, plan preview gives future LLM-assisted planning a stable target: whether a human or model proposes a plan, the engine can expose a structured, reviewable contract before execution.
+
+### Implementation Detail
+
+The exporter now has a small `load_export_manifest()` function. That keeps validation tied to the same manifest format written during generation instead of duplicating file discovery logic in the CLI. The CLI rebuilds the expected generation plan from the schema and options, loads `manifest.json`, then runs the same validator used by `generate`.
+
+This is intentionally not a full saved-plan system yet. A future phase can persist plan JSON and validate directly from that file. For now, schema plus options are enough to keep the command simple and compatible with the current engine.
+
+### Follow-Up Notes
+
+- Add `--plan-path` support once saved plans become part of the public workflow.
+- Add richer validation output formats for CI, such as JSON-only output.
+- Make validation chunk-aware before pushing much beyond the current Phase 1 dataset sizes.

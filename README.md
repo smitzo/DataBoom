@@ -13,9 +13,10 @@ The current implementation is Phase 1: a Python backend engine that reads Postgr
 - Financial, healthcare, and general domain profiles.
 - CSV, JSON, and SQL local artifact exports.
 - Validation reports and artifact manifests.
-- CLI generation workflow.
+- CLI generation, plan preview, and artifact validation workflows.
 - FastAPI app scaffold with health and readiness endpoints.
 - API generation run endpoint for synchronous local relational runs.
+- API artifact listing, downloads, and optional API-key protection.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
 
@@ -49,6 +50,32 @@ Generate a dataset:
 ```bash
 .venv/bin/boom-data generate demo/financial/schema.sql \
   --output-dir artifacts/demo-financial \
+  --rows customers=100 \
+  --rows bank_accounts=250 \
+  --rows transactions=750 \
+  --format csv \
+  --format json \
+  --format sql \
+  --domain financial \
+  --seed demo-financial
+```
+
+Preview the deterministic plan before generation:
+
+```bash
+.venv/bin/boom-data plan demo/financial/schema.sql \
+  --rows customers=100 \
+  --rows bank_accounts=250 \
+  --rows transactions=750 \
+  --format csv \
+  --domain financial \
+  --seed demo-financial
+```
+
+Validate an existing artifact directory without regenerating it:
+
+```bash
+.venv/bin/boom-data validate demo/financial/schema.sql artifacts/demo-financial \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \

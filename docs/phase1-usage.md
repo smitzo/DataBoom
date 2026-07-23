@@ -49,6 +49,27 @@ Run generation:
   --seed demo
 ```
 
+Preview the deterministic plan without writing artifacts:
+
+```bash
+.venv/bin/boom-data plan schema.sql \
+  --rows accounts=10 \
+  --rows users=50 \
+  --format csv \
+  --seed demo
+```
+
+Re-validate an existing artifact directory:
+
+```bash
+.venv/bin/boom-data validate schema.sql artifacts/demo \
+  --rows accounts=10 \
+  --rows users=50 \
+  --format csv \
+  --format sql \
+  --seed demo
+```
+
 Expected outputs:
 
 - `artifacts/demo/manifest.json`

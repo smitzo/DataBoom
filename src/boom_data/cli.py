@@ -9,8 +9,8 @@ import typer
 
 from boom_data.core.config import get_settings
 from boom_data.core.logging import configure_logging
-from boom_data.export import ArtifactExporter
-from boom_data.generation import DomainProfile, OutputFormat, create_generation_plan
+from boom_data.export import ArtifactExporter, load_export_manifest
+from boom_data.generation import DomainProfile, GenerationPlan, OutputFormat, create_generation_plan
 from boom_data.ingest import parse_postgres_ddl
 from boom_data.validation import validate_export
 
@@ -105,28 +105,211 @@ def generate(
 ) -> None:
     """Generate local synthetic data artifacts from PostgreSQL DDL."""
 
-    database = parse_postgres_ddl(schema_path.read_text(encoding="utf-8"))
-    plan = create_generation_plan(
-        database,
+    generation_plan = _build_generation_plan(
+        schema_path,
         row_counts=_parse_row_counts(rows),
         default_row_count=default_row_count,
         seed=seed,
         domain=domain,
         output_formats=tuple(formats or [OutputFormat.CSV]),
     )
-    manifest = ArtifactExporter(plan, output_dir).export()
-    report = validate_export(plan, manifest)
+    manifest = ArtifactExporter(generation_plan, output_dir).export()
+    report = validate_export(generation_plan, manifest)
     validation_path = output_dir / "validation.json"
     report.write_json(validation_path)
 
-    typer.echo(f"tables: {len(plan.tables)}")
-    typer.echo(f"rows: {plan.total_rows}")
+    typer.echo(f"tables: {len(generation_plan.tables)}")
+    typer.echo(f"rows: {generation_plan.total_rows}")
     typer.echo(f"manifest: {manifest.manifest_path}")
     typer.echo(f"validation: {validation_path}")
     typer.echo(f"passed: {str(report.passed).lower()}")
 
     if not report.passed:
         raise typer.Exit(code=1)
+
+
+@app.command("plan")
+def plan_command(
+    schema_path: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            readable=True,
+            help="Path to a PostgreSQL DDL schema file.",
+        ),
+    ],
+    output_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Optional path where the JSON plan should be written.",
+        ),
+    ] = None,
+    rows: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--rows",
+            "-r",
+            help="Per-table row count override in table=count form. Repeatable.",
+        ),
+    ] = None,
+    default_row_count: Annotated[
+        int,
+        typer.Option(
+            "--default-row-count",
+            min=0,
+            help="Default row count for tables without a --rows override.",
+        ),
+    ] = 10,
+    seed: Annotated[
+        str,
+        typer.Option(
+            "--seed",
+            help="Deterministic seed used for generation.",
+        ),
+    ] = "0",
+    domain: Annotated[
+        DomainProfile,
+        typer.Option(
+            "--domain",
+            help="Semantic domain profile for generated values.",
+        ),
+    ] = DomainProfile.GENERAL,
+    formats: Annotated[
+        list[OutputFormat] | None,
+        typer.Option(
+            "--format",
+            help="Output format. Repeat for multiple formats.",
+        ),
+    ] = None,
+) -> None:
+    """Print or write the deterministic generation plan for a schema."""
+
+    generation_plan = _build_generation_plan(
+        schema_path,
+        row_counts=_parse_row_counts(rows),
+        default_row_count=default_row_count,
+        seed=seed,
+        domain=domain,
+        output_formats=tuple(formats or [OutputFormat.CSV]),
+    )
+    plan_json = generation_plan.model_dump_json(indent=2)
+
+    if output_path is None:
+        typer.echo(plan_json)
+        return
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(plan_json + "\n", encoding="utf-8")
+    typer.echo(f"plan: {output_path}")
+
+
+@app.command("validate")
+def validate_command(
+    schema_path: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            readable=True,
+            help="Path to the PostgreSQL DDL schema used for generation.",
+        ),
+    ],
+    artifact_dir: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=False,
+            help="Directory containing manifest.json and generated artifacts.",
+        ),
+    ],
+    rows: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--rows",
+            "-r",
+            help="Per-table row count override in table=count form. Repeatable.",
+        ),
+    ] = None,
+    default_row_count: Annotated[
+        int,
+        typer.Option(
+            "--default-row-count",
+            min=0,
+            help="Default row count for tables without a --rows override.",
+        ),
+    ] = 10,
+    seed: Annotated[
+        str,
+        typer.Option(
+            "--seed",
+            help="Deterministic seed used for the expected plan.",
+        ),
+    ] = "0",
+    domain: Annotated[
+        DomainProfile,
+        typer.Option(
+            "--domain",
+            help="Semantic domain profile for the expected plan.",
+        ),
+    ] = DomainProfile.GENERAL,
+    formats: Annotated[
+        list[OutputFormat] | None,
+        typer.Option(
+            "--format",
+            help="Expected output format. Repeat for multiple formats.",
+        ),
+    ] = None,
+) -> None:
+    """Validate an existing local artifact directory against a schema and plan."""
+
+    manifest_path = artifact_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise typer.BadParameter(f"manifest not found: {manifest_path}")
+
+    generation_plan = _build_generation_plan(
+        schema_path,
+        row_counts=_parse_row_counts(rows),
+        default_row_count=default_row_count,
+        seed=seed,
+        domain=domain,
+        output_formats=tuple(formats or [OutputFormat.CSV]),
+    )
+    manifest = load_export_manifest(manifest_path)
+    report = validate_export(generation_plan, manifest)
+    validation_path = artifact_dir / "validation.json"
+    report.write_json(validation_path)
+
+    typer.echo(f"tables: {len(generation_plan.tables)}")
+    typer.echo(f"rows: {generation_plan.total_rows}")
+    typer.echo(f"validation: {validation_path}")
+    typer.echo(f"passed: {str(report.passed).lower()}")
+
+    for issue in report.issues:
+        typer.echo(f"issue: {issue.code} {issue.table_name or '-'} {issue.message}")
+
+    if not report.passed:
+        raise typer.Exit(code=1)
+
+
+def _build_generation_plan(
+    schema_path: Path,
+    *,
+    row_counts: dict[str, int],
+    default_row_count: int,
+    seed: str,
+    domain: DomainProfile,
+    output_formats: tuple[OutputFormat, ...],
+) -> GenerationPlan:
+    database = parse_postgres_ddl(schema_path.read_text(encoding="utf-8"))
+    return create_generation_plan(
+        database,
+        row_counts=row_counts,
+        default_row_count=default_row_count,
+        seed=seed,
+        domain=domain,
+        output_formats=output_formats,
+    )
 
 
 def _parse_row_counts(values: list[str] | None) -> dict[str, int]:

@@ -115,6 +115,32 @@ class ArtifactExporter:
         )
 
 
+def load_export_manifest(path: Path) -> ExportManifest:
+    """Load an export manifest written by :class:`ArtifactExporter`."""
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return ExportManifest(
+        output_dir=Path(data["output_dir"]),
+        manifest_path=Path(data["manifest_path"]),
+        tables=tuple(
+            TableArtifact(
+                table_name=table["table_name"],
+                row_count=int(table["row_count"]),
+                csv_path=_optional_path(table.get("csv_path")),
+                json_path=_optional_path(table.get("json_path")),
+                sql_path=_optional_path(table.get("sql_path")),
+            )
+            for table in data["tables"]
+        ),
+    )
+
+
+def _optional_path(value: str | None) -> Path | None:
+    if value is None:
+        return None
+    return Path(value)
+
+
 class _close_writers:
     def __init__(self, *writers) -> None:
         self.writers = writers

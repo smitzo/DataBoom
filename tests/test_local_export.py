@@ -1,7 +1,7 @@
 import csv
 import json
 
-from boom_data.export import ArtifactExporter
+from boom_data.export import ArtifactExporter, load_export_manifest
 from boom_data.generation import OutputFormat, create_generation_plan
 from boom_data.ingest import parse_postgres_ddl
 
@@ -47,6 +47,10 @@ def test_artifact_exporter_writes_csv_sql_and_manifest(tmp_path) -> None:
 
     manifest_data = json.loads(manifest.manifest_path.read_text(encoding="utf-8"))
     assert manifest_data["tables"][1]["csv_path"].endswith("public__users.csv")
+
+    loaded_manifest = load_export_manifest(manifest.manifest_path)
+    assert loaded_manifest.output_dir == manifest.output_dir
+    assert loaded_manifest.tables[1].csv_path == users_csv
 
 
 def test_artifact_exporter_writes_json_format(tmp_path) -> None:
