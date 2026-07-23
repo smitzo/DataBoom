@@ -664,3 +664,29 @@ The in-memory run store is intentionally temporary. It makes `POST /runs`, `GET 
 - Add artifact download endpoints before asking the frontend to download files.
 - Add persistent run state before long-running or multi-worker deployment.
 - Add background execution only when progress reporting, cancellation, retries, or large runs require it.
+
+## Decision: wire the frontend to the local API with a small bridge
+
+### Question
+
+How much frontend/API integration should happen before the full generation dashboard exists?
+
+### Answer
+
+Start with a small client-side API bridge that checks `/health`, lists `/runs`, and can create a tiny demo run through `POST /runs`.
+
+### Why This Matters
+
+This proves that the frontend and backend can communicate through the real HTTP contract while keeping the UI surface small. It also keeps the product roadmap honest: the API achievement is visible, and a user can trigger a real backend run from the workbench instead of only seeing static mock data.
+
+### Details
+
+The bridge defaults to `http://localhost:8000` and can be configured with `NEXT_PUBLIC_BOOM_DATA_API_URL`. It intentionally uses a tiny built-in schema so local demo runs finish quickly and do not require file upload UI yet.
+
+This is not the final generation workflow. Later Phase 2 screens should let users paste or upload DDL, choose row counts, select formats, review validation, and download artifacts. The bridge is a low-risk step that verifies connectivity and response contracts first.
+
+### Follow-Up Notes
+
+- Add artifact download endpoints before building download buttons.
+- Move the demo schema into backend fixtures or examples if it starts being reused in multiple places.
+- Add better error states once API authentication and persistent run storage arrive.

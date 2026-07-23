@@ -99,7 +99,7 @@ cd frontend
 npm install
 npm run typecheck
 npm run build
-npm run dev -- --hostname 0.0.0.0 --port 3000
+NEXT_PUBLIC_BOOM_DATA_API_URL=http://localhost:8000 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
 Open:

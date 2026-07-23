@@ -174,6 +174,7 @@ export const roadmap: RoadmapItem[] = [
     achieved: [
       "FastAPI app scaffold with health and readiness endpoints.",
       "Synchronous API generation runs with in-process status lookup.",
+      "Frontend API bridge for health checks and demo generation runs.",
     ],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",

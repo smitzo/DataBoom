@@ -1,6 +1,5 @@
 import {
   Activity,
-  BadgeCheck,
   Database,
   Download,
   GitBranch,
@@ -9,6 +8,7 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 
+import { ApiRunPanel } from "@/components/api-run-panel";
 import { FormatRow } from "@/components/cards";
 import { formats } from "@/data/workbench";
 
@@ -90,14 +90,7 @@ export function ControlCenter() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-lg border border-emerald-300/25 bg-emerald-300/10 p-4">
-              <div className="flex items-center gap-3">
-                <BadgeCheck className="h-5 w-5 text-emerald-300" />
-                <p className="text-sm font-semibold text-emerald-100">
-                  Latest validation passed for primary keys, foreign keys, manifest, and artifacts.
-                </p>
-              </div>
-            </div>
+            <ApiRunPanel />
           </div>
         </div>
       </div>
