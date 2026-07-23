@@ -15,6 +15,7 @@ The current implementation is Phase 1: a Python backend engine that reads Postgr
 - Validation reports and artifact manifests.
 - CLI generation workflow.
 - FastAPI app scaffold with health and readiness endpoints.
+- API generation run endpoint for synchronous local relational runs.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
 
@@ -75,6 +76,20 @@ Health checks:
 ```text
 http://localhost:8000/health
 http://localhost:8000/ready
+```
+
+Create a small API generation run:
+
+```bash
+curl -X POST http://localhost:8000/runs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "schema_ddl": "CREATE TABLE users (id bigint PRIMARY KEY, email text NOT NULL);",
+    "row_counts": {"users": 3},
+    "seed": "api-demo",
+    "domain": "general",
+    "output_formats": ["csv", "json"]
+  }'
 ```
 
 ## Frontend Setup

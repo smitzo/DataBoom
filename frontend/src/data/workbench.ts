@@ -171,10 +171,13 @@ export const roadmap: RoadmapItem[] = [
     title: "Scale, API, profiling, and NoSQL data",
     description:
       "The next phase expands scale and access patterns, then adds document-style generation for NoSQL use cases.",
-    achieved: ["FastAPI app scaffold with health and readiness endpoints."],
+    achieved: [
+      "FastAPI app scaffold with health and readiness endpoints.",
+      "Synchronous API generation runs with in-process status lookup.",
+    ],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",
-      "Expose FastAPI run, status, validation, and artifact endpoints.",
+      "Expand FastAPI run, status, validation, and artifact endpoints.",
       "Add live PostgreSQL profiling and metadata introspection.",
       "Add NoSQL document data support, starting with JSON/NDJSON and MongoDB-style nested records.",
       "Wire the frontend to local API runs and artifact downloads.",

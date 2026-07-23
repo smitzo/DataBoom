@@ -638,3 +638,29 @@ The test suite uses FastAPI's `TestClient`, which currently requires the `httpx2
 - Next API work should add generation run request and status models.
 - Artifact download endpoints should reuse the existing manifest and validation report structure.
 - The frontend roadmap should list significant Phase 2 API milestones as achieved when they land.
+
+## Decision: start API generation runs synchronously
+
+### Question
+
+Should the first API generation endpoint introduce background workers, queues, Redis state, and async orchestration immediately?
+
+### Answer
+
+No. The first `/runs` endpoint should execute a local relational generation run synchronously, write artifacts to local disk, and store the run response in the current API process.
+
+### Why This Matters
+
+The existing engine already generates and validates local artifacts. The next backend risk is the HTTP contract: request shape, status response, artifact paths, validation summary, error handling, and frontend integration. A synchronous endpoint proves that contract without adding queue complexity too early.
+
+### Details
+
+The endpoint accepts PostgreSQL DDL, row counts, seed, domain profile, and output formats. It reuses the same parser, planner, exporter, and validator as the CLI. Artifacts are written under `artifacts/runs/{run_id}` so API runs do not collide with CLI or benchmark outputs.
+
+The in-memory run store is intentionally temporary. It makes `POST /runs`, `GET /runs`, and `GET /runs/{run_id}` useful during local development, but it is not the final production run-state design. Later Phase 2 work can replace it with persistent metadata and background execution without changing the basic response contract.
+
+### Follow-Up Notes
+
+- Add artifact download endpoints before asking the frontend to download files.
+- Add persistent run state before long-running or multi-worker deployment.
+- Add background execution only when progress reporting, cancellation, retries, or large runs require it.
