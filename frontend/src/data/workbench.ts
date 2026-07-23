@@ -178,6 +178,7 @@ export const roadmap: RoadmapItem[] = [
       "Artifact listing and download endpoints for completed local runs.",
       "Optional API-key protection for run and artifact routes.",
       "CLI plan preview and artifact re-validation commands.",
+      "Live PostgreSQL schema introspection foundation.",
     ],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",

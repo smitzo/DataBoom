@@ -91,6 +91,18 @@ GET /runs/{run_id}/artifacts/{relative_artifact_path}
 
 When `BOOM_DATA_API_KEY` is configured, include `X-API-Key` on run and artifact requests. Health and readiness endpoints remain open for local orchestration checks.
 
+## Live PostgreSQL Introspection
+
+Phase 2 adds a backend ingestion helper for reading schema metadata from a live PostgreSQL database through SQLAlchemy:
+
+```python
+from boom_data.ingest import load_postgres_schema
+
+schema = load_postgres_schema("postgresql+psycopg://user:password@localhost:5432/app")
+```
+
+The helper returns the same normalized `DatabaseSchema` used by the DDL parser, planner, generator, and validator.
+
 ## Demo Datasets
 
 This repository includes generated CSV demos under `demo/`:

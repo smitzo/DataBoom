@@ -768,3 +768,29 @@ This is intentionally not a full saved-plan system yet. A future phase can persi
 - Add `--plan-path` support once saved plans become part of the public workflow.
 - Add richer validation output formats for CI, such as JSON-only output.
 - Make validation chunk-aware before pushing much beyond the current Phase 1 dataset sizes.
+
+## Decision: add live PostgreSQL introspection as a library boundary first
+
+### Question
+
+Why implement live database introspection before exposing a full API or CLI workflow for it?
+
+### Answer
+
+The risky part is translating real PostgreSQL metadata into the same normalized `DatabaseSchema` contract used by DDL parsing. By adding `load_postgres_schema()` and `inspect_postgres_schema()` first, the engine can support live schemas without forcing a new user workflow before the underlying contract is proven.
+
+### Why This Matters
+
+DDL files are useful for Phase 1, but many teams keep the source of truth in a running database. Live introspection lets the project read tables, columns, primary keys, foreign keys, unique constraints, defaults, nullability, identity information, and common PostgreSQL type details from SQLAlchemy's inspector. Once that normalized model exists, the existing planner and generator can reuse it instead of maintaining a separate path for database-backed workflows.
+
+### Implementation Detail
+
+The introspection function accepts a SQLAlchemy connectable for tests and an external `database_url` helper for real use. Tests use a fake inspector instead of requiring Docker or a live database, which keeps the suite fast and deterministic while still validating the metadata mapping.
+
+The helper disposes the SQLAlchemy engine after loading schema metadata. That matters for production-grade behavior because database connections should not linger after one-shot metadata reads.
+
+### Follow-Up Notes
+
+- Add CLI/API commands that call `load_postgres_schema()` once the workflow shape is clear.
+- Add integration tests against the Docker PostgreSQL service when CI infrastructure is ready.
+- Extend type mapping as real-world schemas reveal more PostgreSQL-specific types.

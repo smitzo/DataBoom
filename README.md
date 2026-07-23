@@ -17,6 +17,7 @@ The current implementation is Phase 1: a Python backend engine that reads Postgr
 - FastAPI app scaffold with health and readiness endpoints.
 - API generation run endpoint for synchronous local relational runs.
 - API artifact listing, downloads, and optional API-key protection.
+- Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
 
