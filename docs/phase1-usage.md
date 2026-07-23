@@ -59,6 +59,15 @@ Expected outputs:
 
 Use `--domain financial` or `--domain healthcare` when you want semantic values optimized for those use cases.
 
+## API Artifacts
+
+API runs can be created with `POST /runs`, inspected with `GET /runs/{run_id}`, and their generated files can be listed or downloaded with:
+
+```text
+GET /runs/{run_id}/artifacts
+GET /runs/{run_id}/artifacts/{relative_artifact_path}
+```
+
 ## Demo Datasets
 
 This repository includes generated CSV demos under `demo/`:

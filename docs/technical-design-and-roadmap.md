@@ -283,6 +283,7 @@ Technical objectives:
 - Add live PostgreSQL metadata introspection.
 - Add structural profiling for row counts, null rates, cardinality, ranges, and categorical hints.
 - Add FastAPI run endpoints.
+- Add FastAPI artifact listing and download endpoints.
 - Add API-key authentication.
 - Add Docker Compose for API plus PostgreSQL.
 - Keep artifacts on local disk.

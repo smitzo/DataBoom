@@ -175,10 +175,11 @@ export const roadmap: RoadmapItem[] = [
       "FastAPI app scaffold with health and readiness endpoints.",
       "Synchronous API generation runs with in-process status lookup.",
       "Frontend API bridge for health checks and demo generation runs.",
+      "Artifact listing and download endpoints for completed local runs.",
     ],
     future: [
       "Harden generation toward 500k records with chunk-aware validation.",
-      "Expand FastAPI run, status, validation, and artifact endpoints.",
+      "Expand FastAPI run status, validation detail, and long-running job controls.",
       "Add live PostgreSQL profiling and metadata introspection.",
       "Add NoSQL document data support, starting with JSON/NDJSON and MongoDB-style nested records.",
       "Wire the frontend to local API runs and artifact downloads.",

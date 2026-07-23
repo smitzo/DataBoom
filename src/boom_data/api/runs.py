@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from mimetypes import guess_type
+from pathlib import Path
+from urllib.parse import quote
 from uuid import uuid4
 
 from boom_data.api.models import (
     GenerationRunRequest,
     GenerationRunResponse,
+    RunArtifactListResponse,
+    RunArtifactResponse,
     RunStatus,
     TableArtifactResponse,
     ValidationIssueResponse,
@@ -55,6 +60,48 @@ def execute_generation_run(
         validation=validation,
         validation_path=validation_path,
     )
+
+
+def list_generation_run_artifacts(run: GenerationRunResponse) -> RunArtifactListResponse:
+    """Return downloadable files currently present for a generation run."""
+
+    artifact_dir = run.artifact_dir.resolve()
+    files: list[RunArtifactResponse] = []
+
+    if artifact_dir.exists():
+        for path in sorted(artifact_dir.rglob("*")):
+            if path.is_file():
+                relative_path = path.relative_to(artifact_dir).as_posix()
+                media_type = guess_type(path.name)[0] or "application/octet-stream"
+                download_url = f"/runs/{run.run_id}/artifacts/{quote(relative_path, safe='/')}"
+                files.append(
+                    RunArtifactResponse(
+                        name=path.name,
+                        relative_path=relative_path,
+                        size_bytes=path.stat().st_size,
+                        media_type=media_type,
+                        download_url=download_url,
+                    )
+                )
+
+    return RunArtifactListResponse(
+        run_id=run.run_id,
+        artifact_dir=artifact_dir,
+        files=tuple(files),
+    )
+
+
+def resolve_generation_run_artifact(run: GenerationRunResponse, artifact_path: str) -> Path:
+    """Resolve one artifact path while keeping access inside the run directory."""
+
+    artifact_dir = run.artifact_dir.resolve()
+    requested_path = (artifact_dir / artifact_path).resolve()
+
+    if not requested_path.is_relative_to(artifact_dir):
+        raise ValueError("artifact path is outside run directory")
+    if not requested_path.is_file():
+        raise FileNotFoundError(artifact_path)
+    return requested_path
 
 
 def _completed_response(

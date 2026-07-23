@@ -92,6 +92,13 @@ curl -X POST http://localhost:8000/runs \
   }'
 ```
 
+Use the returned `run_id` to inspect and download local artifacts:
+
+```bash
+curl http://localhost:8000/runs/<run_id>/artifacts
+curl -L -o users.csv http://localhost:8000/runs/<run_id>/artifacts/public__users.csv
+```
+
 ## Frontend Setup
 
 ```bash

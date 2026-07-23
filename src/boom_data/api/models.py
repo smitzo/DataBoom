@@ -92,6 +92,28 @@ class ValidationSummaryResponse(BaseModel):
     issues: tuple[ValidationIssueResponse, ...]
 
 
+class RunArtifactResponse(BaseModel):
+    """API representation of one downloadable run artifact."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    relative_path: str
+    size_bytes: int
+    media_type: str
+    download_url: str
+
+
+class RunArtifactListResponse(BaseModel):
+    """API representation of the downloadable files for one run."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    artifact_dir: Path
+    files: tuple[RunArtifactResponse, ...]
+
+
 class GenerationRunResponse(BaseModel):
     """Generation run state returned by the API."""
 

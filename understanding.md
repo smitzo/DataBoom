@@ -690,3 +690,29 @@ This is not the final generation workflow. Later Phase 2 screens should let user
 - Add artifact download endpoints before building download buttons.
 - Move the demo schema into backend fixtures or examples if it starts being reused in multiple places.
 - Add better error states once API authentication and persistent run storage arrive.
+
+## Decision: expose run artifacts through path-safe API endpoints
+
+### Question
+
+Why add artifact listing and download endpoints before building a richer run dashboard?
+
+### Answer
+
+The API already creates local artifacts, but a client cannot use them unless it can discover and retrieve files through HTTP. Adding `GET /runs/{run_id}/artifacts` and `GET /runs/{run_id}/artifacts/{relative_path}` closes that loop for local runs without introducing a queue, worker, object storage, or authentication system before those pieces are truly needed.
+
+### Why This Matters
+
+This turns a generation run into a complete API workflow: create a run, read its status, list its outputs, and download the files. That is the minimum contract the frontend, CLI automation, and future integrations need before they can offer artifact download buttons or pipeline handoffs.
+
+### Security and Reliability Detail
+
+The download endpoint resolves the requested path against the specific run's artifact directory and rejects paths that escape that directory. This prevents a request such as `../secret.txt` from reading unrelated files on disk. Even though Phase 1 and early Phase 2 are local-development focused, this is a production-grade habit worth adding early because artifact APIs are naturally file-system adjacent.
+
+The endpoint still uses the in-process run store, so it only knows about runs created by the current API process. That is acceptable for this phase. Persistent run metadata should come before multi-worker deployment, API restarts, or long-running background generation.
+
+### Follow-Up Notes
+
+- Add authentication before exposing artifact downloads beyond a trusted local environment.
+- Add persistent run metadata so artifacts survive API process restarts.
+- Add retention policies before artifact storage can grow without bounds.

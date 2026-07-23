@@ -5,10 +5,20 @@ from __future__ import annotations
 from typing import cast
 
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import FileResponse
 
 from boom_data import __version__
-from boom_data.api.models import GenerationRunRequest, GenerationRunResponse, HealthResponse
-from boom_data.api.runs import execute_generation_run
+from boom_data.api.models import (
+    GenerationRunRequest,
+    GenerationRunResponse,
+    HealthResponse,
+    RunArtifactListResponse,
+)
+from boom_data.api.runs import (
+    execute_generation_run,
+    list_generation_run_artifacts,
+    resolve_generation_run_artifact,
+)
 from boom_data.core.config import Settings
 
 router = APIRouter()
@@ -65,11 +75,45 @@ def list_runs(request: Request) -> tuple[GenerationRunResponse, ...]:
 def get_run(request: Request, run_id: str) -> GenerationRunResponse:
     """Return one generation run by ID."""
 
-    run = _run_store(request).get(run_id)
-    if run is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
-    return run
+    return _get_existing_run(request, run_id)
+
+
+@router.get(
+    "/runs/{run_id}/artifacts",
+    response_model=RunArtifactListResponse,
+    tags=["runs"],
+)
+def list_run_artifacts(request: Request, run_id: str) -> RunArtifactListResponse:
+    """Return downloadable artifacts for one generation run."""
+
+    run = _get_existing_run(request, run_id)
+    return list_generation_run_artifacts(run)
+
+
+@router.get("/runs/{run_id}/artifacts/{artifact_path:path}", tags=["runs"])
+def download_run_artifact(request: Request, run_id: str, artifact_path: str) -> FileResponse:
+    """Download one generated artifact from a run directory."""
+
+    run = _get_existing_run(request, run_id)
+    try:
+        path = resolve_generation_run_artifact(run, artifact_path)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="artifact not found",
+        ) from error
+
+    return FileResponse(path, filename=path.name)
 
 
 def _run_store(request: Request) -> dict[str, GenerationRunResponse]:
     return cast("dict[str, GenerationRunResponse]", request.app.state.run_store)
+
+
+def _get_existing_run(request: Request, run_id: str) -> GenerationRunResponse:
+    run = _run_store(request).get(run_id)
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
+    return run
