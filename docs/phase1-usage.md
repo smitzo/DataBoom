@@ -151,16 +151,28 @@ Validate Compose configuration:
 docker compose --profile tools config
 ```
 
-Start local infrastructure when Docker daemon is available:
+Start the Dockerized API stack when Docker daemon is available:
 
 ```bash
-docker compose up -d postgres redis
+docker compose up -d --build
 ```
 
-Run the app image as a tool container:
+The API should be available at:
+
+```text
+http://localhost:8000/health
+```
+
+If port `8000` is already in use, choose another host port:
+
+```bash
+DATABOOM_API_PORT=8001 docker compose up -d --build
+```
+
+Run the CLI image as a tool container:
 
 ```bash
 docker compose --profile tools run --rm app
 ```
 
-The current Compose stack includes PostgreSQL and Redis. Celery and Kafka are intentionally not included until a real queue or event-streaming requirement appears.
+The current Compose stack includes the FastAPI service, PostgreSQL, and Redis. Celery and Kafka are intentionally not included until a real queue or event-streaming requirement appears.

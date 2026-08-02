@@ -846,3 +846,29 @@ The code still keeps boring package and enum names such as `databoom`, `financia
 - Add a future `databoom.masking` package only when Masker-Boom implementation starts.
 - Keep README product tables updated as modules move from planned to active.
 - Avoid claiming Masker-Boom exists as a working masking engine until Phase 4 code lands.
+
+## Decision: add a long-running Docker Compose API service
+
+### Question
+
+Why add a dedicated `api` service instead of only using the existing Docker tool container?
+
+### Answer
+
+The previous Compose setup could start PostgreSQL and Redis and run the app image as a one-shot CLI tool, but it did not expose the FastAPI service as a long-running container. A Dockerized setup should let a developer run `docker compose up -d --build` and immediately reach the API at `/health`.
+
+### Why This Matters
+
+Deployment readiness is one of the project goals. A container image that only prints `databoom info` is useful for smoke checks, but it does not prove the HTTP app can run with Compose-managed dependencies. The new `api` service runs Uvicorn, mounts local artifacts, waits for PostgreSQL and Redis health checks, exposes port `8000`, and has its own health check.
+
+### Implementation Detail
+
+The host port can be overridden with `DATABOOM_API_PORT`, for example `DATABOOM_API_PORT=8001 docker compose up -d --build`. This avoids a common local-development failure when another API server already uses port `8000`.
+
+The `app` service remains under the `tools` profile so it can still be used for CLI-oriented container runs without becoming part of the default long-running stack.
+
+### Follow-Up Notes
+
+- Add a production image stage before a public release.
+- Add API-key configuration to Compose examples once the auth story is ready for shared environments.
+- Add a frontend container only when the frontend needs Dockerized deployment, not just local development.
