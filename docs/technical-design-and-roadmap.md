@@ -129,6 +129,12 @@ sequenceDiagram
     C-->>U: artifact paths and validation status
 ```
 
+## API State Persistence
+
+The API uses a `StateStore` boundary for demo sessions, product subscriptions, and generation-run metadata. Local tests can use the in-process memory store, while Dockerized API runs use the SQLAlchemy-backed store against PostgreSQL.
+
+This keeps route behavior independent from the storage implementation. It also lets the dashboard survive API container restarts without changing the frontend contract. Generated datasets remain on local disk in Phase 1 and Phase 2; the database stores the metadata needed to find, preview, and download those artifacts.
+
 ## Core Components
 
 - `schema_ingestor`: parses DDL and reads PostgreSQL metadata.
@@ -142,7 +148,8 @@ sequenceDiagram
 - `generator`: streams generated rows table by table.
 - `validator`: checks generated data against schema and plan.
 - `exporter`: writes CSV, SQL, manifests, and reports.
-- `api`: exposes run creation, status, artifact, and health endpoints.
+- `api`: exposes auth, products, subscriptions, run creation, status, artifact, preview, and health endpoints.
+- `state_store`: persists demo sessions, subscriptions, and generation-run metadata behind a replaceable API boundary.
 - `cli`: supports local and CI workflows.
 
 ## Phase 1: Generator-Boom Schema-Boom Foundation
@@ -309,6 +316,7 @@ Technical objectives:
 - Add FastAPI run endpoints.
 - Add FastAPI artifact listing and download endpoints.
 - Add API-key authentication.
+- Persist API sessions, product subscriptions, and generation-run metadata in PostgreSQL for Dockerized runs.
 - Add CLI plan and validate commands for reviewable local workflows.
 - Add Docker Compose for API plus PostgreSQL.
 - Keep artifacts on local disk.

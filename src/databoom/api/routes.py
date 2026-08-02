@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 from datetime import UTC, datetime
-from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
@@ -36,6 +35,7 @@ from databoom.api.runs import (
     resolve_generation_run_artifact,
 )
 from databoom.api.security import require_api_key
+from databoom.api.state import StateStore
 from databoom.core.config import Settings
 
 router = APIRouter()
@@ -58,7 +58,7 @@ def _require_demo_user(
             detail="missing session token",
         )
 
-    user = _session_store(request).get(credentials.credentials)
+    user = _state_store(request).get_session(credentials.credentials)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -99,7 +99,7 @@ def login(request: Request, payload: LoginRequest) -> LoginResponse:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
     user = DemoUserResponse(email=DEMO_EMAIL, name="Demo Operator")
-    _session_store(request)[DEMO_TOKEN] = user
+    _state_store(request).save_session(DEMO_TOKEN, user)
     return LoginResponse(token=DEMO_TOKEN, user=user)
 
 
@@ -142,7 +142,7 @@ def list_subscriptions(
 ) -> tuple[SubscriptionResponse, ...]:
     """Return demo subscriptions for the authenticated user."""
 
-    return tuple(_subscription_store(request).get(user.email, {}).values())
+    return _state_store(request).list_subscriptions(user.email)
 
 
 @router.post(
@@ -177,7 +177,7 @@ def subscribe(
         user_email=user.email,
         created_at=datetime.now(UTC),
     )
-    _subscription_store(request).setdefault(user.email, {})[product.id] = subscription
+    _state_store(request).save_subscription(subscription)
     return subscription
 
 
@@ -203,7 +203,7 @@ def create_product_run(
             detail="product not found",
         ) from error
 
-    if product.id not in _subscription_store(request).get(user.email, {}):
+    if _state_store(request).get_subscription(user.email, product.id) is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
@@ -224,7 +224,7 @@ def create_product_run(
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    _run_store(request)[run.run_id] = run
+    _state_store(request).save_run(run)
     return run
 
 
@@ -244,7 +244,7 @@ def create_run(request: Request, payload: GenerationRunRequest) -> GenerationRun
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    _run_store(request)[run.run_id] = run
+    _state_store(request).save_run(run)
     return run
 
 
@@ -257,7 +257,7 @@ def create_run(request: Request, payload: GenerationRunRequest) -> GenerationRun
 def list_runs(request: Request) -> tuple[GenerationRunResponse, ...]:
     """Return known generation runs for the current API process."""
 
-    return tuple(_run_store(request).values())
+    return _state_store(request).list_runs()
 
 
 @router.get(
@@ -346,26 +346,15 @@ def preview_run_table(
     )
 
 
-def _run_store(request: Request) -> dict[str, GenerationRunResponse]:
-    return cast("dict[str, GenerationRunResponse]", request.app.state.run_store)
-
-
 def _get_existing_run(request: Request, run_id: str) -> GenerationRunResponse:
-    run = _run_store(request).get(run_id)
+    run = _state_store(request).get_run(run_id)
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
     return run
 
 
-def _session_store(request: Request) -> dict[str, DemoUserResponse]:
-    return cast("dict[str, DemoUserResponse]", request.app.state.sessions)
-
-
-def _subscription_store(request: Request) -> dict[str, dict[str, SubscriptionResponse]]:
-    return cast(
-        "dict[str, dict[str, SubscriptionResponse]]",
-        request.app.state.subscriptions,
-    )
+def _state_store(request: Request) -> StateStore:
+    return request.app.state.state_store
 
 
 def _product_response(product: ProductCatalogEntry) -> ProductResponse:

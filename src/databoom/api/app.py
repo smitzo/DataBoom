@@ -7,11 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from databoom import __version__
 from databoom.api.routes import router
+from databoom.api.state import StateStore, create_state_store
 from databoom.core.config import Settings, get_settings
 from databoom.core.logging import configure_logging
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, state_store: StateStore | None = None) -> FastAPI:
     """Create a configured FastAPI application instance."""
 
     active_settings = settings or get_settings()
@@ -23,9 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
     )
     app.state.settings = active_settings
-    app.state.run_store = {}
-    app.state.sessions = {}
-    app.state.subscriptions = {}
+    app.state.state_store = state_store or create_state_store(active_settings)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(active_settings.cors_origins),

@@ -183,7 +183,7 @@ export const roadmap: RoadmapItem[] = [
       "The next phase expands Generator-Boom scale and access patterns, then adds Docu-Boom document generation for NoSQL use cases.",
     achieved: [
       "FastAPI app scaffold with health and readiness endpoints.",
-      "Synchronous API generation runs with in-process status lookup.",
+      "Synchronous API generation runs with SQL-backed metadata in Dockerized runs.",
       "Dashboard flow for demo login, product subscriptions, product generation, table previews, and downloads.",
       "Demo login, product subscription, product-run generation, run detail, and table preview dashboard pages.",
       "Artifact listing and download endpoints for completed local runs.",

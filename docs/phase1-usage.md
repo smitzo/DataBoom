@@ -116,6 +116,8 @@ The dashboard can:
 - preview the top 10 rows for generated CSV-backed tables,
 - download generated table artifacts and validation files.
 
+In the Dockerized stack, demo sessions, subscriptions, and generation-run metadata are persisted in PostgreSQL. Generated datasets are still written to local disk under `artifacts/`, which keeps Phase 1/2 storage simple and inspectable.
+
 ## Live PostgreSQL Introspection
 
 Phase 2 adds a backend ingestion helper for reading schema metadata from a live PostgreSQL database through SQLAlchemy:

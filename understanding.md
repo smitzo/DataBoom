@@ -970,3 +970,50 @@ The app shell brand now links back to `/` because the DataBoom logo is a product
 - Persist sessions, subscriptions, and run metadata in PostgreSQL instead of app memory.
 - Move long-running generation to a job queue before allowing large dashboard-triggered runs.
 - Add custom schema upload and saved generation templates once the dashboard flow is stable.
+
+## Decision: persist API state behind a store boundary
+
+### Question
+
+Why move demo sessions, product subscriptions, and generation-run metadata out of FastAPI app dictionaries before building more dashboard features?
+
+### Answer
+
+The dashboard has crossed from a static demo into a real full-stack workflow. Once a user can log in, subscribe, generate data, preview tables, and download artifacts, that workflow should not disappear whenever the API process restarts. A small persistence layer gives the product a durable backbone while keeping the current routes and frontend contract stable.
+
+### Why This Matters
+
+In-memory dictionaries are useful for the first proof of concept because they are simple and fast. They are not good enough for a product console. If the API container restarts after a user generates data, the artifact files may still exist on disk, but the API would forget the run ID, product subscription, and session token. That breaks the user's path through the app even though the engine did its work correctly.
+
+PostgreSQL is already part of the DataBoom stack, so storing API metadata there is the natural next step. This improves reliability without introducing a queue, workflow engine, or heavy orchestration system before the project needs one.
+
+### Implementation Detail
+
+The backend now has a `StateStore` protocol. Routes call methods such as `save_session()`, `list_subscriptions()`, and `save_run()` instead of reading and writing raw dictionaries. There are two implementations:
+
+- `MemoryStateStore` keeps tests and fallback local development lightweight.
+- `SQLAlchemyStateStore` stores JSON payloads for demo sessions, subscriptions, and generation runs in SQL tables.
+
+This design keeps SQLAlchemy out of route business logic. A route should care about product behavior: authenticate, subscribe, generate, preview, download. It should not know table names or write SQL statements inline. That separation makes the backend easier to change later when the metadata model becomes more normalized.
+
+For the MVP, run payloads are stored as JSON. That is a practical bridge: the API already has typed Pydantic response models, and storing their JSON form preserves the current contract with minimal code. Later, high-query fields such as run status, product ID, owner, artifact root, duration, row counts, and validation status can be promoted into first-class columns.
+
+### Performance, Reliability, or Maintainability Impact
+
+Reliability improves because Dockerized API runs can survive process restarts while keeping sessions, subscriptions, and run metadata. Maintainability improves because persistence is now a replaceable boundary instead of a pattern duplicated across endpoints.
+
+The performance impact is intentionally small for the current scale. Sessions, subscriptions, and run metadata are tiny compared with generated datasets. The large files still live on local disk under `artifacts/`, so PostgreSQL is not being used as a blob store. That keeps the database focused on metadata and leaves bulk generated data in file artifacts where Phase 1 and Phase 2 can inspect it easily.
+
+### Beginner Explanation
+
+Think of generated CSV/JSON/SQL files as packages in a warehouse. The API metadata is the clipboard that says which packages exist, who requested them, and where to find them. Before this change, the clipboard was wiped whenever the API restarted. Now the clipboard is saved in PostgreSQL.
+
+The `StateStore` is like a service desk window. The rest of the app asks the window for sessions, subscriptions, and runs. Today the window can talk to memory or PostgreSQL. Later it can talk to a more advanced database design without forcing every route to be rewritten.
+
+### Follow-Up Notes
+
+- Replace `metadata.create_all()` with Alembic migrations before production deployment.
+- Normalize important run fields into columns when filtering, search, ownership, or dashboards become more advanced.
+- Add real user accounts and authorization before shared deployment.
+- Move long-running generation into background jobs before dashboard-triggered large runs become common.
+- Add artifact retention and cleanup rules so persisted run metadata cannot point to deleted files without an explicit status.

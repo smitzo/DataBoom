@@ -40,6 +40,7 @@ The current implementation is Generator-Boom: a Python backend engine that reads
 - API artifact listing, downloads, and optional API-key protection.
 - Demo auth with `demo` / `demo` credentials.
 - Product catalog, subscription, product-run, and table-preview API endpoints.
+- SQL-backed demo sessions, subscriptions, and run metadata in Dockerized API runs.
 - Dashboard pages for login, products, subscriptions, runs, table previews, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
@@ -225,7 +226,7 @@ docker compose --profile tools run --rm app
 ## Folder Guide
 
 - `src/databoom`: Python backend package.
-- `src/databoom/api`: FastAPI app factory, response models, and HTTP routes.
+- `src/databoom/api`: FastAPI app factory, response models, HTTP routes, product catalog, and API state storage.
 - `src/databoom/ingest`: PostgreSQL DDL ingestion.
 - `src/databoom/schema`: normalized schema models and relationship graph code.
 - `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
