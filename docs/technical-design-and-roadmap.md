@@ -15,6 +15,29 @@
 - Deployment: Docker and Docker Compose.
 - Artifact storage for Phase 1 and Phase 2: local disk.
 
+## Product Architecture
+
+```mermaid
+flowchart TD
+    DataBoom[DataBoom Platform]
+    DataBoom --> Generator[Generator-Boom]
+    DataBoom --> Masker[Masker-Boom]
+    Generator --> SchemaBoom[Schema-Boom]
+    Generator --> BankBoom[Bank-O-Boom]
+    Generator --> HealthBoom[Health-Boom]
+    Generator --> CommerceBoom[Boom-Commerce]
+    Generator --> AutoBoom[Auto-Boom]
+    Generator --> DocuBoom[Docu-Boom]
+    Generator --> GraphBoom[Graph-Boom]
+    Masker --> ClassifyBoom[Classify-Boom]
+    Masker --> RedactBoom[Redact-Boom]
+    Masker --> TokenBoom[Token-Boom]
+    Masker --> ShapeBoom[Shape-Boom]
+    Masker --> AuditBoom[Audit-Boom]
+```
+
+Generator-Boom creates synthetic data. Masker-Boom transforms sensitive existing data while preserving integrity. The codebase keeps shared contracts in neutral package names such as `databoom.schema`, `databoom.generation`, and future `databoom.masking` modules.
+
 ## High-Level Design
 
 ```mermaid
@@ -114,16 +137,17 @@ sequenceDiagram
 - `document_model`: future Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
 - `graph_model`: future Phase 3 contract for node labels, edge types, properties, and graph cardinality.
 - `prompt_planner`: converts prompt intent into a structured generation plan.
-- `domain_profiles`: provides optional semantic value generation for domains such as financial and healthcare.
+- `domain_profiles`: provides optional semantic value generation for Generator-Boom modules such as Bank-O-Boom and Health-Boom.
+- `masking_policy`: future Masker-Boom contract for classification, redaction, hashing, tokenization, and synthetic replacement.
 - `generator`: streams generated rows table by table.
 - `validator`: checks generated data against schema and plan.
 - `exporter`: writes CSV, SQL, manifests, and reports.
 - `api`: exposes run creation, status, artifact, and health endpoints.
 - `cli`: supports local and CI workflows.
 
-## Phase 1: Backend Engine Foundation
+## Phase 1: Generator-Boom Schema-Boom Foundation
 
-Goal: build the deterministic backend engine for PostgreSQL schema-driven generation.
+Goal: build the deterministic Schema-Boom backend engine for PostgreSQL schema-driven generation.
 
 Technical objectives:
 
@@ -134,7 +158,7 @@ Technical objectives:
 - Implement deterministic seed handling.
 - Implement local generation plans from simple prompt/row-count inputs.
 - Generate primitive values for common PostgreSQL types.
-- Support extensible domain profiles for financial and healthcare demo use cases.
+- Support extensible domain profiles for Bank-O-Boom and Health-Boom demo use cases.
 - Preserve primary keys and foreign keys.
 - Stream CSV, JSON, and SQL output to local disk.
 - Produce validation reports.
@@ -272,9 +296,9 @@ Why tenth: the CLI is the fastest way to use the backend locally and in CI.
 
 Why eleventh: performance goals must be measured, not assumed.
 
-## Phase 2: Scale, API, CLI, Profiling, and NoSQL Documents
+## Phase 2: Generator-Boom Scale, API, Profiling, and Docu-Boom
 
-Goal: harden the engine for larger local runs, expose API/CLI workflows, and add the first NoSQL/document data generation path.
+Goal: harden Generator-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
 Technical objectives:
 
@@ -293,6 +317,7 @@ Technical objectives:
 - Add a document data model for NoSQL collections, nested fields, arrays, object IDs, and optional references.
 - Export NoSQL-oriented JSON and NDJSON artifacts.
 - Validate document shape, configured counts, required fields, and reference consistency where references exist.
+- Keep Masker-Boom in design only until Phase 4.
 
 Recommended commits:
 
@@ -311,9 +336,9 @@ Recommended commits:
 13. `backend: validate nosql document artifacts`
 14. `docs: document api cli and nosql workflows`
 
-## Phase 3: LLM-Assisted Planning, Graph Data, and Operator Experience
+## Phase 3: Generator-Boom LLM Planning, Graph-Boom, and Operator Experience
 
-Goal: add LLM-assisted planning behind a safe, replaceable interface, add graph data generation, and create the first operator-facing experience.
+Goal: add LLM-assisted planning behind a safe, replaceable interface, add Graph-Boom data generation, and create the first operator-facing experience.
 
 Technical objectives:
 
@@ -345,15 +370,17 @@ Recommended commits:
 11. `frontend: add plan and graph review views`
 12. `docs: document prompt pack and graph model maintenance`
 
-## Phase 4: Privacy, Policies, and Security Hardening
+## Phase 4: Masker-Boom Privacy, Policies, and Security Hardening
 
-Goal: add field-level privacy controls and make database profiling safe for sensitive environments.
+Goal: add Masker-Boom as the privacy and masking service layer for sensitive environments.
 
 Technical objectives:
 
 - Add policy file format.
 - Add sensitive field detection hints.
 - Add synthetic replacement, hashing, tokenization, redaction, and allowlist reuse.
+- Preserve primary-key and foreign-key integrity during masking.
+- Preserve useful formats, null rates, and distributions where policy allows.
 - Prevent raw sampled values from being logged.
 - Add privacy validation report.
 - Add audit logs for runs.
@@ -362,19 +389,20 @@ Technical objectives:
 
 Recommended commits:
 
-1. `backend: add privacy policy model`
+1. `backend: add masker-boom policy model`
 2. `backend: detect likely sensitive fields`
-3. `backend: add stable hashing policy`
+3. `backend: add stable tokenization policy`
 4. `backend: add redaction and synthetic replacement policies`
-5. `backend: validate privacy policy compliance`
-6. `security: remove raw values from profiler logs`
-7. `api: expose privacy policy configuration`
-8. `test: cover policy engine edge cases`
-9. `docs: document privacy policy format`
+5. `backend: preserve masked relationship integrity`
+6. `backend: validate privacy policy compliance`
+7. `security: remove raw values from profiler logs`
+8. `api: expose privacy policy configuration`
+9. `test: cover policy engine edge cases`
+10. `docs: document masker-boom policy format`
 
 ## Phase 5: Production Release and Extensibility
 
-Goal: make DataBoom production-grade for deployment, operations, and future adapters.
+Goal: make the DataBoom platform production-grade for Generator-Boom, Masker-Boom, deployment, operations, and future adapters.
 
 Technical objectives:
 

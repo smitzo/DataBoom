@@ -13,7 +13,7 @@ export function Hero() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="h-2 w-2 rounded-full bg-white shadow-[0_0_16px_rgba(255,255,255,0.85)]" />
             <span className="text-sm font-medium uppercase text-zinc-400">
-              Open-source synthetic data engine
+              Open-source data generation and masking platform
             </span>
             <span className="rounded-md border border-emerald-300/40 bg-emerald-300/10 px-3 py-1 text-xs font-semibold uppercase text-emerald-200">
               Phase 1 ready
@@ -28,8 +28,8 @@ export function Hero() {
 
           <div className="mt-8 max-w-2xl border-l border-white/20 pl-5">
             <p className="text-xl font-semibold leading-8 text-white">
-              DataBoom turns PostgreSQL schemas into validated CSV, JSON, and SQL
-              artifacts for fintech, healthcare, and customer-sensitive workflows.
+              Generator-Boom turns PostgreSQL schemas into validated CSV, JSON, and SQL
+              artifacts, while Masker-Boom is planned for integrity-preserving redaction.
             </p>
           </div>
 
@@ -49,7 +49,7 @@ export function Hero() {
               href="#profiles"
               className="inline-flex h-12 items-center gap-2 rounded-md border border-white/15 px-6 text-sm font-semibold text-white transition hover:border-white/35"
             >
-              See profiles
+              See products
               <ArrowRight className="h-4 w-4" />
             </a>
           </div>

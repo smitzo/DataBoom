@@ -18,6 +18,7 @@ The frontend should evolve in phases that match backend capability. It should be
 - Use wide desktop space intentionally with a product-led hero and an embedded
   control-center preview.
 - Make domain profiles visible and easy to understand.
+- Make DataBoom's product family visible: Generator-Boom is active now, while Masker-Boom is the planned privacy layer.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
 - Keep shared display data in one data module so roadmap steps, metrics, and
@@ -37,7 +38,7 @@ Goals:
 - Keep product UI data under `frontend/src/data/workbench.ts`.
 - Keep the first viewport uncluttered, but use the full desktop width with a
   left product story and right generation-control preview.
-- Show domain profiles, output formats, pipeline steps, validation summary, and demo datasets.
+- Show product modules, output formats, pipeline steps, validation summary, and demo datasets.
 - Add a roadmap section where major completed functionality is moved into
   achieved steps and future phase work stays visible.
 - Keep the UI ready for API wiring without requiring the API to exist yet.
@@ -53,6 +54,7 @@ Goals:
 - Display manifest and validation report.
 - Download generated artifacts.
 - Surface validation failures clearly.
+- Keep Masker-Boom visible as planned work without building masking UI before Phase 4.
 
 ## Phase F3: Schema and Domain Builder
 
@@ -87,4 +89,4 @@ Goals:
 - Show run history.
 - Add artifact retention controls.
 - Add benchmark and performance dashboards.
-- Add privacy policy views once Phase 4 backend privacy exists.
+- Add Masker-Boom policy, redaction, tokenization, and audit views once Phase 4 backend privacy exists.

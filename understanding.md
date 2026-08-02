@@ -818,3 +818,31 @@ The Python package moved from `src/boom_data` to `src/databoom`, the CLI script 
 - Update any external scripts that still invoke `boom-data`.
 - Reinstall the editable package after pulling this change so `.venv/bin/databoom` is available.
 - Keep product-family naming separate from engine internals so sub-products do not leak into every module name.
+
+## Decision: split DataBoom into Generator-Boom and Masker-Boom
+
+### Question
+
+How should DataBoom explain generation and masking without making the product feel like one overloaded tool?
+
+### Answer
+
+Use DataBoom as the parent platform, then split the product into two families: Generator-Boom for creating synthetic data and Masker-Boom for future privacy-preserving transformations of existing sensitive data.
+
+### Why This Matters
+
+Generating synthetic data from scratch and masking real source data are related, but they create different expectations. Generator-Boom can be useful before privacy tooling exists because it does not need raw production records. Masker-Boom must be more careful: it needs classification, policies, stable tokenization, redaction, relationship preservation, audit reports, and controls that prevent raw sensitive values from leaking.
+
+The split also gives the project room for memorable module names without blurring scope. Schema-Boom, Bank-O-Boom, Health-Boom, Boom-Commerce, Auto-Boom, Docu-Boom, and Graph-Boom belong under Generator-Boom. Classify-Boom, Redact-Boom, Token-Boom, Shape-Boom, and Audit-Boom belong under Masker-Boom.
+
+### Implementation Detail
+
+The docs now include a dedicated `docs/product-family.md` file as the canonical taxonomy. README, functional specs, technical roadmap, prompt caching notes, frontend plan, agent instructions, and frontend copy all point back to that split. The demo folders were renamed to product-style slugs: `demo/bank-o-boom` and `demo/health-boom`.
+
+The code still keeps boring package and enum names such as `databoom`, `financial`, and `healthcare`. That is intentional. Whacky product names belong in user-facing docs and UI; stable internal names make APIs and tests easier to maintain.
+
+### Follow-Up Notes
+
+- Add a future `databoom.masking` package only when Masker-Boom implementation starts.
+- Keep README product tables updated as modules move from planned to active.
+- Avoid claiming Masker-Boom exists as a working masking engine until Phase 4 code lands.

@@ -68,7 +68,7 @@ export type RoadmapItem = {
 
 export const navItems = [
   { label: "Platform", href: "#platform" },
-  { label: "Profiles", href: "#profiles" },
+  { label: "Products", href: "#profiles" },
   { label: "Pipeline", href: "#pipeline" },
   { label: "Roadmap", href: "#roadmap" },
   { label: "Validation", href: "#validation" },
@@ -83,7 +83,7 @@ export const heroMetrics = [
 
 export const profiles: ProfileConfig[] = [
   {
-    name: "Financial",
+    name: "Bank-O-Boom",
     role: "Banking and fintech data",
     description: "Customers, accounts, balances, merchants, currencies, and transactions.",
     tags: ["accounts", "transactions"],
@@ -92,7 +92,7 @@ export const profiles: ProfileConfig[] = [
     tone: "border-emerald-300/40 text-emerald-200",
   },
   {
-    name: "Healthcare",
+    name: "Health-Boom",
     role: "Patient and clinical data",
     description: "Patients, encounters, vitals, diagnosis codes, and insurance values.",
     tags: ["patients", "vitals"],
@@ -101,13 +101,22 @@ export const profiles: ProfileConfig[] = [
     tone: "border-rose-300/40 text-rose-200",
   },
   {
-    name: "General",
+    name: "Schema-Boom",
     role: "Schema-first fallback",
     description: "Typed fake values for tables that do not need a domain overlay.",
     tags: ["schema", "generic"],
     icon: Blocks,
     selected: false,
     tone: "border-sky-300/40 text-sky-200",
+  },
+  {
+    name: "Masker-Boom",
+    role: "Planned masking layer",
+    description: "Redaction, tokenization, and integrity-preserving masking for sensitive data.",
+    tags: ["masking", "privacy"],
+    icon: ShieldCheck,
+    selected: false,
+    tone: "border-amber-300/40 text-amber-200",
   },
 ];
 
@@ -135,13 +144,13 @@ export const validationMetrics: ValidationMetricConfig[] = [
 
 export const demos: DemoDatasetConfig[] = [
   {
-    name: "Financial demo",
+    name: "Bank-O-Boom demo",
     tables: "customers, bank_accounts, transactions",
     rows: "1,100 rows",
     tone: "border-emerald-300/30",
   },
   {
-    name: "Healthcare demo",
+    name: "Health-Boom demo",
     tables: "patients, encounters, vitals",
     rows: "1,300 rows",
     tone: "border-rose-300/30",
@@ -152,14 +161,14 @@ export const roadmap: RoadmapItem[] = [
   {
     phase: "Phase 1",
     status: "achieved",
-    title: "Relational backend foundation",
+    title: "Generator-Boom Schema-Boom foundation",
     description:
-      "The MVP engine can generate deterministic relational data from PostgreSQL schema files and write validated local artifacts.",
+      "Schema-Boom can generate deterministic relational data from PostgreSQL schema files and write validated local artifacts.",
     achieved: [
       "PostgreSQL DDL ingestion and normalized schema models.",
       "Relationship-aware generation with primary-key and foreign-key preservation.",
       "CSV, JSON, and SQL artifact export to local disk.",
-      "Financial and healthcare domain profiles plus demo CSV datasets.",
+      "Bank-O-Boom and Health-Boom domain profiles plus demo CSV datasets.",
       "100k-record benchmark with validation report.",
       "Static Next.js workbench with a reusable component structure.",
     ],
@@ -168,9 +177,9 @@ export const roadmap: RoadmapItem[] = [
   {
     phase: "Phase 2",
     status: "next",
-    title: "Scale, API, profiling, and NoSQL data",
+    title: "Generator-Boom scale, API, profiling, and Docu-Boom",
     description:
-      "The next phase expands scale and access patterns, then adds document-style generation for NoSQL use cases.",
+      "The next phase expands Generator-Boom scale and access patterns, then adds Docu-Boom document generation for NoSQL use cases.",
     achieved: [
       "FastAPI app scaffold with health and readiness endpoints.",
       "Synchronous API generation runs with in-process status lookup.",
@@ -184,33 +193,33 @@ export const roadmap: RoadmapItem[] = [
       "Harden generation toward 500k records with chunk-aware validation.",
       "Expand FastAPI run status, validation detail, and long-running job controls.",
       "Add live PostgreSQL profiling and metadata introspection.",
-      "Add NoSQL document data support, starting with JSON/NDJSON and MongoDB-style nested records.",
+      "Add Docu-Boom support, starting with JSON/NDJSON and MongoDB-style nested records.",
       "Wire the frontend to local API runs and artifact downloads.",
     ],
   },
   {
     phase: "Phase 3",
     status: "planned",
-    title: "LLM-assisted planning, graph data, and operator UX",
+    title: "LLM-assisted planning, Graph-Boom, and operator UX",
     description:
-      "Planning becomes more intelligent while the engine gains graph data generation for connected datasets.",
+      "Planning becomes more intelligent while Generator-Boom gains Graph-Boom support for connected datasets.",
     achieved: [],
     future: [
       "Add prompt packs, prompt cache keys, and validated planner output schemas.",
       "Add dry-run plan review before generation.",
-      "Add graph data generation for nodes, edges, properties, and graph exports.",
+      "Add Graph-Boom generation for nodes, edges, properties, and graph exports.",
       "Build operator-facing run review, plan review, and graph preview screens.",
     ],
   },
   {
     phase: "Phase 4",
     status: "planned",
-    title: "Privacy, policy engine, and security hardening",
+    title: "Masker-Boom privacy and security hardening",
     description:
-      "Sensitive-domain workflows become safer through explicit policy controls and privacy validation.",
+      "Sensitive-domain workflows become safer through Masker-Boom policy controls, redaction, tokenization, and privacy validation.",
     achieved: [],
     future: [
-      "Add privacy policy files for synthetic replacement, hashing, tokenization, and redaction.",
+      "Add Masker-Boom policy files for synthetic replacement, hashing, tokenization, and redaction.",
       "Prevent raw sampled values from appearing in logs or reports.",
       "Add audit logs and privacy validation reports.",
     ],

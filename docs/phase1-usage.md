@@ -78,7 +78,7 @@ Expected outputs:
 - one JSON file per table when `--format json` is used
 - one SQL file per table when `--format sql` is used
 
-Use `--domain financial` or `--domain healthcare` when you want semantic values optimized for those use cases.
+Use `--domain financial` for Bank-O-Boom values or `--domain healthcare` for Health-Boom values.
 
 ## API Artifacts
 
@@ -107,8 +107,8 @@ The helper returns the same normalized `DatabaseSchema` used by the DDL parser, 
 
 This repository includes generated CSV demos under `demo/`:
 
-- `demo/financial/csv`
-- `demo/healthcare/csv`
+- `demo/bank-o-boom/csv`
+- `demo/health-boom/csv`
 
 These are generated through the CLI from the schemas in each demo folder.
 

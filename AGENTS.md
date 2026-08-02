@@ -4,7 +4,7 @@ This file is persistent guidance for Codex in the DataBoom repository.
 
 ## Project Identity
 
-DataBoom is a Python, FastAPI, Typer, PostgreSQL-first synthetic data engine. The core product value is relationship-aware synthetic data generation for multi-table schemas.
+DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its two product families are Generator-Boom for synthetic data generation and Masker-Boom for future privacy-preserving masking/redaction.
 
 ## Current Phase
 
@@ -15,6 +15,7 @@ Before implementation, read:
 - `instructions.md`
 - `docs/functional-specification.md`
 - `docs/technical-design-and-roadmap.md`
+- `docs/product-family.md`
 - `docs/prompt-caching-and-instructions.md`
 - `docs/product-reasoning-faq.md`
 - `understanding.md`
@@ -23,7 +24,7 @@ Before implementation, read:
 
 - Keep changes commit-sized and easy to review.
 - Prefer backend engine work before frontend work.
-- Keep Phase 1 privacy features out of scope unless explicitly requested.
+- Keep Masker-Boom privacy features out of Phase 1 and Phase 2 implementation unless explicitly requested.
 - Keep Phase 1 and Phase 2 artifact storage on local disk.
 - Preserve deterministic generation through seed-based behavior.
 - Favor streaming exports over full in-memory datasets.
@@ -71,7 +72,7 @@ Examples:
 
 ## Phase Discipline
 
-Phase 1 should focus on:
+Phase 1 should focus on Generator-Boom Schema-Boom:
 
 - schema ingestion,
 - schema models,
@@ -82,7 +83,7 @@ Phase 1 should focus on:
 - CLI entry point,
 - 100k record benchmark.
 
-Phase 2 should focus on:
+Phase 2 should focus on Generator-Boom scale and Docu-Boom:
 
 - 500k record target,
 - FastAPI run workflow,
@@ -91,7 +92,7 @@ Phase 2 should focus on:
 - Docker Compose,
 - local artifact management.
 
-Phase 3 should introduce:
+Phase 3 should introduce Generator-Boom planning and Graph-Boom:
 
 - LLM-assisted planning,
 - prompt packs,
@@ -99,7 +100,7 @@ Phase 3 should introduce:
 - plan review,
 - optional frontend.
 
-Phase 4 should introduce:
+Phase 4 should introduce Masker-Boom:
 
 - privacy policies,
 - masking and hashing,

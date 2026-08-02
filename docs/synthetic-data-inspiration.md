@@ -13,20 +13,20 @@ This document captures product and implementation lessons from adjacent tools. T
 
 ### Domain-Specific Datasets
 
-Tonic frames synthetic data around use cases such as software testing, AI training, mock APIs, financial services, and healthcare. DataBoom should similarly treat domain use cases as first-class product concepts.
+Tonic frames synthetic data around use cases such as software testing, AI training, mock APIs, financial services, and healthcare. DataBoom should similarly treat domain use cases as first-class product concepts under Generator-Boom.
 
 Current application:
 
 - `general` domain profile.
-- `financial` domain profile.
-- `healthcare` domain profile.
+- Bank-O-Boom through the `financial` domain profile.
+- Health-Boom through the `healthcare` domain profile.
 - demo datasets in `demo/`.
 
 Future direction:
 
 - add domain profile configuration files,
 - add profile preview examples,
-- let users choose domain intent in the frontend,
+- let users choose Generator-Boom module intent in the frontend,
 - expose profile-specific quality checks.
 
 ### Multiple Outputs
@@ -50,7 +50,7 @@ Future direction:
 
 ### Modular Generation Engines
 
-Gretel Synthetics separates different model families and generation approaches. DataBoom should follow that modular idea at an engine level: local rule-based generation first, optional LLM planning later, and specialized providers for domain semantics.
+Gretel Synthetics separates different model families and generation approaches. DataBoom should follow that modular idea at an engine level: Generator-Boom local rule-based generation first, optional LLM planning later, specialized providers for domain semantics, and Masker-Boom policies as a separate service layer.
 
 Current application:
 
@@ -66,7 +66,7 @@ Future direction:
 
 - configurable domain providers,
 - LLM-assisted planner,
-- privacy policy engine,
+- Masker-Boom privacy policy engine,
 - profiling-based statistical providers.
 
 ### Simple User Flow
@@ -82,7 +82,7 @@ Frontend implication:
 
 ## Product Guardrails
 
-- Do not claim DataBoom is already a privacy platform in Phase 1.
+- Do not claim Masker-Boom is implemented in Phase 1.
 - Do not position DataBoom as universally better than Tonic or Gretel.
 - Keep the differentiator focused on owned, local-first, inspectable, PostgreSQL-first relational generation.
 - Use commercial tools as inspiration for workflow clarity, not as implementation dependencies.

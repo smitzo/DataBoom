@@ -42,18 +42,21 @@ Use this logical layout when Phase 2 or Phase 3 introduces LLM-assisted planning
 
 The planner should return a structured generation plan. It should not directly generate the final dataset.
 
+Generator-Boom and Masker-Boom should use separate prompt packs because generation and masking have different safety boundaries. Generator-Boom prompts produce data plans; Masker-Boom prompts should eventually produce policy suggestions, classification hints, or review summaries, never raw sensitive data.
+
 ## Prompt Cache Keys
 
 When using OpenAI API support for prompt cache keys, DataBoom should derive keys from stable non-sensitive identifiers:
 
 ```text
-databoom:{planner_version}:{schema_fingerprint}:{prompt_pack_version}
+databoom:{product_family}:{planner_version}:{schema_fingerprint}:{prompt_pack_version}
 ```
 
 Rules:
 
 - Never include raw database values.
 - Never include secrets, connection strings, user emails, or organization names unless explicitly approved.
+- Use product-family namespaces such as `generator-boom` or `masker-boom`.
 - Use a schema fingerprint based on normalized metadata, not sampled data.
 - Rotate the key when the stable prompt pack changes.
 - Log cache usage metrics, not prompt contents.
@@ -93,7 +96,7 @@ These prompts define the first benchmark set for planner and generator behavior:
 7. "Generate CSV files per table and a validation report without writing to any database."
 8. "Create SQL inserts that can be loaded into a clean PostgreSQL database in dependency order."
 
-Privacy prompts are intentionally deferred until Phase 4.
+Masker-Boom privacy prompts are intentionally deferred until Phase 4.
 
 ## Instruction Caching for Codex
 

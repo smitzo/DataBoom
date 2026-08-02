@@ -13,11 +13,11 @@ export default function Home() {
 
       <Section
         id="profiles"
-        eyebrow="Domain profiles"
-        title="Use-case focused generators, not one generic blob."
-        subtitle="The core engine stays schema-first. Profiles add realistic values only where the domain benefits from them."
+        eyebrow="Product modules"
+        title="Whacky names, serious data contracts."
+        subtitle="Generator-Boom modules add realistic values where the domain benefits from them. Masker-Boom stays visible as the future privacy layer."
       >
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {profiles.map((profile) => (
             <ProfileCard key={profile.name} profile={profile} />
           ))}
@@ -56,7 +56,7 @@ export default function Home() {
         id="demos"
         eyebrow="Demo data"
         title="Checked-in datasets for product demos and regression checks."
-        subtitle="Financial and healthcare CSVs are already generated through the backend engine."
+        subtitle="Bank-O-Boom and Health-Boom CSVs are already generated through Generator-Boom."
       >
         <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
           {demos.map((demo) => (

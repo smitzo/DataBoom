@@ -1,8 +1,29 @@
 # DataBoom
 
-DataBoom is a synthetic data engine for generating realistic, repeatable datasets from schemas, prompts, and future data-family specifications.
+DataBoom is a synthetic data and masking platform for teams that need realistic, repeatable, integrity-safe datasets without casually copying production data.
 
-The current implementation is Phase 1: a Python backend engine that reads PostgreSQL DDL, plans dependency-aware relational generation, writes local CSV/JSON/SQL artifacts, and produces validation reports. The frontend is a Next.js workbench that presents the product, current benchmark status, domain profiles, roadmap, and demo datasets.
+## Product Family
+
+| Product | Purpose | Status |
+| --- | --- | --- |
+| `Generator-Boom` | Synthetic data generation from schemas, prompts, domain profiles, and future document/graph specs. | Active |
+| `Masker-Boom` | Redaction, masking, tokenization, and integrity-preserving privacy workflows for sensitive source data. | Planned for Phase 4 |
+
+Generator-Boom contains whacky but useful modules:
+
+| Module | Purpose | Status |
+| --- | --- | --- |
+| `Schema-Boom` | PostgreSQL-first schema-aware relational generation. | Active |
+| `Bank-O-Boom` | Banking and fintech demo/profile generation. | Active demo |
+| `Health-Boom` | Medical and patient-style demo/profile generation. | Active demo |
+| `Boom-Commerce` | Ecommerce, orders, payments, refunds, and inventory data. | Planned |
+| `Auto-Boom` | Automotive, fleet, insurance, and service datasets. | Planned |
+| `Docu-Boom` | NoSQL document and nested JSON generation. | Phase 2 planned |
+| `Graph-Boom` | Node and edge generation for graph datasets. | Phase 3 planned |
+
+See [DataBoom Product Family](docs/product-family.md) for the canonical product taxonomy.
+
+The current implementation is Generator-Boom: a Python backend engine that reads PostgreSQL DDL, plans dependency-aware relational generation, writes local CSV/JSON/SQL artifacts, and produces validation reports. The frontend is a Next.js workbench that presents the product, current benchmark status, domain profiles, roadmap, and demo datasets.
 
 ## Current Capabilities
 
@@ -10,7 +31,7 @@ The current implementation is Phase 1: a Python backend engine that reads Postgr
 - Normalized schema models.
 - Relationship-aware generation with primary-key and foreign-key preservation.
 - Deterministic seeds.
-- Financial, healthcare, and general domain profiles.
+- Bank-O-Boom, Health-Boom, and general domain profiles.
 - CSV, JSON, and SQL local artifact exports.
 - Validation reports and artifact manifests.
 - CLI generation, plan preview, and artifact validation workflows.
@@ -23,10 +44,10 @@ The current implementation is Phase 1: a Python backend engine that reads Postgr
 
 ## Roadmap Summary
 
-- Phase 1: relational backend foundation for PostgreSQL schema-driven generation.
-- Phase 2: scale toward 500k records, add FastAPI workflows, profiling, and NoSQL document data support.
-- Phase 3: add LLM-assisted planning, graph data support, and richer operator-facing review flows.
-- Phase 4: add privacy policies, masking, hashing, tokenization, audit logs, and security hardening.
+- Phase 1: Generator-Boom Schema-Boom relational foundation for PostgreSQL schema-driven generation.
+- Phase 2: Generator-Boom scale, FastAPI workflows, profiling, and Docu-Boom NoSQL document support.
+- Phase 3: Generator-Boom LLM-assisted planning, Graph-Boom support, and richer operator-facing review flows.
+- Phase 4: Masker-Boom policies, redaction, masking, hashing, tokenization, audit logs, and security hardening.
 - Phase 5: production deployment, CI, observability, retention, and adapter extensibility.
 
 ## Backend Setup
@@ -49,8 +70,8 @@ Run backend checks:
 Generate a dataset:
 
 ```bash
-.venv/bin/databoom generate demo/financial/schema.sql \
-  --output-dir artifacts/demo-financial \
+.venv/bin/databoom generate demo/bank-o-boom/schema.sql \
+  --output-dir artifacts/demo-bank-o-boom \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
@@ -58,25 +79,25 @@ Generate a dataset:
   --format json \
   --format sql \
   --domain financial \
-  --seed demo-financial
+  --seed demo-bank-o-boom
 ```
 
 Preview the deterministic plan before generation:
 
 ```bash
-.venv/bin/databoom plan demo/financial/schema.sql \
+.venv/bin/databoom plan demo/bank-o-boom/schema.sql \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
   --format csv \
   --domain financial \
-  --seed demo-financial
+  --seed demo-bank-o-boom
 ```
 
 Validate an existing artifact directory without regenerating it:
 
 ```bash
-.venv/bin/databoom validate demo/financial/schema.sql artifacts/demo-financial \
+.venv/bin/databoom validate demo/bank-o-boom/schema.sql artifacts/demo-bank-o-boom \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
@@ -84,7 +105,7 @@ Validate an existing artifact directory without regenerating it:
   --format json \
   --format sql \
   --domain financial \
-  --seed demo-financial
+  --seed demo-bank-o-boom
 ```
 
 Run the Phase 1 benchmark:
@@ -180,7 +201,7 @@ docker compose --profile tools run --rm app
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.
 - `benchmarks`: repeatable benchmark scripts.
-- `demo`: checked-in financial and healthcare CSV demo datasets plus schemas.
+- `demo`: checked-in Bank-O-Boom and Health-Boom CSV demo datasets plus schemas.
 - `frontend`: Next.js, TypeScript, Tailwind frontend workbench.
 - `frontend/src/components`: reusable frontend UI components.
 - `frontend/src/data`: shared frontend display data, including roadmap entries.
@@ -189,6 +210,7 @@ docker compose --profile tools run --rm app
 ## Docs Guide
 
 - `instructions.md`: project entrypoint and commit discipline.
+- `docs/product-family.md`: DataBoom platform, Generator-Boom modules, and Masker-Boom modules.
 - `docs/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
 - `docs/technical-design-and-roadmap.md`: system design, phase roadmap, objectives, and commit sequence.
 - `docs/frontend-development.md`: frontend design principles and phased UI plan.

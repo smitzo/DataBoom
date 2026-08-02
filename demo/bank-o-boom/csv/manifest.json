@@ -1,25 +1,25 @@
 {
-  "output_dir": "demo/financial/csv",
-  "manifest_path": "demo/financial/csv/manifest.json",
+  "output_dir": "demo/bank-o-boom/csv",
+  "manifest_path": "demo/bank-o-boom/csv/manifest.json",
   "tables": [
     {
       "table_name": "public.customers",
       "row_count": 100,
-      "csv_path": "demo/financial/csv/public__customers.csv",
+      "csv_path": "demo/bank-o-boom/csv/public__customers.csv",
       "json_path": null,
       "sql_path": null
     },
     {
       "table_name": "public.bank_accounts",
       "row_count": 250,
-      "csv_path": "demo/financial/csv/public__bank_accounts.csv",
+      "csv_path": "demo/bank-o-boom/csv/public__bank_accounts.csv",
       "json_path": null,
       "sql_path": null
     },
     {
       "table_name": "public.transactions",
       "row_count": 750,
-      "csv_path": "demo/financial/csv/public__transactions.csv",
+      "csv_path": "demo/bank-o-boom/csv/public__transactions.csv",
       "json_path": null,
       "sql_path": null
     }

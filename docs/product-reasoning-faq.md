@@ -4,9 +4,23 @@ This document explains why DataBoom exists, where it fits, and how to answer com
 
 ## Short Positioning
 
-DataBoom is not just a fake-value generator and not just a chat prompt. It is a schema-aware, relationship-aware, validation-first data generation engine for teams that need large, repeatable, safe, and useful datasets.
+DataBoom is not just a fake-value generator and not just a chat prompt. It is a platform for two related jobs: Generator-Boom creates schema-aware synthetic data, and Masker-Boom will transform sensitive existing data into safer datasets while preserving integrity.
 
-The engine should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on the relational generation engine first. Phase 2 expands into NoSQL document data, Phase 3 adds graph data, and privacy, masking, hashing, and policy enforcement are intentionally added later once the core generation paths are reliable.
+The platform should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on Generator-Boom's relational generation engine first. Phase 2 expands into Docu-Boom NoSQL document data, Phase 3 adds Graph-Boom data, and Masker-Boom privacy, masking, hashing, tokenization, and policy enforcement arrive in Phase 4 once the core generation paths are reliable.
+
+## Product Families
+
+### What is Generator-Boom?
+
+Generator-Boom creates synthetic data from scratch. It includes Schema-Boom for relational schemas, Bank-O-Boom for banking and fintech data, Health-Boom for medical data, Boom-Commerce for ecommerce, Auto-Boom for automotive datasets, Docu-Boom for document data, and Graph-Boom for graph data.
+
+### What is Masker-Boom?
+
+Masker-Boom is the planned masking service layer. It will classify sensitive fields, redact values, tokenize identifiers, replace values synthetically, preserve joins, and produce privacy/audit reports. It is for teams that already have sensitive data but need safer copies for development, QA, analytics, or AI workflows.
+
+### Why split them?
+
+Generation and masking are related but not identical. Generator-Boom can create fresh synthetic data with no source records. Masker-Boom starts from source data and must preserve enough structure to remain useful while removing or replacing sensitive values. Keeping the product families separate makes scope, safety, and customer promises clearer.
 
 ## 4W1H Product Questions
 
@@ -54,7 +68,7 @@ A dedicated engine is needed because large relational data generation is a syste
 
 ### How does DataBoom solve it?
 
-DataBoom splits the problem into specialized components:
+Generator-Boom splits the generation problem into specialized components:
 
 - schema ingestion understands database structure,
 - relationship solving computes table order and foreign-key sources,
@@ -62,21 +76,22 @@ DataBoom splits the problem into specialized components:
 - chunked exporters avoid holding every row in memory,
 - validators prove the result can be loaded,
 - prompt planners translate intent into controlled generation plans,
-- later privacy policies protect sensitive fields.
+- Masker-Boom later adds privacy policies that protect sensitive fields.
 
 ### Where do NoSQL and graph data fit?
 
-PostgreSQL relational generation is the first foundation because foreign keys, dependency ordering, and validation are the hardest core problems to prove early. Phase 2 should add NoSQL document data once the API, scaling, and profiling foundations are stronger. Phase 3 should add graph data once planning and operator review are mature enough to reason about nodes, edges, properties, and cardinality.
+PostgreSQL relational generation is the first foundation because foreign keys, dependency ordering, and validation are the hardest core problems to prove early. Phase 2 should add Docu-Boom NoSQL document data once the API, scaling, and profiling foundations are stronger. Phase 3 should add Graph-Boom once planning and operator review are mature enough to reason about nodes, edges, properties, and cardinality.
 
 This keeps scope disciplined:
 
 - Phase 1 proves relational correctness.
-- Phase 2 adds document-style generation for JSON, NDJSON, and MongoDB-like use cases.
-- Phase 3 adds connected graph generation for node and edge datasets.
+- Phase 2 adds Docu-Boom document-style generation for JSON, NDJSON, and MongoDB-like use cases.
+- Phase 3 adds Graph-Boom connected graph generation for node and edge datasets.
+- Phase 4 adds Masker-Boom for sensitive-data masking and privacy policies.
 
 ## Why Not Just Use Faker?
 
-Faker is useful, and DataBoom should use Faker where it helps. But Faker is a value library, not a complete relational data engine.
+Faker is useful, and Generator-Boom should use Faker where it helps. But Faker is a value library, not a complete relational data engine or masking service.
 
 Faker can generate:
 
@@ -102,7 +117,7 @@ Faker does not, by itself, solve:
 - large artifact handling,
 - privacy policy enforcement.
 
-DataBoom should use Faker as one ingredient inside the generator, then add the missing engine layer around it.
+Generator-Boom should use Faker as one ingredient inside the generator, then add the missing engine layer around it.
 
 ## Why Not Just Ask ChatGPT To Generate 1 Million Records?
 
@@ -162,7 +177,7 @@ DataBoom should not claim to be universally better than Tonic.ai. The better cla
 - ability to tune performance for our exact database and CI workflows,
 - no dependency on a closed vendor workflow for core test-data generation.
 
-Tonic.ai may be the better choice for teams that need a complete commercial data de-identification platform immediately. DataBoom is valuable when the team wants an owned engine, transparent internals, local deployment, and a roadmap tailored to PostgreSQL-first synthetic generation.
+Tonic.ai may be the better choice for teams that need a complete commercial data de-identification platform immediately. DataBoom is valuable when the team wants an owned engine, transparent internals, local deployment, and a roadmap split clearly between Generator-Boom and Masker-Boom.
 
 References:
 
@@ -172,14 +187,14 @@ References:
 
 ## Why Sensitive Domains Still Matter If Privacy Is Later?
 
-Fintech, medical, insurance, and customer-sensitive SaaS workflows are central use cases. However, privacy features should be built on top of a correct generation engine, not before it.
+Fintech, medical, insurance, and customer-sensitive SaaS workflows are central use cases. However, Masker-Boom privacy features should be built on top of a correct generation and validation foundation, not before it.
 
 The staged logic is:
 
 1. First, make generation relationally correct.
 2. Then, make it scalable and operational.
 3. Then, add LLM-assisted planning safely.
-4. Then, add privacy policy enforcement, masking, hashing, tokenization, and audit trails.
+4. Then, add Masker-Boom privacy policy enforcement, masking, hashing, tokenization, and audit trails.
 
 This avoids building privacy controls around a weak generator that cannot yet preserve relationships or validate output.
 
