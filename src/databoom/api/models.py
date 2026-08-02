@@ -30,6 +30,130 @@ class RunStatus(StrEnum):
     FAILED = "failed"
 
 
+class ProductStatus(StrEnum):
+    """Availability state for a DataBoom product module."""
+
+    ACTIVE = "active"
+    PLANNED = "planned"
+
+
+class SubscriptionStatus(StrEnum):
+    """Lifecycle state for a demo subscription."""
+
+    ACTIVE = "active"
+
+
+class LoginRequest(BaseModel):
+    """Demo login request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(min_length=1)
+    password: str = Field(min_length=1)
+
+
+class DemoUserResponse(BaseModel):
+    """Authenticated demo user returned by the local API."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str
+    name: str
+
+
+class LoginResponse(BaseModel):
+    """Demo login response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str
+    user: DemoUserResponse
+
+
+class ProductPlanResponse(BaseModel):
+    """Available subscription plan for one product."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    price: str
+    description: str
+
+
+class ProductResponse(BaseModel):
+    """DataBoom product module exposed to the frontend."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    family: str
+    module: str
+    status: ProductStatus
+    description: str
+    domain: DomainProfile
+    default_row_counts: dict[str, int]
+    output_formats: tuple[OutputFormat, ...]
+    tables: tuple[str, ...]
+    features: tuple[str, ...]
+    plans: tuple[ProductPlanResponse, ...]
+
+
+class SubscriptionRequest(BaseModel):
+    """Subscribe the demo user to a product module."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    product_id: str
+    plan_id: str = "starter"
+
+
+class SubscriptionResponse(BaseModel):
+    """Demo subscription state."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    subscription_id: str
+    product_id: str
+    plan_id: str
+    status: SubscriptionStatus
+    user_email: str
+    created_at: datetime
+
+
+class ProductRunRequest(BaseModel):
+    """Generation request based on a subscribed product catalog entry."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    row_counts: dict[str, int] = Field(default_factory=dict)
+    seed: str = "dashboard-demo"
+    output_formats: tuple[OutputFormat, ...] | None = None
+
+    @field_validator("row_counts")
+    @classmethod
+    def validate_row_counts(cls, value: dict[str, int]) -> dict[str, int]:
+        for table_name, row_count in value.items():
+            if not table_name.strip():
+                raise ValueError("row count table names cannot be empty")
+            if row_count < 0:
+                raise ValueError("row counts cannot be negative")
+            if row_count > 10_000:
+                raise ValueError("dashboard product runs are limited to 10,000 rows per table")
+        return value
+
+    @field_validator("output_formats")
+    @classmethod
+    def require_output_formats(
+        cls,
+        value: tuple[OutputFormat, ...] | None,
+    ) -> tuple[OutputFormat, ...] | None:
+        if value is not None and not value:
+            raise ValueError("at least one output format is required")
+        return value
+
+
 class GenerationRunRequest(BaseModel):
     """Request to execute a relational generation run through the API."""
 
@@ -112,6 +236,17 @@ class RunArtifactListResponse(BaseModel):
     run_id: str
     artifact_dir: Path
     files: tuple[RunArtifactResponse, ...]
+
+
+class TablePreviewResponse(BaseModel):
+    """Small table preview returned from a generated CSV artifact."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    table_name: str
+    columns: tuple[str, ...]
+    rows: tuple[dict[str, str], ...]
 
 
 class GenerationRunResponse(BaseModel):

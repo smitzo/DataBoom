@@ -24,6 +24,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = active_settings
     app.state.run_store = {}
+    app.state.sessions = {}
+    app.state.subscriptions = {}
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(active_settings.cors_origins),
