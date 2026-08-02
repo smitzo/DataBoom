@@ -19,6 +19,7 @@ services:
       DATABOOM_ARTIFACT_ROOT: /app/artifacts
       DATABOOM_DATABASE_URL: postgresql+psycopg://databoom:databoom@postgres:5432/databoom
       DATABOOM_REDIS_URL: redis://redis:6379/0
+      DATABOOM_CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001
     ports:
       - "${DATABOOM_API_PORT:-8000}:8000"
     volumes:
@@ -45,7 +46,7 @@ services:
       POSTGRES_USER: databoom
       POSTGRES_PASSWORD: databoom
     ports:
-      - "5432:5432"
+      - "${DATABOOM_POSTGRES_BIND:-127.0.0.1}:${DATABOOM_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -57,7 +58,7 @@ services:
   redis:
     image: redis:8-alpine
     ports:
-      - "6379:6379"
+      - "${DATABOOM_REDIS_BIND:-127.0.0.1}:${DATABOOM_REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]

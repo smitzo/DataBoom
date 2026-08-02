@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AlertCircle, CheckCircle2, Play } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, Download, FileDown, Play, Table2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ApiHealth = {
@@ -17,9 +17,30 @@ type ApiRun = {
   total_rows: number;
   table_count: number;
   artifact_dir: string;
+  output_formats: string[];
+  tables: ApiTable[];
   validation?: {
     passed: boolean;
   } | null;
+};
+
+type ApiTable = {
+  table_name: string;
+  row_count: number;
+};
+
+type ApiArtifact = {
+  name: string;
+  relative_path: string;
+  size_bytes: number;
+  media_type: string;
+  download_url: string;
+};
+
+type ApiArtifactList = {
+  run_id: string;
+  artifact_dir: string;
+  files: ApiArtifact[];
 };
 
 const demoRequest = {
@@ -42,33 +63,68 @@ const demoRequest = {
 };
 
 export function ApiRunPanel() {
-  const apiBaseUrl = useMemo(
-    () => process.env.NEXT_PUBLIC_DATABOOM_API_URL ?? "http://localhost:8000",
-    [],
-  );
+  const apiBaseCandidates = useMemo(() => {
+    const configuredUrl = process.env.NEXT_PUBLIC_DATABOOM_API_URL;
+    return Array.from(
+      new Set(
+        [configuredUrl, "http://localhost:8001", "http://localhost:8000"].filter(
+          (url): url is string => Boolean(url),
+        ),
+      ),
+    );
+  }, []);
+  const [apiBaseUrl, setApiBaseUrl] = useState(apiBaseCandidates[0] ?? "http://localhost:8001");
   const [health, setHealth] = useState<ApiHealth | null>(null);
   const [runs, setRuns] = useState<ApiRun[]>([]);
+  const [artifacts, setArtifacts] = useState<ApiArtifactList | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchArtifacts = useCallback(
+    async (baseUrl: string, runId: string) => {
+      const response = await fetch(`${baseUrl}/runs/${runId}/artifacts`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("API artifact list failed");
+      }
+      return (await response.json()) as ApiArtifactList;
+    },
+    [],
+  );
+
   const refreshApiState = useCallback(async () => {
     setError(null);
-    const [healthResponse, runsResponse] = await Promise.all([
-      fetch(`${apiBaseUrl}/health`, { cache: "no-store" }),
-      fetch(`${apiBaseUrl}/runs`, { cache: "no-store" }),
-    ]);
+    let lastError: Error | null = null;
 
-    if (!healthResponse.ok) {
-      throw new Error("API health check failed");
-    }
-    if (!runsResponse.ok) {
-      throw new Error("API run list failed");
+    for (const candidateUrl of apiBaseCandidates) {
+      try {
+        const [healthResponse, runsResponse] = await Promise.all([
+          fetch(`${candidateUrl}/health`, { cache: "no-store" }),
+          fetch(`${candidateUrl}/runs`, { cache: "no-store" }),
+        ]);
+
+        if (!healthResponse.ok) {
+          throw new Error("API health check failed");
+        }
+        if (!runsResponse.ok) {
+          throw new Error("API run list failed");
+        }
+
+        const nextRuns = (await runsResponse.json()) as ApiRun[];
+        const latest = nextRuns.at(-1);
+
+        setApiBaseUrl(candidateUrl);
+        setHealth((await healthResponse.json()) as ApiHealth);
+        setRuns(nextRuns);
+        setArtifacts(latest ? await fetchArtifacts(candidateUrl, latest.run_id) : null);
+        return;
+      } catch (caughtError) {
+        lastError = caughtError instanceof Error ? caughtError : new Error("API is unavailable");
+      }
     }
 
-    setHealth((await healthResponse.json()) as ApiHealth);
-    setRuns((await runsResponse.json()) as ApiRun[]);
-  }, [apiBaseUrl]);
+    throw lastError ?? new Error("API is unavailable");
+  }, [apiBaseCandidates, fetchArtifacts]);
 
   useEffect(() => {
     refreshApiState()
@@ -96,6 +152,7 @@ export function ApiRunPanel() {
 
       const run = (await response.json()) as ApiRun;
       setRuns((currentRuns) => [...currentRuns, run]);
+      setArtifacts(await fetchArtifacts(apiBaseUrl, run.run_id));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to create run");
     } finally {
@@ -122,18 +179,18 @@ export function ApiRunPanel() {
             {isLoading
               ? "Checking local API..."
               : online
-                ? `${health.service} ${health.version} in ${health.environment}`
+                ? `${health.service} ${health.version} in ${health.environment} at ${apiBaseUrl}`
                 : error ?? "API is unavailable"}
           </p>
         </div>
 
         <button
           className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isRunning}
+          disabled={isRunning || isLoading || !online}
           onClick={createDemoRun}
         >
           {isRunning ? <Activity className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          Run API demo
+          Generate sample data
         </button>
       </div>
 
@@ -146,6 +203,52 @@ export function ApiRunPanel() {
           success={latestRun?.validation?.passed}
         />
       </div>
+
+      {latestRun ? (
+        <div className="mt-4 grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-md border border-white/10 bg-black/25 p-4">
+            <div className="flex items-center gap-2">
+              <Table2 className="h-4 w-4 text-cyan-200" />
+              <p className="text-sm font-semibold text-white">Generated tables</p>
+            </div>
+            <div className="mt-3 space-y-2">
+              {latestRun.tables.map((table) => (
+                <div
+                  key={table.table_name}
+                  className="flex items-center justify-between gap-3 rounded-md bg-white/[0.04] px-3 py-2"
+                >
+                  <span className="truncate text-sm text-zinc-300">{table.table_name}</span>
+                  <span className="text-xs font-semibold uppercase text-cyan-200">
+                    {table.row_count} rows
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-md border border-white/10 bg-black/25 p-4">
+            <div className="flex items-center gap-2">
+              <FileDown className="h-4 w-4 text-emerald-200" />
+              <p className="text-sm font-semibold text-white">Output artifacts</p>
+            </div>
+            <div className="mt-3 max-h-44 space-y-2 overflow-y-auto pr-1">
+              {artifacts?.files.map((artifact) => (
+                <a
+                  key={artifact.relative_path}
+                  className="flex items-center justify-between gap-3 rounded-md bg-white/[0.04] px-3 py-2 text-sm transition hover:bg-white/[0.08]"
+                  href={`${apiBaseUrl}${artifact.download_url}`}
+                >
+                  <span className="min-w-0 truncate text-zinc-300">{artifact.relative_path}</span>
+                  <span className="inline-flex shrink-0 items-center gap-2 text-xs font-semibold uppercase text-emerald-200">
+                    {formatBytes(artifact.size_bytes)}
+                    <Download className="h-3.5 w-3.5" />
+                  </span>
+                </a>
+              )) ?? <p className="text-sm text-zinc-500">Artifacts will appear after generation.</p>}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -173,4 +276,11 @@ function ApiStat({
       </p>
     </div>
   );
+}
+
+function formatBytes(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+  return `${(sizeBytes / 1024).toFixed(1)} KB`;
 }

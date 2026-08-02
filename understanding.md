@@ -865,6 +865,8 @@ Deployment readiness is one of the project goals. A container image that only pr
 
 The host port can be overridden with `DATABOOM_API_PORT`, for example `DATABOOM_API_PORT=8001 docker compose up -d --build`. This avoids a common local-development failure when another API server already uses port `8000`.
 
+PostgreSQL and Redis host ports are configurable too: `DATABOOM_POSTGRES_PORT` and `DATABOOM_REDIS_PORT`. The containers still talk to each other on `postgres:5432` and `redis:6379` inside the Docker network, but developers can map those services to alternate localhost ports when their machine already has PostgreSQL or Redis running.
+
 The `app` service remains under the `tools` profile so it can still be used for CLI-oriented container runs without becoming part of the default long-running stack.
 
 ### Follow-Up Notes
@@ -872,3 +874,55 @@ The `app` service remains under the `tools` profile so it can still be used for 
 - Add a production image stage before a public release.
 - Add API-key configuration to Compose examples once the auth story is ready for shared environments.
 - Add a frontend container only when the frontend needs Dockerized deployment, not just local development.
+
+## Decision: copy package metadata into the Docker image before install
+
+### Question
+
+Why did the Docker build fail at `python -m pip install .` even though the source code was copied?
+
+### Answer
+
+The package configuration declares `README.md` as the project readme in `pyproject.toml`. Python build backends validate that metadata while preparing the wheel. The Dockerfile copied `pyproject.toml`, `instructions.md`, and `src`, but it did not copy `README.md`, so Hatchling correctly stopped the build with `OSError: Readme file does not exist: README.md`.
+
+### Why This Matters
+
+Docker images should build from the same packaging contract that local installs use. If the image skips metadata files, the container can fail even when the Python modules themselves are present. Keeping packaging metadata in the image also catches broken release metadata earlier, which is useful before CI/CD and deployment automation become stricter.
+
+### Implementation Detail
+
+The Dockerfile now copies `README.md` together with `pyproject.toml` and `instructions.md` before running `pip install .`. This keeps Docker layer caching efficient: dependency and metadata changes invalidate the install layer, while ordinary source changes only invalidate the later source copy and install step.
+
+### Follow-Up Notes
+
+- If future package metadata references `LICENSE`, changelog files, or generated assets, copy those files before `pip install .` too.
+- Consider adding a CI job that runs `docker compose build api` so packaging regressions are caught before local deployment testing.
+
+## Decision: make the local full-stack path actually exercise backend output
+
+### Question
+
+Why show generated tables and artifact downloads in the frontend instead of only showing API health and run counts?
+
+### Answer
+
+A full-stack app should prove that the user action travels through the browser, reaches the backend, runs the engine, writes artifacts, validates them, and returns useful output. Health checks prove the server is alive, but they do not prove the product workflow works.
+
+### Why This Matters
+
+DataBoom's core promise is not just "an API exists." The promise is that Generator-Boom can produce usable synthetic datasets. By showing generated table names, row counts, validation status, and artifact download links in the hero control center, the frontend now demonstrates the real product path with the current Phase 1/2 backend capabilities.
+
+This also keeps frontend work aligned with backend phases. The current UI still uses a small built-in schema so it remains fast and reliable, but the same shape can later support pasted DDL, row-count controls, domain selection, output-format switches, async run status, and detailed validation reports.
+
+### Implementation Detail
+
+The `ApiRunPanel` now calls `POST /runs`, then calls `GET /runs/{run_id}/artifacts` for the generated files. It renders the latest run's tables and backend-provided artifact download URLs. This keeps the frontend from guessing file names or duplicating artifact-layout rules that belong to the API.
+
+The backend settings layer now reads explicit `DATABOOM_*` variables through validation aliases, and CORS origins are configurable with `DATABOOM_CORS_ORIGINS`. That matters in local development because the frontend may run on `3000` or `3001`, and Dockerized backend ports may move when a laptop already has services on `8000`, `5432`, or `6379`.
+
+### Follow-Up Notes
+
+- Add frontend controls for pasted schema, row counts, domain profile, and output formats.
+- Add detailed validation report rendering instead of only pass/fail.
+- Move API runs to persisted storage before relying on run history across container restarts.
+- Add async/background run execution before increasing default browser-triggered runs toward 500k records.

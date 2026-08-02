@@ -38,6 +38,7 @@ The current implementation is Generator-Boom: a Python backend engine that reads
 - FastAPI app scaffold with health and readiness endpoints.
 - API generation run endpoint for synchronous local relational runs.
 - API artifact listing, downloads, and optional API-key protection.
+- Frontend API bridge for health checks, generation runs, generated table output, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
@@ -170,6 +171,21 @@ Open:
 http://localhost:3000
 ```
 
+For the Dockerized backend currently running on alternate local ports, start the frontend like this:
+
+```bash
+cd frontend
+NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3001
+```
+
+Then open:
+
+```text
+http://localhost:3001
+```
+
+The hero control center can call the backend, create a small generation run, show generated tables, and link to downloadable CSV/JSON artifacts.
+
 ## Docker
 
 Validate Compose configuration:
@@ -190,10 +206,10 @@ The API should be available at:
 http://localhost:8000/health
 ```
 
-If port `8000` is already in use, choose another host port:
+If a local service already uses the default API, PostgreSQL, or Redis ports, choose alternate host ports:
 
 ```bash
-DATABOOM_API_PORT=8001 docker compose up -d --build
+DATABOOM_API_PORT=8001 DATABOOM_POSTGRES_PORT=55432 DATABOOM_REDIS_PORT=56379 docker compose up -d --build
 ```
 
 Run the CLI image as a tool container:

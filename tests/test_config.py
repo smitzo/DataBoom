@@ -26,3 +26,17 @@ def test_empty_api_key_disables_api_key_authentication() -> None:
     settings = Settings(API_KEY="")
 
     assert settings.api_key is None
+
+
+def test_settings_read_databoom_prefixed_environment(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("DATABOOM_ENV", "docker")
+    monkeypatch.setenv("DATABOOM_ARTIFACT_ROOT", str(tmp_path / "docker-artifacts"))
+    monkeypatch.setenv("DATABOOM_LOG_LEVEL", "debug")
+    monkeypatch.setenv("DATABOOM_CORS_ORIGINS", "http://localhost:3001,http://127.0.0.1:3001")
+
+    settings = Settings()
+
+    assert settings.environment == "docker"
+    assert settings.artifact_root == tmp_path / "docker-artifacts"
+    assert settings.log_level == "DEBUG"
+    assert settings.cors_origins == ("http://localhost:3001", "http://127.0.0.1:3001")

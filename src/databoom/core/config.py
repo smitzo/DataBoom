@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -14,19 +15,40 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_prefix="DATABOOM_",
         extra="ignore",
+        populate_by_name=True,
     )
 
-    environment: str = Field(default="local", alias="ENV")
-    artifact_root: Path = Field(default=Path("artifacts"), alias="ARTIFACT_ROOT")
+    environment: str = Field(default="local", validation_alias=AliasChoices("DATABOOM_ENV", "ENV"))
+    artifact_root: Path = Field(
+        default=Path("artifacts"),
+        validation_alias=AliasChoices("DATABOOM_ARTIFACT_ROOT", "ARTIFACT_ROOT"),
+    )
     database_url: str = Field(
         default="postgresql+psycopg://databoom:databoom@localhost:5432/databoom",
-        alias="DATABASE_URL",
+        validation_alias=AliasChoices("DATABOOM_DATABASE_URL", "DATABASE_URL"),
     )
-    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
-    api_key: SecretStr | None = Field(default=None, alias="API_KEY")
-    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        validation_alias=AliasChoices("DATABOOM_REDIS_URL", "REDIS_URL"),
+    )
+    api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_API_KEY", "API_KEY"),
+    )
+    log_level: str = Field(
+        default="INFO",
+        validation_alias=AliasChoices("DATABOOM_LOG_LEVEL", "LOG_LEVEL"),
+    )
+    cors_origins: Annotated[tuple[str, ...], NoDecode] = Field(
+        default=(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+        ),
+        validation_alias=AliasChoices("DATABOOM_CORS_ORIGINS", "CORS_ORIGINS"),
+    )
 
     @field_validator("log_level")
     @classmethod
@@ -42,6 +64,15 @@ class Settings(BaseSettings):
 
         if value == "":
             return None
+        return value
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        """Support comma-separated CORS origins from environment variables."""
+
+        if isinstance(value, str):
+            return tuple(origin.strip() for origin in value.split(",") if origin.strip())
         return value
 
     def resolve_artifact_root(self) -> Path:

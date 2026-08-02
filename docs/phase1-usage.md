@@ -91,6 +91,23 @@ GET /runs/{run_id}/artifacts/{relative_artifact_path}
 
 When `DATABOOM_API_KEY` is configured, include `X-API-Key` on run and artifact requests. Health and readiness endpoints remain open for local orchestration checks.
 
+## Full-Stack Local Run
+
+When the Dockerized backend uses alternate host ports, start the API stack with:
+
+```bash
+DATABOOM_API_PORT=8001 DATABOOM_POSTGRES_PORT=55432 DATABOOM_REDIS_PORT=56379 docker compose up -d --build
+```
+
+Then start the frontend against that API:
+
+```bash
+cd frontend
+NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3001
+```
+
+Open `http://localhost:3001`. The hero control center can run a sample backend generation request, display the generated tables, and expose downloadable artifacts returned by the API.
+
 ## Live PostgreSQL Introspection
 
 Phase 2 adds a backend ingestion helper for reading schema metadata from a live PostgreSQL database through SQLAlchemy:
@@ -163,10 +180,10 @@ The API should be available at:
 http://localhost:8000/health
 ```
 
-If port `8000` is already in use, choose another host port:
+If a local service already uses the default API, PostgreSQL, or Redis ports, choose alternate host ports:
 
 ```bash
-DATABOOM_API_PORT=8001 docker compose up -d --build
+DATABOOM_API_PORT=8001 DATABOOM_POSTGRES_PORT=55432 DATABOOM_REDIS_PORT=56379 docker compose up -d --build
 ```
 
 Run the CLI image as a tool container:

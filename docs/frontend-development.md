@@ -47,12 +47,15 @@ Goals:
 
 Backend dependency: FastAPI run endpoints.
 
+Status: partially complete for the local Docker API and sample generation path.
+
 Goals:
 
-- Submit generation requests to the backend.
-- Show run status.
-- Display manifest and validation report.
-- Download generated artifacts.
+- Submit generation requests to the backend. `complete for a built-in sample run`
+- Show run status. `complete for synchronous local runs`
+- Display generated table output. `complete for synchronous local runs`
+- Download generated artifacts. `complete for CSV/JSON/manifest/validation artifacts`
+- Display manifest and validation report. `partial: validation pass/fail is visible; detailed report UI is still planned`
 - Surface validation failures clearly.
 - Keep Masker-Boom visible as planned work without building masking UI before Phase 4.
 
