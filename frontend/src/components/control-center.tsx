@@ -12,7 +12,7 @@ import { ApiRunPanel } from "@/components/api-run-panel";
 import { FormatRow } from "@/components/cards";
 import { formats } from "@/data/workbench";
 
-export function ControlCenter() {
+export function ControlCenter({ showApiPanel = true }: { showApiPanel?: boolean }) {
   return (
     <div className="relative z-10 lg:pl-4 xl:pl-10">
       <div className="rounded-lg border border-white/15 bg-zinc-950/95 shadow-2xl shadow-black">
@@ -90,7 +90,7 @@ export function ControlCenter() {
               </div>
             </div>
 
-            <ApiRunPanel />
+            {showApiPanel ? <ApiRunPanel /> : null}
           </div>
         </div>
       </div>

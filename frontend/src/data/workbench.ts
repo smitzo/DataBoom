@@ -70,6 +70,7 @@ export const navItems = [
   { label: "Platform", href: "#platform" },
   { label: "Products", href: "#profiles" },
   { label: "Pipeline", href: "#pipeline" },
+  { label: "Dashboard", href: "#dashboard" },
   { label: "Roadmap", href: "#roadmap" },
   { label: "Validation", href: "#validation" },
   { label: "Demos", href: "#demos" },

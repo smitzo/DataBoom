@@ -41,15 +41,18 @@ export function Hero() {
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
-            <button className="inline-flex h-12 items-center gap-2 rounded-md bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100">
-              <Play className="h-4 w-4" />
-              Run generation
-            </button>
             <a
-              href="#profiles"
+              href="/login"
+              className="inline-flex h-12 items-center gap-2 rounded-md bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
+            >
+              <Play className="h-4 w-4" />
+              Start generating
+            </a>
+            <a
+              href="/dashboard"
               className="inline-flex h-12 items-center gap-2 rounded-md border border-white/15 px-6 text-sm font-semibold text-white transition hover:border-white/35"
             >
-              See products
+              My dashboard
               <ArrowRight className="h-4 w-4" />
             </a>
           </div>
@@ -61,7 +64,7 @@ export function Hero() {
           </div>
         </div>
 
-        <ControlCenter />
+        <ControlCenter showApiPanel={false} />
       </div>
     </section>
   );

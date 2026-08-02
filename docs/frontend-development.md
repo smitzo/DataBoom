@@ -14,6 +14,7 @@ The frontend should evolve in phases that match backend capability. It should be
 
 - Use Tailwind utility classes, not raw handwritten CSS.
 - Keep the dashboard calm and focused on the primary subscription-to-generation path.
+- Keep `/` as the public hero/product page, then route authenticated work to `/dashboard`.
 - Use dedicated pages for login, dashboard, products, runs, and roadmap once backend capability exists.
 - Use wide desktop space intentionally with operational panels, tables, and artifact actions.
 - Make domain profiles visible and easy to understand.

@@ -951,6 +951,7 @@ The table preview endpoint reads the generated CSV artifact for a selected table
 
 The frontend now has dedicated pages:
 
+- `/` for the public hero/product story,
 - `/login` for demo authentication with `demo` / `demo`,
 - `/dashboard` for subscriptions and recent runs,
 - `/products` for the product catalog,
@@ -958,6 +959,8 @@ The frontend now has dedicated pages:
 - `/runs` for run history,
 - `/runs/[runId]` for table previews and downloads,
 - `/roadmap` for visible phase progress.
+
+The public route stays separate from the authenticated console. This mirrors mature product sites: the homepage explains value, product families, use cases, and trust signals, while the logged-in workspace owns operational workflows. In DataBoom terms, `/` explains Generator-Boom and Masker-Boom, then `/dashboard` becomes "My Dashboard" for subscribed product work.
 
 ### Follow-Up Notes
 

@@ -47,9 +47,18 @@ export function Header() {
             <KeyRound className="h-3.5 w-3.5" />
             Local first
           </span>
-          <button className="inline-flex h-11 items-center rounded-full bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100">
-            Run locally
-          </button>
+          <a
+            href="/login"
+            className="inline-flex h-11 items-center rounded-full border border-white/10 px-5 text-sm font-semibold text-white transition hover:border-white/30"
+          >
+            Log in
+          </a>
+          <a
+            href="/dashboard"
+            className="inline-flex h-11 items-center rounded-full bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
+          >
+            My dashboard
+          </a>
         </div>
       </div>
     </header>
