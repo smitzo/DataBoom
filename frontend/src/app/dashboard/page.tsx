@@ -1,14 +1,14 @@
 "use client";
 
-import { ArrowRight, Database, PlayCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Settings } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
-import { EmptyState, ProductCard, StatTile } from "@/components/product-console";
-import type { GenerationRun, Product, Subscription } from "@/lib/api";
-import { getProducts, getRuns, getSubscriptions } from "@/lib/api";
+import { EmptyState, StatTile } from "@/components/product-console";
+import type { GenerationRun, Subscription } from "@/lib/api";
+import { getRuns, getSubscriptions } from "@/lib/api";
 import type { Session } from "@/lib/session";
 
 export default function DashboardPage() {
@@ -20,16 +20,14 @@ export default function DashboardPage() {
 }
 
 function DashboardContent({ session }: { session: Session }) {
-  const [products, setProducts] = useState<Product[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [runs, setRuns] = useState<GenerationRun[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getProducts(), getSubscriptions(session.token), getRuns()])
-      .then(([nextProducts, nextSubscriptions, nextRuns]) => {
-        setProducts(nextProducts);
+    Promise.all([getSubscriptions(session.token), getRuns()])
+      .then(([nextSubscriptions, nextRuns]) => {
         setSubscriptions(nextSubscriptions);
         setRuns(nextRuns);
       })
@@ -39,27 +37,19 @@ function DashboardContent({ session }: { session: Session }) {
       .finally(() => setIsLoading(false));
   }, [session.token]);
 
-  const subscribedIds = useMemo(
-    () => new Set(subscriptions.map((subscription) => subscription.product_id)),
-    [subscriptions],
+  const recentRuns = runs.slice(-6).reverse();
+  const totalRows = useMemo(
+    () => runs.reduce((total, run) => total + run.total_rows, 0),
+    [runs],
   );
-  const subscribedProducts = products.filter((product) => subscribedIds.has(product.id));
-  const recentRuns = runs.slice(-5).reverse();
+  const passedRuns = runs.filter((run) => run.validation?.passed).length;
 
   return (
     <>
       <PageHeader
-        eyebrow="Dashboard"
-        title="Your DataBoom command center."
-        description="Subscribe to product modules, generate realistic datasets, preview output rows, and download artifacts from the backend."
-        action={
-          <Link
-            href="/products"
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-white px-5 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-100"
-          >
-            Browse products <ArrowRight className="h-4 w-4" />
-          </Link>
-        }
+        eyebrow="My dashboard"
+        title="A clean view of your DataBoom workspace."
+        description="Track generated runs, validation health, and workspace state without mixing subscription settings into the main dashboard."
       />
 
       {error ? (
@@ -68,97 +58,102 @@ function DashboardContent({ session }: { session: Session }) {
         </p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatTile label="Generation runs" value={String(runs.length)} hint="Current API process" />
+        <StatTile label="Rows generated" value={String(totalRows)} hint="Across visible runs" />
+        <StatTile label="Validation passed" value={String(passedRuns)} hint="Runs with clean reports" />
         <StatTile
-          label="Subscribed products"
+          label="Subscriptions"
           value={String(subscriptions.length)}
-          hint="Modules you can generate from"
+          hint="Managed in settings"
         />
-        <StatTile label="Available products" value={String(products.length)} hint="Generator catalog" />
-        <StatTile label="Recent runs" value={String(runs.length)} hint="Current backend process" />
       </div>
 
-      <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.8fr]">
-        <div>
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold text-white">Subscribed products</h2>
-            <Link href="/products" className="text-sm font-semibold text-cyan-200">
-              Manage subscriptions
+      <section className="mt-8 grid gap-6 xl:grid-cols-[1fr_380px]">
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Recent generation runs</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Open a run to preview top rows and download generated artifacts.
+              </p>
+            </div>
+            <Link href="/runs" className="text-sm font-semibold text-cyan-200">
+              View all runs
             </Link>
           </div>
+
           {isLoading ? (
-            <LoadingRows />
-          ) : subscribedProducts.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {subscribedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} subscribed />
+            <div className="space-y-3">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-20 animate-pulse rounded-md border border-white/10 bg-white/[0.04]"
+                />
+              ))}
+            </div>
+          ) : recentRuns.length > 0 ? (
+            <div className="space-y-3">
+              {recentRuns.map((run) => (
+                <Link
+                  key={run.run_id}
+                  href={`/runs/${run.run_id}`}
+                  className="grid gap-4 rounded-md border border-white/10 bg-black/25 p-4 transition hover:border-cyan-300/35 hover:bg-white/[0.05] md:grid-cols-[1fr_auto]"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                      <Clock3 className="h-4 w-4 shrink-0 text-cyan-200" />
+                      <p className="truncate text-sm font-semibold text-white">{run.run_id}</p>
+                    </div>
+                    <p className="mt-2 text-sm text-zinc-500">
+                      {run.total_rows} rows · {run.table_count} tables · {run.domain}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-200">
+                    Open <ArrowRight className="h-4 w-4" />
+                  </span>
+                </Link>
               ))}
             </div>
           ) : (
             <EmptyState
-              title="No products subscribed yet"
-              detail="Open Products, subscribe to a module, then generate data."
+              title="No runs yet"
+              detail="Generate data from a subscribed product to see output here."
             />
           )}
         </div>
 
-        <div>
-          <h2 className="mb-4 text-xl font-semibold text-white">Recent generation runs</h2>
-          <div className="space-y-3">
-            {recentRuns.length > 0 ? (
-              recentRuns.map((run) => (
-                <Link
-                  key={run.run_id}
-                  href={`/runs/${run.run_id}`}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.03] p-4 transition hover:border-cyan-300/35 hover:bg-white/[0.06]"
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <PlayCircle className="h-5 w-5 shrink-0 text-cyan-200" />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-white">
-                        {run.run_id}
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        {run.total_rows} rows · {run.table_count} tables
-                      </span>
-                    </span>
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-zinc-500" />
-                </Link>
-              ))
-            ) : (
-              <EmptyState
-                title="No runs yet"
-                detail="Generate from a subscribed product to see run output here."
-              />
-            )}
+        <aside className="space-y-6">
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
+            <div className="flex items-start gap-3">
+              <Settings className="mt-1 h-5 w-5 text-cyan-200" />
+              <div>
+                <h2 className="text-xl font-semibold text-white">My subscriptions</h2>
+                <p className="mt-2 text-sm leading-6 text-zinc-500">
+                  Product subscription details live in settings so the dashboard stays focused.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/settings/subscriptions"
+              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 text-sm font-semibold text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100"
+            >
+              Open subscription settings
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-        </div>
-      </section>
 
-      <section className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] p-6">
-        <div className="flex items-start gap-4">
-          <Database className="mt-1 h-5 w-5 text-emerald-200" />
-          <div>
-            <h2 className="text-xl font-semibold text-white">How the flow works</h2>
-            <p className="mt-2 max-w-4xl text-sm leading-6 text-zinc-400">
-              The dashboard talks to FastAPI for login, product catalog, subscription state, generation runs,
-              table previews, and artifact downloads. This is still a local MVP, but the flow is now genuinely
-              full stack.
+          <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-5">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-emerald-200" />
+              <h2 className="text-lg font-semibold text-white">Backend connected</h2>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">
+              This dashboard reads runs and subscriptions from the FastAPI service, not static mock data.
             </p>
           </div>
-        </div>
+        </aside>
       </section>
     </>
-  );
-}
-
-function LoadingRows() {
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {[1, 2].map((item) => (
-        <div key={item} className="h-64 animate-pulse rounded-lg border border-white/10 bg-white/[0.04]" />
-      ))}
-    </div>
   );
 }

@@ -173,7 +173,7 @@ Open:
 http://localhost:3000
 ```
 
-The root route `/` is the public hero/product page. Use `/login` for demo auth and `/dashboard` for the authenticated product console.
+The root route `/` is the public hero/product page. Use `/login` for demo auth, `/dashboard` for the authenticated product console, and `/settings/subscriptions` for subscription management.
 
 For the Dockerized backend currently running on alternate local ports, start the frontend like this:
 

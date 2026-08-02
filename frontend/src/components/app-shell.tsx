@@ -4,9 +4,9 @@ import {
   BarChart3,
   Database,
   LayoutDashboard,
-  ListChecks,
   LogOut,
   PackageCheck,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: PackageCheck },
   { href: "/runs", label: "Runs", icon: BarChart3 },
-  { href: "/roadmap", label: "Roadmap", icon: ListChecks },
+  { href: "/settings/subscriptions", label: "Settings", icon: Settings },
 ];
 
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
@@ -33,7 +33,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
   return (
     <main className="min-h-screen bg-black text-zinc-100">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/10 bg-zinc-950/95 px-5 py-6 lg:block">
-        <Link href="/dashboard" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-md border border-emerald-300/25 bg-emerald-300/10 text-emerald-200">
             <Database className="h-5 w-5" />
           </span>
@@ -83,7 +83,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
       <div className="lg:pl-72">
         <header className="sticky top-0 z-30 border-b border-white/10 bg-black/85 backdrop-blur">
           <div className="flex min-h-16 items-center justify-between gap-4 px-5 sm:px-8">
-            <Link href="/dashboard" className="flex items-center gap-3 lg:hidden">
+            <Link href="/" className="flex items-center gap-3 lg:hidden">
               <Database className="h-5 w-5 text-emerald-200" />
               <span className="text-sm font-semibold uppercase text-white">DataBoom</span>
             </Link>

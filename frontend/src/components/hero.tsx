@@ -1,7 +1,6 @@
-import { ArrowRight, Play, ShieldCheck } from "lucide-react";
-
 import { MetricTile } from "@/components/cards";
 import { ControlCenter } from "@/components/control-center";
+import { HeroActions } from "@/components/public-session-actions";
 import { heroMetrics } from "@/data/workbench";
 
 export function Hero() {
@@ -41,20 +40,7 @@ export function Hero() {
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
-            <a
-              href="/login"
-              className="inline-flex h-12 items-center gap-2 rounded-md bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
-            >
-              <Play className="h-4 w-4" />
-              Start generating
-            </a>
-            <a
-              href="/dashboard"
-              className="inline-flex h-12 items-center gap-2 rounded-md border border-white/15 px-6 text-sm font-semibold text-white transition hover:border-white/35"
-            >
-              My dashboard
-              <ArrowRight className="h-4 w-4" />
-            </a>
+            <HeroActions />
           </div>
 
           <div className="mt-12 grid gap-3 sm:grid-cols-3">

@@ -962,6 +962,8 @@ The frontend now has dedicated pages:
 
 The public route stays separate from the authenticated console. This mirrors mature product sites: the homepage explains value, product families, use cases, and trust signals, while the logged-in workspace owns operational workflows. In DataBoom terms, `/` explains Generator-Boom and Masker-Boom, then `/dashboard` becomes "My Dashboard" for subscribed product work.
 
+The app shell brand now links back to `/` because the DataBoom logo is a product-home affordance, not a dashboard-only navigation item. Subscription details moved from the dashboard into `/settings/subscriptions`; this keeps the dashboard focused on operational status and recent runs while settings owns account/module state. The public header checks the local demo session before showing login actions, so logged-in users see "My dashboard" instead of a confusing login CTA.
+
 ### Follow-Up Notes
 
 - Replace demo auth with real auth before shared deployment.
