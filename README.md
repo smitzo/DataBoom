@@ -38,7 +38,9 @@ The current implementation is Generator-Boom: a Python backend engine that reads
 - FastAPI app scaffold with health and readiness endpoints.
 - API generation run endpoint for synchronous local relational runs.
 - API artifact listing, downloads, and optional API-key protection.
-- Frontend API bridge for health checks, generation runs, generated table output, and artifact downloads.
+- Demo auth with `demo` / `demo` credentials.
+- Product catalog, subscription, product-run, and table-preview API endpoints.
+- Dashboard pages for login, products, subscriptions, runs, table previews, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
@@ -175,16 +177,16 @@ For the Dockerized backend currently running on alternate local ports, start the
 
 ```bash
 cd frontend
-NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3001
+NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
 Then open:
 
 ```text
-http://localhost:3001
+http://localhost:3000
 ```
 
-The hero control center can call the backend, create a small generation run, show generated tables, and link to downloadable CSV/JSON artifacts.
+Login with email `demo` and password `demo`. The dashboard can subscribe to a product, generate data through the backend, show top-10 table previews, and link to downloadable CSV/JSON/SQL artifacts.
 
 ## Docker
 

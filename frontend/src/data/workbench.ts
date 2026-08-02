@@ -183,7 +183,8 @@ export const roadmap: RoadmapItem[] = [
     achieved: [
       "FastAPI app scaffold with health and readiness endpoints.",
       "Synchronous API generation runs with in-process status lookup.",
-      "Frontend API bridge for health checks, demo generation runs, generated table output, and artifact downloads.",
+      "Dashboard flow for demo login, product subscriptions, product generation, table previews, and downloads.",
+      "Demo login, product subscription, product-run generation, run detail, and table preview dashboard pages.",
       "Artifact listing and download endpoints for completed local runs.",
       "Optional API-key protection for run and artifact routes.",
       "CLI plan preview and artifact re-validation commands.",
@@ -194,7 +195,7 @@ export const roadmap: RoadmapItem[] = [
       "Expand FastAPI run status, validation detail, and long-running job controls.",
       "Add live PostgreSQL profiling and metadata introspection.",
       "Add Docu-Boom support, starting with JSON/NDJSON and MongoDB-style nested records.",
-      "Add configurable schema, row-count, domain, and output-format controls in the frontend.",
+      "Add custom schema upload, custom domain mapping, and saved generation templates.",
     ],
   },
   {

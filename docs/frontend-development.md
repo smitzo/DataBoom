@@ -8,15 +8,14 @@ The frontend should evolve in phases that match backend capability. It should be
 - TypeScript.
 - Tailwind CSS.
 - lucide-react icons.
-- API integration with the FastAPI backend in later phases.
+- API integration with the FastAPI backend.
 
 ## Design Principles
 
 - Use Tailwind utility classes, not raw handwritten CSS.
-- Keep the first screen calm and focused on one primary generation path.
-- Use a single-page, scrollable workbench with progressive disclosure.
-- Use wide desktop space intentionally with a product-led hero and an embedded
-  control-center preview.
+- Keep the dashboard calm and focused on the primary subscription-to-generation path.
+- Use dedicated pages for login, dashboard, products, runs, and roadmap once backend capability exists.
+- Use wide desktop space intentionally with operational panels, tables, and artifact actions.
 - Make domain profiles visible and easy to understand.
 - Make DataBoom's product family visible: Generator-Boom is active now, while Masker-Boom is the planned privacy layer.
 - Treat validation and artifacts as first-class outcomes.
@@ -47,15 +46,17 @@ Goals:
 
 Backend dependency: FastAPI run endpoints.
 
-Status: partially complete for the local Docker API and sample generation path.
+Status: complete for the local full-stack dashboard path.
 
 Goals:
 
-- Submit generation requests to the backend. `complete for a built-in sample run`
-- Show run status. `complete for synchronous local runs`
+- Login with the demo user. `complete with demo/demo credentials`
+- Subscribe to product modules. `complete with local in-memory API subscriptions`
+- Submit generation requests to the backend. `complete for subscribed products`
+- Show run status. `complete for synchronous local runs and run history`
 - Display generated table output. `complete for synchronous local runs`
 - Download generated artifacts. `complete for CSV/JSON/manifest/validation artifacts`
-- Display manifest and validation report. `partial: validation pass/fail is visible; detailed report UI is still planned`
+- Display manifest and validation report. `partial: validation pass/fail and downloads are visible; detailed report UI is still planned`
 - Surface validation failures clearly.
 - Keep Masker-Boom visible as planned work without building masking UI before Phase 4.
 

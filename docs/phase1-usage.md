@@ -103,10 +103,18 @@ Then start the frontend against that API:
 
 ```bash
 cd frontend
-NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3001
+NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-Open `http://localhost:3001`. The hero control center can run a sample backend generation request, display the generated tables, and expose downloadable artifacts returned by the API.
+Open `http://localhost:3000`. Login with email `demo` and password `demo`.
+
+The dashboard can:
+
+- show the product catalog,
+- subscribe the demo user to a product,
+- generate data through the backend product-run endpoint,
+- preview the top 10 rows for generated CSV-backed tables,
+- download generated table artifacts and validation files.
 
 ## Live PostgreSQL Introspection
 

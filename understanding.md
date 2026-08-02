@@ -926,3 +926,42 @@ The backend settings layer now reads explicit `DATABOOM_*` variables through val
 - Add detailed validation report rendering instead of only pass/fail.
 - Move API runs to persisted storage before relying on run history across container restarts.
 - Add async/background run execution before increasing default browser-triggered runs toward 500k records.
+
+## Decision: promote the UI from demo bridge to product dashboard
+
+### Question
+
+Why add login, subscriptions, product-run endpoints, and run detail pages before building more generator internals?
+
+### Answer
+
+The project needs to feel like a product, not only an engine with a button. A user should be able to enter the app, choose a product module, subscribe to it, generate data, inspect output, and download artifacts. That path is now represented end to end with real frontend pages and real backend endpoints.
+
+### Why This Matters
+
+Full-stack product confidence comes from seeing state move through system boundaries. If subscription and product generation only lived as frontend mock state, the dashboard would look nice but would not prove the backend can support the workflow. By adding backend product catalog, demo auth, subscriptions, product-specific run creation, and table previews, the UI now exercises the same FastAPI service that generates and serves artifacts.
+
+This also sets up the commercial product model early. DataBoom can have many modules, but each one needs a consistent lifecycle: discover product, subscribe, configure, generate, preview, download, and audit. Even with demo credentials and in-memory subscriptions, the route shape is close to the production shape.
+
+### Implementation Detail
+
+The backend owns runnable product definitions in `src/databoom/api/products.py`. Each catalog entry includes schema DDL, default row counts, output formats, a domain profile, features, and plans. The product-run endpoint turns that catalog entry into a normal `GenerationRunRequest`, so it reuses the existing parser, planner, generator, exporter, and validator instead of creating a second generation path.
+
+The table preview endpoint reads the generated CSV artifact for a selected table and returns the first rows as structured JSON. This is better than making the frontend guess artifact file paths or parse downloaded files by itself. The frontend can render collapsible top-10 previews while the backend remains the source of truth for artifact layout.
+
+The frontend now has dedicated pages:
+
+- `/login` for demo authentication with `demo` / `demo`,
+- `/dashboard` for subscriptions and recent runs,
+- `/products` for the product catalog,
+- `/products/[productId]` for subscribing and generating,
+- `/runs` for run history,
+- `/runs/[runId]` for table previews and downloads,
+- `/roadmap` for visible phase progress.
+
+### Follow-Up Notes
+
+- Replace demo auth with real auth before shared deployment.
+- Persist sessions, subscriptions, and run metadata in PostgreSQL instead of app memory.
+- Move long-running generation to a job queue before allowing large dashboard-triggered runs.
+- Add custom schema upload and saved generation templates once the dashboard flow is stable.
