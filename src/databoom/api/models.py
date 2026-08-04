@@ -37,6 +37,15 @@ class ProductStatus(StrEnum):
     PLANNED = "planned"
 
 
+class DataProductKind(StrEnum):
+    """Major DataBoom generation surface."""
+
+    RELATIONAL = "relational"
+    DOCUMENT = "document"
+    GRAPH = "graph"
+    MASKING = "masking"
+
+
 class SubscriptionStatus(StrEnum):
     """Lifecycle state for a demo subscription."""
 
@@ -90,12 +99,15 @@ class ProductResponse(BaseModel):
     name: str
     family: str
     module: str
+    kind: DataProductKind
     status: ProductStatus
     description: str
     domain: DomainProfile
     default_row_counts: dict[str, int]
-    output_formats: tuple[OutputFormat, ...]
+    output_formats: tuple[str, ...]
     tables: tuple[str, ...]
+    collections: tuple[str, ...] = ()
+    use_cases: tuple[str, ...] = ()
     features: tuple[str, ...]
     plans: tuple[ProductPlanResponse, ...]
 
@@ -129,7 +141,7 @@ class ProductRunRequest(BaseModel):
 
     row_counts: dict[str, int] = Field(default_factory=dict)
     seed: str = "dashboard-demo"
-    output_formats: tuple[OutputFormat, ...] | None = None
+    output_formats: tuple[str, ...] | None = None
 
     @field_validator("row_counts")
     @classmethod
@@ -147,10 +159,12 @@ class ProductRunRequest(BaseModel):
     @classmethod
     def require_output_formats(
         cls,
-        value: tuple[OutputFormat, ...] | None,
-    ) -> tuple[OutputFormat, ...] | None:
+        value: tuple[str, ...] | None,
+    ) -> tuple[str, ...] | None:
         if value is not None and not value:
             raise ValueError("at least one output format is required")
+        if value is not None and any(not item.strip() for item in value):
+            raise ValueError("output formats cannot be empty")
         return value
 
 
@@ -194,6 +208,17 @@ class TableArtifactResponse(BaseModel):
     csv_path: Path | None = None
     json_path: Path | None = None
     sql_path: Path | None = None
+
+
+class CollectionArtifactResponse(BaseModel):
+    """API representation of generated document collection artifacts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    collection_name: str
+    row_count: int
+    json_path: Path | None = None
+    ndjson_path: Path | None = None
 
 
 class ValidationIssueResponse(BaseModel):
@@ -249,12 +274,23 @@ class TablePreviewResponse(BaseModel):
     rows: tuple[dict[str, str], ...]
 
 
+class DocumentPreviewResponse(BaseModel):
+    """Small document collection preview returned from JSON/NDJSON artifacts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    collection_name: str
+    documents: tuple[dict[str, object], ...]
+
+
 class GenerationRunResponse(BaseModel):
     """Generation run state returned by the API."""
 
     model_config = ConfigDict(extra="forbid")
 
     run_id: str
+    kind: DataProductKind = DataProductKind.RELATIONAL
     status: RunStatus
     created_at: datetime
     completed_at: datetime | None = None
@@ -262,9 +298,10 @@ class GenerationRunResponse(BaseModel):
     manifest_path: Path | None = None
     validation_path: Path | None = None
     domain: DomainProfile
-    output_formats: tuple[OutputFormat, ...]
+    output_formats: tuple[str, ...]
     total_rows: int
     table_count: int
     tables: tuple[TableArtifactResponse, ...] = ()
+    collections: tuple[CollectionArtifactResponse, ...] = ()
     validation: ValidationSummaryResponse | None = None
     error: str | None = None

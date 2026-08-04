@@ -9,8 +9,11 @@ from urllib.parse import quote
 from uuid import uuid4
 
 from databoom.api.models import (
+    CollectionArtifactResponse,
+    DataProductKind,
     GenerationRunRequest,
     GenerationRunResponse,
+    ProductRunRequest,
     RunArtifactListResponse,
     RunArtifactResponse,
     RunStatus,
@@ -18,10 +21,13 @@ from databoom.api.models import (
     ValidationIssueResponse,
     ValidationSummaryResponse,
 )
+from databoom.api.products import ProductCatalogEntry
 from databoom.core.artifacts import ensure_artifact_root
 from databoom.core.config import Settings
+from databoom.document import DocumentGenerator
 from databoom.export import ArtifactExporter, ExportManifest
 from databoom.generation import GenerationPlan, create_generation_plan
+from databoom.generation.plan import OutputFormat
 from databoom.ingest import parse_postgres_ddl
 from databoom.validation import ValidationReport, validate_export
 
@@ -59,6 +65,82 @@ def execute_generation_run(
         manifest=manifest,
         validation=validation,
         validation_path=validation_path,
+    )
+
+
+def execute_product_generation_run(
+    product: ProductCatalogEntry,
+    payload: ProductRunRequest,
+    settings: Settings,
+) -> GenerationRunResponse:
+    """Execute a catalog-backed generation run for the product kind."""
+
+    match product.kind:
+        case DataProductKind.RELATIONAL:
+            if product.schema_ddl is None:
+                raise ValueError("relational product is missing schema DDL")
+            return execute_generation_run(
+                GenerationRunRequest(
+                    schema_ddl=product.schema_ddl,
+                    row_counts=payload.row_counts or product.default_counts,
+                    seed=payload.seed,
+                    domain=product.domain,
+                    output_formats=_relational_output_formats(
+                        payload.output_formats or product.output_formats
+                    ),
+                ),
+                settings,
+            )
+        case DataProductKind.DOCUMENT:
+            return execute_document_generation_run(product, payload, settings)
+        case DataProductKind.GRAPH | DataProductKind.MASKING:
+            raise ValueError(f"{product.name} is planned and is not runnable yet")
+
+
+def execute_document_generation_run(
+    product: ProductCatalogEntry,
+    payload: ProductRunRequest,
+    settings: Settings,
+) -> GenerationRunResponse:
+    """Execute a synchronous local Docu-Boom generation run."""
+
+    created_at = datetime.now(UTC)
+    run_id = uuid4().hex
+    artifact_dir = ensure_artifact_root(settings) / "runs" / run_id
+    result = DocumentGenerator(
+        collections=product.document_collections,
+        row_counts=payload.row_counts or product.default_counts,
+        seed=payload.seed,
+        output_dir=artifact_dir,
+    ).generate()
+
+    return GenerationRunResponse(
+        run_id=run_id,
+        kind=DataProductKind.DOCUMENT,
+        status=RunStatus.COMPLETED,
+        created_at=created_at,
+        completed_at=datetime.now(UTC),
+        artifact_dir=artifact_dir,
+        manifest_path=result.manifest.manifest_path,
+        validation_path=result.validation_path,
+        domain=product.domain,
+        output_formats=tuple(payload.output_formats or product.output_formats),
+        total_rows=result.total_rows,
+        table_count=len(result.manifest.collections),
+        collections=tuple(
+            CollectionArtifactResponse(
+                collection_name=collection.collection_name,
+                row_count=collection.row_count,
+                json_path=collection.json_path,
+                ndjson_path=collection.ndjson_path,
+            )
+            for collection in result.manifest.collections
+        ),
+        validation=ValidationSummaryResponse(
+            passed=bool(result.validation["passed"]),
+            checked_tables=tuple(result.validation["checked_collections"]),
+            issues=(),
+        ),
     )
 
 
@@ -117,6 +199,7 @@ def _completed_response(
 ) -> GenerationRunResponse:
     return GenerationRunResponse(
         run_id=run_id,
+        kind=DataProductKind.RELATIONAL,
         status=RunStatus.COMPLETED if validation.passed else RunStatus.FAILED,
         created_at=created_at,
         completed_at=completed_at,
@@ -124,7 +207,7 @@ def _completed_response(
         manifest_path=manifest.manifest_path,
         validation_path=validation_path,
         domain=plan.domain,
-        output_formats=plan.output_formats,
+        output_formats=tuple(str(output_format) for output_format in plan.output_formats),
         total_rows=plan.total_rows,
         table_count=len(plan.tables),
         tables=tuple(
@@ -150,3 +233,15 @@ def _completed_response(
             ),
         ),
     )
+
+
+def _relational_output_formats(output_formats: tuple[str, ...]) -> tuple[OutputFormat, ...]:
+    formats: list[OutputFormat] = []
+    for output_format in output_formats:
+        try:
+            formats.append(OutputFormat(output_format))
+        except ValueError as error:
+            raise ValueError(
+                f"unsupported relational output format: {output_format}"
+            ) from error
+    return tuple(formats)

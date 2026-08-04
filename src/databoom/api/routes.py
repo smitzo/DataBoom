@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -11,7 +12,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from databoom import __version__
 from databoom.api.models import (
+    CollectionArtifactResponse,
     DemoUserResponse,
+    DocumentPreviewResponse,
     GenerationRunRequest,
     GenerationRunResponse,
     HealthResponse,
@@ -20,7 +23,6 @@ from databoom.api.models import (
     ProductPlanResponse,
     ProductResponse,
     ProductRunRequest,
-    ProductStatus,
     RunArtifactListResponse,
     SubscriptionRequest,
     SubscriptionResponse,
@@ -31,6 +33,7 @@ from databoom.api.models import (
 from databoom.api.products import ProductCatalogEntry, get_product, list_products
 from databoom.api.runs import (
     execute_generation_run,
+    execute_product_generation_run,
     list_generation_run_artifacts,
     resolve_generation_run_artifact,
 )
@@ -209,18 +212,8 @@ def create_product_run(
             detail="subscribe to this product before generating data",
         )
 
-    settings: Settings = request.app.state.settings
     try:
-        run = execute_generation_run(
-            GenerationRunRequest(
-                schema_ddl=product.schema_ddl,
-                row_counts=payload.row_counts or product.default_row_counts,
-                seed=payload.seed,
-                domain=product.domain,
-                output_formats=payload.output_formats or product.output_formats,
-            ),
-            settings,
-        )
+        run = execute_product_generation_run(product, payload, request.app.state.settings)
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
@@ -346,6 +339,40 @@ def preview_run_table(
     )
 
 
+@router.get(
+    "/runs/{run_id}/document-preview",
+    response_model=DocumentPreviewResponse,
+    tags=["runs"],
+    dependencies=[protected_route],
+)
+def preview_run_documents(
+    request: Request,
+    run_id: str,
+    collection: str = Query(..., min_length=1),
+    limit: int = Query(default=10, ge=1, le=50),
+) -> DocumentPreviewResponse:
+    """Return the first documents from a generated collection artifact."""
+
+    run = _get_existing_run(request, run_id)
+    collection_artifact = _find_collection_artifact(run, collection)
+    if collection_artifact.json_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="collection does not have a JSON artifact",
+        )
+
+    path = collection_artifact.json_path.resolve()
+    if not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="JSON artifact not found")
+
+    documents = tuple(json.loads(path.read_text(encoding="utf-8"))[:limit])
+    return DocumentPreviewResponse(
+        run_id=run.run_id,
+        collection_name=collection_artifact.collection_name,
+        documents=documents,
+    )
+
+
 def _get_existing_run(request: Request, run_id: str) -> GenerationRunResponse:
     run = _state_store(request).get_run(run_id)
     if run is None:
@@ -363,12 +390,15 @@ def _product_response(product: ProductCatalogEntry) -> ProductResponse:
         name=product.name,
         family=product.family,
         module=product.module,
-        status=ProductStatus.ACTIVE,
+        kind=product.kind,
+        status=product.status,
         description=product.description,
         domain=product.domain,
-        default_row_counts=product.default_row_counts,
+        default_row_counts=product.default_counts,
         output_formats=product.output_formats,
         tables=product.tables,
+        collections=product.collections,
+        use_cases=product.use_cases,
         features=product.features,
         plans=tuple(
             ProductPlanResponse(
@@ -380,6 +410,16 @@ def _product_response(product: ProductCatalogEntry) -> ProductResponse:
             for plan in product.plans
         ),
     )
+
+
+def _find_collection_artifact(
+    run: GenerationRunResponse,
+    collection_name: str,
+) -> CollectionArtifactResponse:
+    for collection in run.collections:
+        if collection.collection_name == collection_name:
+            return collection
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="collection not found")
 
 
 def _find_table_artifact(

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from databoom.generation import DomainProfile, OutputFormat
+from databoom.api.models import DataProductKind, ProductStatus
+from databoom.document import DocumentCollectionSpec, DocumentFieldSpec
+from databoom.generation import DomainProfile
 
 
 @dataclass(frozen=True)
@@ -25,19 +27,40 @@ class ProductCatalogEntry:
     name: str
     family: str
     module: str
+    kind: DataProductKind
+    status: ProductStatus
     description: str
     domain: DomainProfile
-    schema_ddl: str
-    default_row_counts: dict[str, int]
-    output_formats: tuple[OutputFormat, ...]
+    output_formats: tuple[str, ...]
     features: tuple[str, ...]
     plans: tuple[ProductPlan, ...]
+    use_cases: tuple[str, ...] = ()
+    schema_ddl: str | None = None
+    default_row_counts: dict[str, int] | None = None
+    document_collections: tuple[DocumentCollectionSpec, ...] = ()
 
     @property
     def tables(self) -> tuple[str, ...]:
         """Return generated table names in display order."""
 
-        return tuple(self.default_row_counts)
+        return tuple(self.default_row_counts or {})
+
+    @property
+    def collections(self) -> tuple[str, ...]:
+        """Return generated collection names in display order."""
+
+        return tuple(collection.name for collection in self.document_collections)
+
+    @property
+    def default_counts(self) -> dict[str, int]:
+        """Return table or collection counts by generated resource name."""
+
+        if self.kind == DataProductKind.DOCUMENT:
+            return {
+                collection.name: collection.default_count
+                for collection in self.document_collections
+            }
+        return dict(self.default_row_counts or {})
 
 
 DEFAULT_PLANS = (
@@ -56,197 +79,208 @@ DEFAULT_PLANS = (
 )
 
 
+TABLE_BOOM_SCHEMA = """
+    CREATE TABLE customers (
+        id bigint PRIMARY KEY,
+        full_name text NOT NULL,
+        email text NOT NULL,
+        phone text,
+        segment text NOT NULL,
+        status text NOT NULL
+    );
+
+    CREATE TABLE products (
+        id bigint PRIMARY KEY,
+        sku text NOT NULL,
+        name text NOT NULL,
+        category text,
+        price numeric NOT NULL,
+        status text NOT NULL
+    );
+
+    CREATE TABLE orders (
+        id bigint PRIMARY KEY,
+        customer_id bigint NOT NULL REFERENCES customers(id),
+        status text NOT NULL,
+        total_amount numeric NOT NULL,
+        created_at timestamp
+    );
+
+    CREATE TABLE order_items (
+        id bigint PRIMARY KEY,
+        order_id bigint NOT NULL REFERENCES orders(id),
+        product_id bigint NOT NULL REFERENCES products(id),
+        quantity integer NOT NULL,
+        amount numeric NOT NULL
+    );
+
+    CREATE TABLE payments (
+        id bigint PRIMARY KEY,
+        order_id bigint NOT NULL REFERENCES orders(id),
+        payment_method text NOT NULL,
+        payment_amount numeric NOT NULL,
+        status text NOT NULL
+    );
+"""
+
+
+DOCU_BOOM_COLLECTIONS = (
+    DocumentCollectionSpec(
+        name="customers",
+        default_count=40,
+        fields=(
+            DocumentFieldSpec("_id", "object_id"),
+            DocumentFieldSpec("email", "email"),
+            DocumentFieldSpec("status", "status"),
+            DocumentFieldSpec(
+                "profile",
+                "object",
+                fields=(
+                    DocumentFieldSpec("first_name", "first_name"),
+                    DocumentFieldSpec("last_name", "last_name"),
+                    DocumentFieldSpec("age", "integer"),
+                    DocumentFieldSpec("loyalty_tier", "tier"),
+                ),
+            ),
+            DocumentFieldSpec(
+                "addresses",
+                "array",
+                item_fields=(
+                    DocumentFieldSpec("city", "city"),
+                    DocumentFieldSpec("country", "country"),
+                    DocumentFieldSpec("postal_code", "postal_code"),
+                ),
+            ),
+            DocumentFieldSpec("created_at", "timestamp"),
+        ),
+    ),
+    DocumentCollectionSpec(
+        name="orders",
+        default_count=120,
+        fields=(
+            DocumentFieldSpec("_id", "object_id"),
+            DocumentFieldSpec("customer_id", "reference", target_collection="customers"),
+            DocumentFieldSpec("status", "order_status"),
+            DocumentFieldSpec(
+                "items",
+                "array",
+                item_fields=(
+                    DocumentFieldSpec("sku", "sku"),
+                    DocumentFieldSpec("name", "product_name"),
+                    DocumentFieldSpec("quantity", "quantity"),
+                    DocumentFieldSpec("price", "money"),
+                ),
+            ),
+            DocumentFieldSpec("total", "money"),
+            DocumentFieldSpec("created_at", "timestamp"),
+        ),
+    ),
+    DocumentCollectionSpec(
+        name="events",
+        default_count=180,
+        fields=(
+            DocumentFieldSpec("_id", "object_id"),
+            DocumentFieldSpec("customer_id", "reference", target_collection="customers"),
+            DocumentFieldSpec("event_name", "event_name"),
+            DocumentFieldSpec(
+                "metadata",
+                "object",
+                fields=(
+                    DocumentFieldSpec("channel", "channel"),
+                    DocumentFieldSpec("campaign", "campaign"),
+                    DocumentFieldSpec("score", "number"),
+                ),
+            ),
+            DocumentFieldSpec("created_at", "timestamp"),
+        ),
+    ),
+)
+
+
 PRODUCT_CATALOG: tuple[ProductCatalogEntry, ...] = (
     ProductCatalogEntry(
-        id="bank-o-boom",
-        name="Bank-O-Boom",
-        family="Generator-Boom",
-        module="Banking and fintech",
-        description="Generate customers, accounts, and transactions for banking-style workflows.",
+        id="table-boom",
+        name="Table-Boom",
+        family="DataBoom",
+        module="Relational data",
+        kind=DataProductKind.RELATIONAL,
+        status=ProductStatus.ACTIVE,
+        description="Generate relational table data with primary-key and foreign-key integrity.",
         domain=DomainProfile.FINANCIAL,
-        schema_ddl="""
-            CREATE TABLE customers (
-                id bigint PRIMARY KEY,
-                full_name text NOT NULL,
-                email text NOT NULL,
-                phone text,
-                credit_score integer,
-                status text NOT NULL
-            );
-
-            CREATE TABLE bank_accounts (
-                id bigint PRIMARY KEY,
-                customer_id bigint NOT NULL REFERENCES customers(id),
-                account_number text NOT NULL,
-                account_type text NOT NULL,
-                currency text NOT NULL,
-                balance numeric NOT NULL,
-                status text NOT NULL
-            );
-
-            CREATE TABLE transactions (
-                id bigint PRIMARY KEY,
-                account_id bigint NOT NULL REFERENCES bank_accounts(id),
-                merchant_name text,
-                category text,
-                transaction_type text NOT NULL,
-                amount numeric NOT NULL,
-                status text NOT NULL
-            );
-        """,
-        default_row_counts={"customers": 8, "bank_accounts": 16, "transactions": 48},
-        output_formats=(OutputFormat.CSV, OutputFormat.JSON, OutputFormat.SQL),
-        features=(
-            "Relationship-safe account and transaction rows.",
-            "Financial profile values for balances, merchants, categories, and status.",
-            "CSV, JSON, and SQL exports for downstream testing.",
-        ),
-        plans=DEFAULT_PLANS,
-    ),
-    ProductCatalogEntry(
-        id="health-boom",
-        name="Health-Boom",
-        family="Generator-Boom",
-        module="Healthcare and patient data",
-        description="Generate patient, encounter, and vitals data for clinical test workflows.",
-        domain=DomainProfile.HEALTHCARE,
-        schema_ddl="""
-            CREATE TABLE patients (
-                id bigint PRIMARY KEY,
-                mrn text NOT NULL,
-                first_name text NOT NULL,
-                last_name text NOT NULL,
-                age integer,
-                gender text,
-                insurance_provider text
-            );
-
-            CREATE TABLE encounters (
-                id bigint PRIMARY KEY,
-                patient_id bigint NOT NULL REFERENCES patients(id),
-                diagnosis_code text,
-                diagnosis text,
-                status text NOT NULL
-            );
-
-            CREATE TABLE vitals (
-                id bigint PRIMARY KEY,
-                encounter_id bigint NOT NULL REFERENCES encounters(id),
-                heart_rate integer,
-                systolic integer,
-                diastolic integer,
-                weight numeric,
-                status text
-            );
-        """,
-        default_row_counts={"patients": 10, "encounters": 18, "vitals": 36},
-        output_formats=(OutputFormat.CSV, OutputFormat.JSON),
-        features=(
-            "Patient-style values without using real patient records.",
-            "Encounter and vitals tables preserve foreign-key integrity.",
-            "Useful for demos, QA flows, and analytics prototypes.",
-        ),
-        plans=DEFAULT_PLANS,
-    ),
-    ProductCatalogEntry(
-        id="boom-commerce",
-        name="Boom-Commerce",
-        family="Generator-Boom",
-        module="Commerce and order data",
-        description="Generate customers, products, orders, line items, and payments.",
-        domain=DomainProfile.FINANCIAL,
-        schema_ddl="""
-            CREATE TABLE commerce_customers (
-                id bigint PRIMARY KEY,
-                full_name text NOT NULL,
-                email text NOT NULL,
-                status text NOT NULL
-            );
-
-            CREATE TABLE products (
-                id bigint PRIMARY KEY,
-                sku text NOT NULL,
-                name text NOT NULL,
-                category text,
-                price numeric NOT NULL,
-                status text NOT NULL
-            );
-
-            CREATE TABLE orders (
-                id bigint PRIMARY KEY,
-                customer_id bigint NOT NULL REFERENCES commerce_customers(id),
-                status text NOT NULL,
-                total_amount numeric NOT NULL
-            );
-
-            CREATE TABLE order_items (
-                id bigint PRIMARY KEY,
-                order_id bigint NOT NULL REFERENCES orders(id),
-                product_id bigint NOT NULL REFERENCES products(id),
-                quantity integer NOT NULL,
-                amount numeric NOT NULL
-            );
-
-            CREATE TABLE payments (
-                id bigint PRIMARY KEY,
-                order_id bigint NOT NULL REFERENCES orders(id),
-                payment_method text NOT NULL,
-                payment_amount numeric NOT NULL,
-                status text NOT NULL
-            );
-        """,
+        schema_ddl=TABLE_BOOM_SCHEMA,
         default_row_counts={
-            "commerce_customers": 8,
-            "products": 12,
-            "orders": 20,
-            "order_items": 42,
-            "payments": 20,
+            "customers": 24,
+            "products": 16,
+            "orders": 48,
+            "order_items": 96,
+            "payments": 48,
         },
-        output_formats=(OutputFormat.CSV, OutputFormat.JSON, OutputFormat.SQL),
+        output_formats=("csv", "json", "sql"),
+        use_cases=("financial records", "healthcare records", "commerce orders", "SaaS audit data"),
         features=(
-            "Multi-table ecommerce shape for order lifecycle testing.",
-            "Line items and payments preserve order relationships.",
-            "Good next-step module before deeper commerce-specific profiles.",
+            "PostgreSQL schema-aware generation.",
+            "Relationship-safe parent and child rows.",
+            "CSV, JSON, and SQL exports with validation reports.",
         ),
         plans=DEFAULT_PLANS,
     ),
     ProductCatalogEntry(
-        id="schema-boom",
-        name="Schema-Boom",
-        family="Generator-Boom",
-        module="Generic relational data",
-        description="Generate typed relational data from a neutral SaaS-style schema.",
+        id="docu-boom",
+        name="Docu-Boom",
+        family="DataBoom",
+        module="NoSQL document data",
+        kind=DataProductKind.DOCUMENT,
+        status=ProductStatus.ACTIVE,
+        description=(
+            "Generate MongoDB-style nested JSON and NDJSON collections for document workflows."
+        ),
         domain=DomainProfile.GENERAL,
-        schema_ddl="""
-            CREATE TABLE organizations (
-                id bigint PRIMARY KEY,
-                name text NOT NULL,
-                status text NOT NULL
-            );
-
-            CREATE TABLE users (
-                id bigint PRIMARY KEY,
-                organization_id bigint NOT NULL REFERENCES organizations(id),
-                name text NOT NULL,
-                email text NOT NULL,
-                phone text,
-                status text NOT NULL
-            );
-
-            CREATE TABLE audit_events (
-                id bigint PRIMARY KEY,
-                user_id bigint NOT NULL REFERENCES users(id),
-                event_name text NOT NULL,
-                metadata jsonb,
-                created_at timestamp
-            );
-        """,
-        default_row_counts={"organizations": 5, "users": 15, "audit_events": 45},
-        output_formats=(OutputFormat.CSV, OutputFormat.JSON, OutputFormat.SQL),
+        document_collections=DOCU_BOOM_COLLECTIONS,
+        output_formats=("json", "ndjson"),
+        use_cases=("customer profiles", "orders", "events", "catalog documents"),
         features=(
-            "Generic relational fallback for custom app demos.",
-            "JSON and timestamp values exercise broader type handling.",
-            "Useful as a neutral product sandbox for Schema-Boom.",
+            "Nested objects and arrays for document-style records.",
+            "Stable object IDs and simple cross-collection references.",
+            "JSON and NDJSON exports with document previews.",
+        ),
+        plans=DEFAULT_PLANS,
+    ),
+    ProductCatalogEntry(
+        id="graph-boom",
+        name="Graph-Boom",
+        family="DataBoom",
+        module="Graph data",
+        kind=DataProductKind.GRAPH,
+        status=ProductStatus.PLANNED,
+        description="Generate connected node and edge datasets with labels and properties.",
+        domain=DomainProfile.GENERAL,
+        output_formats=("json", "csv"),
+        use_cases=("fraud networks", "recommendations", "knowledge graphs"),
+        features=(
+            "Planned node and edge generation.",
+            "Planned graph cardinality and edge-reference validation.",
+            "Planned graph preview workspace.",
+        ),
+        plans=DEFAULT_PLANS,
+    ),
+    ProductCatalogEntry(
+        id="masker-boom",
+        name="Masker-Boom",
+        family="DataBoom",
+        module="Masking and redaction",
+        kind=DataProductKind.MASKING,
+        status=ProductStatus.PLANNED,
+        description=(
+            "Redact, tokenize, hash, or replace sensitive source data while preserving useful "
+            "structure."
+        ),
+        domain=DomainProfile.GENERAL,
+        output_formats=("csv", "json"),
+        use_cases=("PII redaction", "tokenized joins", "privacy audits"),
+        features=(
+            "Planned sensitive-field classification.",
+            "Planned masking policies and privacy validation.",
+            "Planned audit reports for sensitive data workflows.",
         ),
         plans=DEFAULT_PLANS,
     ),
@@ -254,7 +288,7 @@ PRODUCT_CATALOG: tuple[ProductCatalogEntry, ...] = (
 
 
 def list_products() -> tuple[ProductCatalogEntry, ...]:
-    """Return the runnable product catalog."""
+    """Return the product catalog."""
 
     return PRODUCT_CATALOG
 
