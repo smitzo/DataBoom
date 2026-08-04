@@ -2,9 +2,9 @@
 
 ## Product Summary
 
-DataBoom is the parent platform for two product families: Generator-Boom and Masker-Boom. Generator-Boom generates realistic synthetic data from prompts and PostgreSQL schemas while preserving relational integrity across tables. Masker-Boom will redact, mask, tokenize, or replace sensitive source data while preserving integrity.
+DataBoom is the parent platform for four catalog products: Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom. Table-Boom generates relational data, Docu-Boom generates NoSQL document data, Graph-Boom will generate graph data, and Masker-Boom will redact, mask, tokenize, or replace sensitive source data while preserving useful structure.
 
-Generator-Boom is the current implementation focus. PostgreSQL-backed relational generation is first; NoSQL document data is planned for Phase 2, and graph data is planned for Phase 3. Masker-Boom starts in Phase 4 after the generation, profiling, validation, and policy foundations are reliable.
+Table-Boom and Docu-Boom are the current implementation focus. PostgreSQL-backed relational generation came first; NoSQL document data is completed in Phase 2. Graph data is planned for Phase 3. Masker-Boom starts in Phase 4 after the generation, profiling, validation, and policy foundations are reliable.
 
 The product should help engineers, QA teams, data teams, demo teams, and privacy-aware platform teams create or transform useful datasets without hand-writing fragile fixtures or copying production data casually.
 
@@ -12,32 +12,18 @@ The product should help engineers, QA teams, data teams, demo teams, and privacy
 
 | Product | Role | Current Scope |
 | --- | --- | --- |
-| Generator-Boom | Generate synthetic data from scratch. | Active. Schema-Boom, Bank-O-Boom, and Health-Boom are the current modules. |
+| Table-Boom | Generate relational/table data from schemas and profiles. | Active. PostgreSQL-first with CSV, JSON, SQL artifacts and table previews. |
+| Docu-Boom | Generate NoSQL document data. | Active in Phase 2. JSON/NDJSON artifacts and document previews. |
+| Graph-Boom | Generate graph node and edge data. | Planned for Phase 3. |
 | Masker-Boom | Mask or redact sensitive existing data while preserving useful shape and relationships. | Planned for Phase 4. |
 
-Generator-Boom modules:
-
-- `Schema-Boom`: PostgreSQL-first relational generation.
-- `Bank-O-Boom`: banking and fintech data.
-- `Health-Boom`: medical, patient, encounter, and vitals data.
-- `Boom-Commerce`: ecommerce and retail data.
-- `Auto-Boom`: automotive, fleet, insurance, and service data.
-- `Docu-Boom`: NoSQL document data.
-- `Graph-Boom`: graph node and edge data.
-
-Masker-Boom modules:
-
-- `Classify-Boom`: sensitive field classification.
-- `Redact-Boom`: field redaction and removal.
-- `Token-Boom`: stable tokenization with join preservation.
-- `Shape-Boom`: format and distribution preservation.
-- `Audit-Boom`: privacy reports and policy audit trails.
+Banking, healthcare, ecommerce, SaaS, insurance, and similar domains are demo use cases or profiles under these products. They are not separate products.
 
 ## Problem Statement
 
 Teams need realistic data for development, QA, demos, CI, analytics, and automation. Production data is risky to copy, and simple fixture generators often fail when data must respect primary keys, foreign keys, unique constraints, nullable fields, enums, date ranges, and realistic table relationships.
 
-Generator-Boom solves this by understanding schema structure, planning generation, producing relationally valid data, validating the result, and exporting it in formats that can be loaded or inspected. Masker-Boom will solve the adjacent problem of making existing sensitive datasets safer to use without destroying keys, joins, or useful shape.
+Table-Boom solves the relational side by understanding schema structure, planning generation, producing valid table data, validating the result, and exporting it in formats that can be loaded or inspected. Docu-Boom solves the document side with nested collection artifacts. Masker-Boom will solve the adjacent problem of making existing sensitive datasets safer to use without destroying keys, joins, or useful shape.
 
 ## Target Users
 
@@ -151,13 +137,13 @@ Phase 1 uses deterministic local planning. LLM-assisted planning can be introduc
 
 ### Domain Profiles
 
-Generator-Boom should support domain profiles so users can request data optimized for a use case without changing the core engine.
+DataBoom should support domain profiles so users can request data optimized for a use case without changing the core engine.
 
 Initial profiles:
 
 - `general`: generic schema-aware data.
-- `financial`: Bank-O-Boom banking and financial data such as accounts, balances, currencies, transaction types, merchants, and statuses.
-- `healthcare`: Health-Boom patient and clinical data such as medical record numbers, blood types, diagnoses, vitals, and insurance providers.
+- `financial`: banking and financial data such as accounts, balances, currencies, transaction types, merchants, and statuses.
+- `healthcare`: patient and clinical data such as medical record numbers, blood types, diagnoses, vitals, and insurance providers.
 
 Domain profiles must remain optional overlays. They should improve semantic realism where possible, while schema constraints, relationship solving, deterministic seeds, and validation stay generic.
 

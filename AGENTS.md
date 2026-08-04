@@ -4,7 +4,7 @@ This file is persistent guidance for Codex in the DataBoom repository.
 
 ## Project Identity
 
-DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its two product families are Generator-Boom for synthetic data generation and Masker-Boom for future privacy-preserving masking/redaction.
+DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its catalog has four main products: Table-Boom for relational data, Docu-Boom for NoSQL document data, Graph-Boom for graph data, and Masker-Boom for masking/redaction.
 
 ## Current Phase
 
@@ -16,6 +16,7 @@ Before implementation, read:
 - `docs/functional-specification.md`
 - `docs/technical-design-and-roadmap.md`
 - `docs/product-family.md`
+- `docs/engineering-standards.md`
 - `docs/prompt-caching-and-instructions.md`
 - `docs/product-reasoning-faq.md`
 - `understanding.md`
@@ -28,6 +29,8 @@ Before implementation, read:
 - Keep Phase 1 and Phase 2 artifact storage on local disk.
 - Preserve deterministic generation through seed-based behavior.
 - Favor streaming exports over full in-memory datasets.
+- Reuse backend services and frontend components before adding new product-specific branches.
+- Render product surfaces by product `kind` (`relational`, `document`, `graph`, `masking`) instead of demo product names.
 - Update documentation when behavior, architecture, prompts, or phase scope changes.
 - Update `understanding.md` for significant architecture, performance, reliability, product-scope, or non-obvious implementation decisions. Do not add entries for tiny mechanical changes, simple variable additions, or routine API calls.
 - Do not introduce broad abstractions unless they support the documented phase roadmap.
@@ -72,7 +75,7 @@ Examples:
 
 ## Phase Discipline
 
-Phase 1 should focus on Generator-Boom Schema-Boom:
+Phase 1 should focus on Table-Boom relational generation:
 
 - schema ingestion,
 - schema models,
@@ -83,7 +86,7 @@ Phase 1 should focus on Generator-Boom Schema-Boom:
 - CLI entry point,
 - 100k record benchmark.
 
-Phase 2 should focus on Generator-Boom scale and Docu-Boom:
+Phase 2 should focus on Table-Boom scale and Docu-Boom:
 
 - 500k record target,
 - FastAPI run workflow,
@@ -92,7 +95,7 @@ Phase 2 should focus on Generator-Boom scale and Docu-Boom:
 - Docker Compose,
 - local artifact management.
 
-Phase 3 should introduce Generator-Boom planning and Graph-Boom:
+Phase 3 should introduce LLM-assisted planning and Graph-Boom:
 
 - LLM-assisted planning,
 - prompt packs,

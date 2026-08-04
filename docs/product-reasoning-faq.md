@@ -4,15 +4,15 @@ This document explains why DataBoom exists, where it fits, and how to answer com
 
 ## Short Positioning
 
-DataBoom is not just a fake-value generator and not just a chat prompt. It is a platform for two related jobs: Generator-Boom creates schema-aware synthetic data, and Masker-Boom will transform sensitive existing data into safer datasets while preserving integrity.
+DataBoom is not just a fake-value generator and not just a chat prompt. It is a platform for four related data products: Table-Boom creates relational synthetic data, Docu-Boom creates NoSQL document data, Graph-Boom will create graph data, and Masker-Boom will transform sensitive existing data into safer datasets while preserving integrity.
 
-The platform should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on Generator-Boom's relational generation engine first. Phase 2 expands into Docu-Boom NoSQL document data, Phase 3 adds Graph-Boom data, and Masker-Boom privacy, masking, hashing, tokenization, and policy enforcement arrive in Phase 4 once the core generation paths are reliable.
+The platform should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on Table-Boom's relational generation engine first. Phase 2 expands into Docu-Boom NoSQL document data, Phase 3 adds Graph-Boom data, and Masker-Boom privacy, masking, hashing, tokenization, and policy enforcement arrive in Phase 4 once the core generation paths are reliable.
 
 ## Product Families
 
-### What is Generator-Boom?
+### What are Table-Boom, Docu-Boom, and Graph-Boom?
 
-Generator-Boom creates synthetic data from scratch. It includes Schema-Boom for relational schemas, Bank-O-Boom for banking and fintech data, Health-Boom for medical data, Boom-Commerce for ecommerce, Auto-Boom for automotive datasets, Docu-Boom for document data, and Graph-Boom for graph data.
+They create synthetic data from scratch for different data surfaces. Table-Boom handles relational tables, Docu-Boom handles nested NoSQL documents, and Graph-Boom will handle nodes and edges. Banking, healthcare, ecommerce, and similar domains are use cases or demo profiles under those products.
 
 ### What is Masker-Boom?
 
@@ -20,7 +20,7 @@ Masker-Boom is the planned masking service layer. It will classify sensitive fie
 
 ### Why split them?
 
-Generation and masking are related but not identical. Generator-Boom can create fresh synthetic data with no source records. Masker-Boom starts from source data and must preserve enough structure to remain useful while removing or replacing sensitive values. Keeping the product families separate makes scope, safety, and customer promises clearer.
+Generation and masking are related but not identical. Table-Boom, Docu-Boom, and Graph-Boom can create fresh synthetic data with no source records. Masker-Boom starts from source data and must preserve enough structure to remain useful while removing or replacing sensitive values. Keeping the product responsibilities separate makes scope, safety, and customer promises clearer.
 
 ## 4W1H Product Questions
 
@@ -68,7 +68,7 @@ A dedicated engine is needed because large relational data generation is a syste
 
 ### How does DataBoom solve it?
 
-Generator-Boom splits the generation problem into specialized components:
+DataBoom splits the generation problem into specialized components:
 
 - schema ingestion understands database structure,
 - relationship solving computes table order and foreign-key sources,
@@ -91,7 +91,7 @@ This keeps scope disciplined:
 
 ## Why Not Just Use Faker?
 
-Faker is useful, and Generator-Boom should use Faker where it helps. But Faker is a value library, not a complete relational data engine or masking service.
+Faker is useful, and DataBoom should use Faker where it helps. But Faker is a value library, not a complete relational, document, graph, or masking engine.
 
 Faker can generate:
 
@@ -117,7 +117,7 @@ Faker does not, by itself, solve:
 - large artifact handling,
 - privacy policy enforcement.
 
-Generator-Boom should use Faker as one ingredient inside the generator, then add the missing engine layer around it.
+DataBoom should use Faker as one ingredient inside the generator, then add the missing engine layer around it.
 
 ## Why Not Just Ask ChatGPT To Generate 1 Million Records?
 
@@ -177,7 +177,7 @@ DataBoom should not claim to be universally better than Tonic.ai. The better cla
 - ability to tune performance for our exact database and CI workflows,
 - no dependency on a closed vendor workflow for core test-data generation.
 
-Tonic.ai may be the better choice for teams that need a complete commercial data de-identification platform immediately. DataBoom is valuable when the team wants an owned engine, transparent internals, local deployment, and a roadmap split clearly between Generator-Boom and Masker-Boom.
+Tonic.ai may be the better choice for teams that need a complete commercial data de-identification platform immediately. DataBoom is valuable when the team wants an owned engine, transparent internals, local deployment, and a roadmap split clearly across Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom.
 
 References:
 

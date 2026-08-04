@@ -42,7 +42,7 @@ Use this logical layout when Phase 2 or Phase 3 introduces LLM-assisted planning
 
 The planner should return a structured generation plan. It should not directly generate the final dataset.
 
-Generator-Boom and Masker-Boom should use separate prompt packs because generation and masking have different safety boundaries. Generator-Boom prompts produce data plans; Masker-Boom prompts should eventually produce policy suggestions, classification hints, or review summaries, never raw sensitive data.
+Generation products and Masker-Boom should use separate prompt packs because generation and masking have different safety boundaries. Table-Boom, Docu-Boom, and Graph-Boom prompts produce data plans; Masker-Boom prompts should eventually produce policy suggestions, classification hints, or review summaries, never raw sensitive data.
 
 ## Prompt Cache Keys
 

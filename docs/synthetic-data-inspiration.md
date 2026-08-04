@@ -13,20 +13,20 @@ This document captures product and implementation lessons from adjacent tools. T
 
 ### Domain-Specific Datasets
 
-Tonic frames synthetic data around use cases such as software testing, AI training, mock APIs, financial services, and healthcare. DataBoom should similarly treat domain use cases as first-class product concepts under Generator-Boom.
+Tonic frames synthetic data around use cases such as software testing, AI training, mock APIs, financial services, and healthcare. DataBoom should similarly treat domain use cases as first-class demos under the correct data-surface product.
 
 Current application:
 
 - `general` domain profile.
-- Bank-O-Boom through the `financial` domain profile.
-- Health-Boom through the `healthcare` domain profile.
+- financial relational demos through the `financial` domain profile.
+- healthcare relational demos through the `healthcare` domain profile.
 - demo datasets in `demo/`.
 
 Future direction:
 
 - add domain profile configuration files,
 - add profile preview examples,
-- let users choose Generator-Boom module intent in the frontend,
+- let users choose product kind and demo use case in the frontend,
 - expose profile-specific quality checks.
 
 ### Multiple Outputs
@@ -50,7 +50,7 @@ Future direction:
 
 ### Modular Generation Engines
 
-Gretel Synthetics separates different model families and generation approaches. DataBoom should follow that modular idea at an engine level: Generator-Boom local rule-based generation first, optional LLM planning later, specialized providers for domain semantics, and Masker-Boom policies as a separate service layer.
+Gretel Synthetics separates different model families and generation approaches. DataBoom should follow that modular idea at an engine level: Table-Boom and Docu-Boom deterministic generation first, optional LLM planning later, specialized providers for domain semantics, and Masker-Boom policies as a separate service layer.
 
 Current application:
 

@@ -20,23 +20,17 @@
 ```mermaid
 flowchart TD
     DataBoom[DataBoom Platform]
-    DataBoom --> Generator[Generator-Boom]
-    DataBoom --> Masker[Masker-Boom]
-    Generator --> SchemaBoom[Schema-Boom]
-    Generator --> BankBoom[Bank-O-Boom]
-    Generator --> HealthBoom[Health-Boom]
-    Generator --> CommerceBoom[Boom-Commerce]
-    Generator --> AutoBoom[Auto-Boom]
-    Generator --> DocuBoom[Docu-Boom]
-    Generator --> GraphBoom[Graph-Boom]
-    Masker --> ClassifyBoom[Classify-Boom]
-    Masker --> RedactBoom[Redact-Boom]
-    Masker --> TokenBoom[Token-Boom]
-    Masker --> ShapeBoom[Shape-Boom]
-    Masker --> AuditBoom[Audit-Boom]
+    DataBoom --> TableBoom[Table-Boom Relational]
+    DataBoom --> DocuBoom[Docu-Boom Documents]
+    DataBoom --> GraphBoom[Graph-Boom Graphs]
+    DataBoom --> MaskerBoom[Masker-Boom Masking]
+    TableBoom --> UseCasesA[Financial Healthcare Ecommerce SaaS use cases]
+    DocuBoom --> UseCasesB[Catalog Orders Events User Profiles]
+    GraphBoom --> GraphUseCases[Nodes Edges Properties]
+    MaskerBoom --> MaskingUseCases[Redaction Tokenization Audit]
 ```
 
-Generator-Boom creates synthetic data. Masker-Boom transforms sensitive existing data while preserving integrity. The codebase keeps shared contracts in neutral package names such as `databoom.schema`, `databoom.generation`, and future `databoom.masking` modules.
+Table-Boom, Docu-Boom, and Graph-Boom create synthetic data for different data surfaces. Masker-Boom transforms sensitive existing data while preserving useful integrity. The codebase keeps shared contracts in neutral package names such as `databoom.schema`, `databoom.generation`, `databoom.document`, and future `databoom.masking` modules.
 
 ## High-Level Design
 
@@ -140,10 +134,10 @@ This keeps route behavior independent from the storage implementation. It also l
 - `schema_ingestor`: parses DDL and reads PostgreSQL metadata.
 - `schema_model`: stores normalized tables, columns, constraints, and relationships.
 - `relationship_solver`: computes dependency order and foreign-key mappings.
-- `document_model`: future Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
+- `document_model`: Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
 - `graph_model`: future Phase 3 contract for node labels, edge types, properties, and graph cardinality.
 - `prompt_planner`: converts prompt intent into a structured generation plan.
-- `domain_profiles`: provides optional semantic value generation for Generator-Boom modules such as Bank-O-Boom and Health-Boom.
+- `domain_profiles`: provides optional semantic value generation for use cases such as financial and healthcare demos.
 - `masking_policy`: future Masker-Boom contract for classification, redaction, hashing, tokenization, and synthetic replacement.
 - `generator`: streams generated rows table by table.
 - `validator`: checks generated data against schema and plan.
@@ -152,9 +146,9 @@ This keeps route behavior independent from the storage implementation. It also l
 - `state_store`: persists demo sessions, subscriptions, and generation-run metadata behind a replaceable API boundary.
 - `cli`: supports local and CI workflows.
 
-## Phase 1: Generator-Boom Schema-Boom Foundation
+## Phase 1: Table-Boom Relational Foundation
 
-Goal: build the deterministic Schema-Boom backend engine for PostgreSQL schema-driven generation.
+Goal: build the deterministic Table-Boom backend engine for PostgreSQL schema-driven generation.
 
 Technical objectives:
 
@@ -165,7 +159,7 @@ Technical objectives:
 - Implement deterministic seed handling.
 - Implement local generation plans from simple prompt/row-count inputs.
 - Generate primitive values for common PostgreSQL types.
-- Support extensible domain profiles for Bank-O-Boom and Health-Boom demo use cases.
+- Support extensible domain profiles for financial and healthcare demo use cases.
 - Preserve primary keys and foreign keys.
 - Stream CSV, JSON, and SQL output to local disk.
 - Produce validation reports.
@@ -303,9 +297,9 @@ Why tenth: the CLI is the fastest way to use the backend locally and in CI.
 
 Why eleventh: performance goals must be measured, not assumed.
 
-## Phase 2: Generator-Boom Scale, API, Profiling, and Docu-Boom
+## Phase 2: Table-Boom Scale, API, Profiling, and Docu-Boom
 
-Goal: harden Generator-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
+Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
 Technical objectives:
 
@@ -344,9 +338,9 @@ Recommended commits:
 13. `backend: validate nosql document artifacts`
 14. `docs: document api cli and nosql workflows`
 
-## Phase 3: Generator-Boom LLM Planning, Graph-Boom, and Operator Experience
+## Phase 3: LLM Planning, Graph-Boom, and Operator Experience
 
-Goal: add LLM-assisted planning behind a safe, replaceable interface, add Graph-Boom data generation, and create the first operator-facing experience.
+Goal: add LLM-assisted planning behind a safe, replaceable interface, add Graph-Boom data generation, and create richer operator-facing experiences.
 
 Technical objectives:
 
@@ -410,7 +404,7 @@ Recommended commits:
 
 ## Phase 5: Production Release and Extensibility
 
-Goal: make the DataBoom platform production-grade for Generator-Boom, Masker-Boom, deployment, operations, and future adapters.
+Goal: make the DataBoom platform production-grade for Table-Boom, Docu-Boom, Graph-Boom, Masker-Boom, deployment, operations, and future adapters.
 
 Technical objectives:
 

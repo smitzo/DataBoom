@@ -6,24 +6,14 @@ DataBoom is a synthetic data and masking platform for teams that need realistic,
 
 | Product | Purpose | Status |
 | --- | --- | --- |
-| `Generator-Boom` | Synthetic data generation from schemas, prompts, domain profiles, and future document/graph specs. | Active |
-| `Masker-Boom` | Redaction, masking, tokenization, and integrity-preserving privacy workflows for sensitive source data. | Planned for Phase 4 |
-
-Generator-Boom contains whacky but useful modules:
-
-| Module | Purpose | Status |
-| --- | --- | --- |
-| `Schema-Boom` | PostgreSQL-first schema-aware relational generation. | Active |
-| `Bank-O-Boom` | Banking and fintech demo/profile generation. | Active demo |
-| `Health-Boom` | Medical and patient-style demo/profile generation. | Active demo |
-| `Boom-Commerce` | Ecommerce, orders, payments, refunds, and inventory data. | Planned |
-| `Auto-Boom` | Automotive, fleet, insurance, and service datasets. | Planned |
-| `Docu-Boom` | NoSQL document and nested JSON generation. | Phase 2 planned |
-| `Graph-Boom` | Node and edge generation for graph datasets. | Phase 3 planned |
+| `Table-Boom` | Relational/table generation with key integrity and CSV/JSON/SQL exports. | Active |
+| `Docu-Boom` | NoSQL document generation with nested JSON/NDJSON artifacts. | Active in Phase 2 |
+| `Graph-Boom` | Node and edge generation for graph datasets. | Planned for Phase 3 |
+| `Masker-Boom` | Redaction, masking, tokenization, and integrity-preserving privacy workflows. | Planned for Phase 4 |
 
 See [DataBoom Product Family](docs/product-family.md) for the canonical product taxonomy.
 
-The current implementation is Generator-Boom: a Python backend engine that reads PostgreSQL DDL, plans dependency-aware relational generation, writes local CSV/JSON/SQL artifacts, and produces validation reports. The frontend is a Next.js workbench that presents the product, current benchmark status, domain profiles, roadmap, and demo datasets.
+The current implementation includes Table-Boom relational generation and the Phase 2 Docu-Boom foundation. Banking, healthcare, ecommerce, SaaS, and similar domains are demo use cases or profiles, not separate products.
 
 ## Current Capabilities
 
@@ -31,7 +21,7 @@ The current implementation is Generator-Boom: a Python backend engine that reads
 - Normalized schema models.
 - Relationship-aware generation with primary-key and foreign-key preservation.
 - Deterministic seeds.
-- Bank-O-Boom, Health-Boom, and general domain profiles.
+- General, financial, and healthcare demo domain profiles.
 - CSV, JSON, and SQL local artifact exports.
 - Validation reports and artifact manifests.
 - CLI generation, plan preview, and artifact validation workflows.
@@ -39,18 +29,18 @@ The current implementation is Generator-Boom: a Python backend engine that reads
 - API generation run endpoint for synchronous local relational runs.
 - API artifact listing, downloads, and optional API-key protection.
 - Demo auth with `demo` / `demo` credentials.
-- Product catalog, subscription, product-run, and table-preview API endpoints.
+- Product catalog, subscription, product-run, table-preview, and document-preview API endpoints.
 - SQL-backed demo sessions, subscriptions, and run metadata in Dockerized API runs.
-- DataBoom Relational dashboard with product/table navigation, spreadsheet-style previews, agent run steps, subscriptions, runs, and artifact downloads.
+- DataBoom workspace with product navigation, relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
 
 ## Roadmap Summary
 
-- Phase 1: Generator-Boom Schema-Boom relational foundation for PostgreSQL schema-driven generation.
-- Phase 2: Generator-Boom scale, FastAPI workflows, profiling, and Docu-Boom NoSQL document support.
-- Phase 3: Generator-Boom LLM-assisted planning, Graph-Boom support, and richer operator-facing review flows.
+- Phase 1: Table-Boom relational foundation for PostgreSQL schema-driven generation.
+- Phase 2: Table-Boom scale, FastAPI workflows, profiling, and Docu-Boom NoSQL document support.
+- Phase 3: LLM-assisted planning, Graph-Boom support, and richer operator-facing review flows.
 - Phase 4: Masker-Boom policies, redaction, masking, hashing, tokenization, audit logs, and security hardening.
 - Phase 5: production deployment, CI, observability, retention, and adapter extensibility.
 
@@ -74,8 +64,8 @@ Run backend checks:
 Generate a dataset:
 
 ```bash
-.venv/bin/databoom generate demo/bank-o-boom/schema.sql \
-  --output-dir artifacts/demo-bank-o-boom \
+.venv/bin/databoom generate demo/financial-relational/schema.sql \
+  --output-dir artifacts/demo-financial-relational \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
@@ -83,25 +73,25 @@ Generate a dataset:
   --format json \
   --format sql \
   --domain financial \
-  --seed demo-bank-o-boom
+  --seed demo-financial-relational
 ```
 
 Preview the deterministic plan before generation:
 
 ```bash
-.venv/bin/databoom plan demo/bank-o-boom/schema.sql \
+.venv/bin/databoom plan demo/financial-relational/schema.sql \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
   --format csv \
   --domain financial \
-  --seed demo-bank-o-boom
+  --seed demo-financial-relational
 ```
 
 Validate an existing artifact directory without regenerating it:
 
 ```bash
-.venv/bin/databoom validate demo/bank-o-boom/schema.sql artifacts/demo-bank-o-boom \
+.venv/bin/databoom validate demo/financial-relational/schema.sql artifacts/demo-financial-relational \
   --rows customers=100 \
   --rows bank_accounts=250 \
   --rows transactions=750 \
@@ -109,7 +99,7 @@ Validate an existing artifact directory without regenerating it:
   --format json \
   --format sql \
   --domain financial \
-  --seed demo-bank-o-boom
+  --seed demo-financial-relational
 ```
 
 Run the Phase 1 benchmark:
@@ -234,7 +224,7 @@ docker compose --profile tools run --rm app
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.
 - `benchmarks`: repeatable benchmark scripts.
-- `demo`: checked-in Bank-O-Boom and Health-Boom CSV demo datasets plus schemas.
+- `demo`: checked-in financial and healthcare CSV demo datasets plus schemas.
 - `frontend`: Next.js, TypeScript, Tailwind frontend workbench.
 - `frontend/src/components`: reusable frontend UI components.
 - `frontend/src/data`: shared frontend display data, including roadmap entries.
@@ -243,7 +233,8 @@ docker compose --profile tools run --rm app
 ## Docs Guide
 
 - `instructions.md`: project entrypoint and commit discipline.
-- `docs/product-family.md`: DataBoom platform, Generator-Boom modules, and Masker-Boom modules.
+- `docs/product-family.md`: DataBoom platform products and use-case naming rules.
+- `docs/engineering-standards.md`: reusable backend/frontend code standards.
 - `docs/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
 - `docs/technical-design-and-roadmap.md`: system design, phase roadmap, objectives, and commit sequence.
 - `docs/frontend-development.md`: frontend design principles and phased UI plan.

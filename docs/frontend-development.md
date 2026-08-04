@@ -18,7 +18,7 @@ The frontend should evolve in phases that match backend capability. It should be
 - Use dedicated pages for login, dashboard, products, runs, and roadmap once backend capability exists.
 - Use wide desktop space intentionally with operational panels, tables, and artifact actions.
 - Make domain profiles visible and easy to understand.
-- Make DataBoom's product family visible: Generator-Boom is active now, while Masker-Boom is the planned privacy layer.
+- Make DataBoom's product family visible: Table-Boom and Docu-Boom are active, while Graph-Boom and Masker-Boom are planned.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
 - Keep shared display data in one data module so roadmap steps, metrics, and
@@ -60,7 +60,7 @@ Goals:
 - Present `/dashboard` as the DataBoom Relational workspace with product/table navigation, spreadsheet-style previews, an agent run panel, and export links. `complete`
 - Display manifest and validation report. `partial: validation pass/fail and downloads are visible; detailed report UI is still planned`
 - Surface validation failures clearly.
-- Keep Masker-Boom visible as planned work without building masking UI before Phase 4.
+- Keep Graph-Boom and Masker-Boom visible as planned work without building their runtime UI before their phases.
 
 ## Phase F3: Schema and Domain Builder
 
