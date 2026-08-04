@@ -185,6 +185,7 @@ export const roadmap: RoadmapItem[] = [
       "FastAPI app scaffold with health and readiness endpoints.",
       "Synchronous API generation runs with SQL-backed metadata in Dockerized runs.",
       "Dashboard flow for demo login, product subscriptions, product generation, table previews, and downloads.",
+      "DataBoom Relational workspace with dataset navigation, spreadsheet previews, agent steps, and exports.",
       "Demo login, product subscription, product-run generation, run detail, and table preview dashboard pages.",
       "Artifact listing and download endpoints for completed local runs.",
       "Optional API-key protection for run and artifact routes.",

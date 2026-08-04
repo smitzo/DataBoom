@@ -37,7 +37,7 @@ function RunsContent() {
       <PageHeader
         eyebrow="Runs"
         title="Generation run history."
-        description="Runs are stored in the current backend process for now. Open a run to preview tables and download artifacts."
+        description="Open a relational generation run to preview tables and download artifacts."
       />
 
       {error ? (
@@ -47,7 +47,7 @@ function RunsContent() {
       ) : null}
 
       <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <StatTile label="Runs" value={String(runs.length)} hint="In current API process" />
+        <StatTile label="Runs" value={String(runs.length)} hint="Visible backend metadata" />
         <StatTile
           label="Rows generated"
           value={String(runs.reduce((total, run) => total + run.total_rows, 0))}

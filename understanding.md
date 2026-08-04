@@ -1017,3 +1017,45 @@ The `StateStore` is like a service desk window. The rest of the app asks the win
 - Add real user accounts and authorization before shared deployment.
 - Move long-running generation into background jobs before dashboard-triggered large runs become common.
 - Add artifact retention and cleanup rules so persisted run metadata cannot point to deleted files without an explicit status.
+
+## Decision: make the authenticated dashboard a DataBoom Relational workspace
+
+### Question
+
+Why replace the card-style dashboard with a database-console layout inspired by tools like Tonic Fabricate?
+
+### Answer
+
+The authenticated app should feel like a place where users work with generated relational data, not just a page that reports counts. DataBoom Relational now uses a three-panel workflow: dataset and table navigation on the left, spreadsheet-style rows in the center, and an agent/run panel on the right.
+
+### Why This Matters
+
+Synthetic data products become easier to trust when users can immediately inspect the output. A run count is abstract. A table grid with columns, inferred types, row previews, validation status, generation steps, and export links is concrete. It proves that the backend generated real artifacts and that the frontend can browse them.
+
+This layout also maps better to how relational data users think. They expect databases, tables, records, SQL/JSON/CSV exports, and summaries. Keeping those concepts visible makes the product feel closer to a production data tool and less like a marketing dashboard.
+
+### Implementation Detail
+
+The new `RelationalWorkspace` component keeps the flow wired to the existing FastAPI backend:
+
+- it loads products, subscriptions, and runs,
+- it lets the user subscribe to a product,
+- it generates a product run through `POST /products/{product_id}/runs`,
+- it loads table previews through the preview API,
+- it lists downloadable artifacts through the artifact API,
+- it shows agent steps based on the selected run and validation state.
+
+The UI does not claim to have a real LLM planner yet. The right panel uses agent-style language and a prompt box, but execution still goes through deterministic product defaults. That is intentional: the user experience can prepare for Phase 3 LLM-assisted planning without pretending that the backend planner exists today.
+
+### Performance, Reliability, or Maintainability Impact
+
+The workspace improves perceived performance because users can inspect top rows instead of downloading full artifacts immediately. It also keeps large table output constrained to a scrollable grid, which avoids resizing the whole page when rows or columns are wide.
+
+Maintainability improves because the workspace is componentized instead of embedded directly inside the dashboard page. The route now only handles authentication and delegates the product-specific operational UI to `RelationalWorkspace`.
+
+### Follow-Up Notes
+
+- Add run progress events once backend jobs become asynchronous.
+- Add editable row-count and schema controls inside the relational workspace when custom-schema generation becomes the next focus.
+- Add real prompt-to-plan behavior only after the planner interface and prompt cache strategy are implemented.
+- Consider a dedicated `/relational` route if DataBoom later has separate workspaces for Docu-Boom, Graph-Boom, and Masker-Boom.

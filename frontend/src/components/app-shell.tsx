@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 import { clearSession, type Session } from "@/lib/session";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Relational", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: PackageCheck },
   { href: "/runs", label: "Runs", icon: BarChart3 },
   { href: "/settings/subscriptions", label: "Settings", icon: Settings },
@@ -41,7 +41,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
             <span className="block text-sm font-semibold uppercase tracking-wide text-white">
               DataBoom
             </span>
-            <span className="text-xs text-zinc-500">Generator console</span>
+            <span className="text-xs text-zinc-500">Relational console</span>
           </span>
         </Link>
 
@@ -90,7 +90,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
             <div className="hidden lg:block">
               <p className="text-xs font-semibold uppercase text-zinc-600">Local full-stack MVP</p>
               <p className="text-sm text-zinc-400">
-                Login, subscribe, generate, preview, and download.
+                DataBoom Relational workspace.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
           </div>
         </header>
 
-        <div className="mx-auto max-w-[1500px] px-5 py-8 sm:px-8">{children}</div>
+        <div className="mx-auto max-w-none px-4 py-4 sm:px-6">{children}</div>
       </div>
     </main>
   );

@@ -41,7 +41,7 @@ The current implementation is Generator-Boom: a Python backend engine that reads
 - Demo auth with `demo` / `demo` credentials.
 - Product catalog, subscription, product-run, and table-preview API endpoints.
 - SQL-backed demo sessions, subscriptions, and run metadata in Dockerized API runs.
-- Dashboard pages for login, products, subscriptions, runs, table previews, and artifact downloads.
+- DataBoom Relational dashboard with product/table navigation, spreadsheet-style previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
 - Next.js and Tailwind frontend workbench.
