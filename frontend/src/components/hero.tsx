@@ -20,15 +20,15 @@ export function Hero() {
           </div>
 
           <h1 className="mt-9 text-5xl font-semibold leading-none text-white sm:text-6xl lg:text-7xl">
-            One engine to generate{" "}
+            One workspace to generate{" "}
             <span className="font-serif italic text-zinc-300">domain-aware</span>{" "}
-            relational data.
+            structured data.
           </h1>
 
           <div className="mt-8 max-w-2xl border-l border-white/20 pl-5">
             <p className="text-xl font-semibold leading-8 text-white">
-              Generator-Boom turns PostgreSQL schemas into validated CSV, JSON, and SQL
-              artifacts, while Masker-Boom is planned for integrity-preserving redaction.
+              Table-Boom turns schemas into validated table artifacts, Docu-Boom
+              creates nested NoSQL documents, and Masker-Boom is planned for redaction.
             </p>
           </div>
 

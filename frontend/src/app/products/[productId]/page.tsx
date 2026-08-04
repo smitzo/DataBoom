@@ -58,6 +58,7 @@ function ProductDetailContent({ session }: { session: Session }) {
     [subscriptions, product?.id],
   );
 
+  const resourceNames = product ? productResources(product) : [];
   const totalRows = Object.values(rowCounts).reduce((total, value) => total + Number(value || 0), 0);
 
   const subscribe = async () => {
@@ -91,7 +92,7 @@ function ProductDetailContent({ session }: { session: Session }) {
       const run = await createProductRun(session.token, product.id, {
         row_counts: rowCounts,
         seed: `${product.id}-dashboard`,
-        output_formats: Array.from(new Set(["csv", ...formats])),
+        output_formats: formats,
       });
       router.push(`/runs/${run.run_id}?product=${product.id}`);
     } catch (caughtError) {
@@ -142,8 +143,16 @@ function ProductDetailContent({ session }: { session: Session }) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <StatTile label="Domain" value={product.domain} hint={product.module} />
-        <StatTile label="Tables" value={String(product.tables.length)} hint={product.tables.join(", ")} />
-        <StatTile label="Rows planned" value={String(totalRows)} hint="Editable before generation" />
+        <StatTile
+          label={product.kind === "document" ? "Collections" : "Resources"}
+          value={String(resourceNames.length)}
+          hint={resourceNames.join(", ")}
+        />
+        <StatTile
+          label="Records planned"
+          value={String(totalRows)}
+          hint={product.status === "active" ? "Editable before generation" : "Planned product"}
+        />
       </div>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -173,7 +182,7 @@ function ProductDetailContent({ session }: { session: Session }) {
           </div>
           <button
             className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-white text-sm font-semibold text-zinc-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isSubscribing || subscribed}
+            disabled={isSubscribing || subscribed || product.status !== "active"}
             onClick={subscribe}
           >
             {subscribed ? (
@@ -183,30 +192,34 @@ function ProductDetailContent({ session }: { session: Session }) {
             ) : (
               <Rocket className="h-4 w-4" />
             )}
-            {subscribed ? "Subscribed" : "Subscribe to product"}
+            {product.status === "planned"
+              ? "Planned"
+              : subscribed
+                ? "Subscribed"
+                : "Subscribe to product"}
           </button>
         </div>
 
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
           <h2 className="text-xl font-semibold text-white">Generate data</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Configure row counts, choose output formats, then create real backend artifacts.
+            Configure record counts, choose output formats, then create real backend artifacts.
           </p>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {product.tables.map((table) => (
-              <label key={table} className="block rounded-md border border-white/10 bg-black/25 p-3">
-                <span className="text-xs font-semibold uppercase text-zinc-500">{table}</span>
+            {resourceNames.map((resource) => (
+              <label key={resource} className="block rounded-md border border-white/10 bg-black/25 p-3">
+                <span className="text-xs font-semibold uppercase text-zinc-500">{resource}</span>
                 <input
                   className="mt-2 h-10 w-full rounded-md border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none focus:border-cyan-300/50"
                   min={0}
                   max={10000}
                   type="number"
-                  value={rowCounts[table] ?? 0}
+                  value={rowCounts[resource] ?? 0}
                   onChange={(event) =>
                     setRowCounts((current) => ({
                       ...current,
-                      [table]: Number(event.target.value),
+                      [resource]: Number(event.target.value),
                     }))
                   }
                 />
@@ -215,15 +228,14 @@ function ProductDetailContent({ session }: { session: Session }) {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            {["csv", "json", "sql"].map((format) => (
+            {product.output_formats.map((format) => (
               <label
                 key={format}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-black/25 px-3 py-2 text-sm font-semibold uppercase text-zinc-300"
               >
                 <input
-                  checked={format === "csv" || formats.includes(format)}
+                  checked={formats.includes(format)}
                   className="accent-cyan-300"
-                  disabled={format === "csv"}
                   type="checkbox"
                   onChange={(event) =>
                     setFormats((current) =>
@@ -244,7 +256,7 @@ function ProductDetailContent({ session }: { session: Session }) {
 
           <button
             className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-cyan-200 text-sm font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={!subscribed || isGenerating || formats.length === 0}
+            disabled={!subscribed || isGenerating || formats.length === 0 || product.status !== "active"}
             onClick={generate}
           >
             {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
@@ -265,4 +277,14 @@ function ProductDetailContent({ session }: { session: Session }) {
       </section>
     </>
   );
+}
+
+function productResources(product: Product) {
+  if (product.kind === "document") {
+    return product.collections;
+  }
+  if (product.kind === "relational") {
+    return product.tables;
+  }
+  return product.use_cases;
 }

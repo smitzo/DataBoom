@@ -52,8 +52,8 @@ export default function Home() {
         <div className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-6">
           <p className="text-xl font-semibold text-white">DataBoom product console</p>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
-            Use demo credentials on the login page, subscribe to Bank-O-Boom, Health-Boom,
-            Boom-Commerce, or Schema-Boom, then generate data through the FastAPI backend.
+            Use demo credentials on the login page, subscribe to Table-Boom or Docu-Boom,
+            then generate data through the FastAPI backend.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <a
@@ -91,7 +91,7 @@ export default function Home() {
         id="demos"
         eyebrow="Demo data"
         title="Checked-in datasets for product demos and regression checks."
-        subtitle="Bank-O-Boom and Health-Boom CSVs are already generated through Generator-Boom."
+        subtitle="Financial and healthcare CSVs are checked in as Table-Boom demo use cases."
       >
         <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
           {demos.map((demo) => (

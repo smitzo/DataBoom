@@ -1,12 +1,12 @@
 "use client";
 
 import { AuthGate } from "@/components/auth-gate";
-import { RelationalWorkspace } from "@/components/relational-workspace";
+import { DataWorkspace } from "@/components/data-workspace";
 
 export default function DashboardPage() {
   return (
     <AuthGate>
-      {(session) => <RelationalWorkspace session={session} />}
+      {(session) => <DataWorkspace session={session} />}
     </AuthGate>
   );
 }

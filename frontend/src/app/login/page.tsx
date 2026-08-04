@@ -47,7 +47,7 @@ export default function LoginPage() {
               </span>
               <div>
                 <p className="text-sm font-semibold uppercase text-white">DataBoom</p>
-                <p className="text-xs text-zinc-500">Generator-Boom dashboard</p>
+                <p className="text-xs text-zinc-500">Product workspace</p>
               </div>
             </div>
 

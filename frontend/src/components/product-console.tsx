@@ -42,6 +42,12 @@ export function ProductCard({
   product: Product;
   subscribed: boolean;
 }) {
+  const resources = product.collections.length
+    ? product.collections
+    : product.tables.length
+      ? product.tables
+      : product.use_cases;
+
   return (
     <Link
       href={`/products/${product.id}`}
@@ -65,12 +71,12 @@ export function ProductCard({
       <p className="mt-1 text-sm font-semibold uppercase text-cyan-300">{product.module}</p>
       <p className="mt-4 min-h-12 text-sm leading-6 text-zinc-400">{product.description}</p>
       <div className="mt-6 flex flex-wrap gap-2">
-        {product.tables.slice(0, 4).map((table) => (
+        {resources.slice(0, 4).map((resource) => (
           <span
-            key={table}
+            key={resource}
             className="rounded-md border border-white/10 px-2 py-1 text-xs text-zinc-500"
           >
-            {table}
+            {resource}
           </span>
         ))}
       </div>

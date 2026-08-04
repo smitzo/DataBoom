@@ -1,7 +1,5 @@
 import {
   Activity,
-  Banknote,
-  Blocks,
   CheckCircle2,
   Cpu,
   Database,
@@ -10,7 +8,6 @@ import {
   FileSpreadsheet,
   FileText,
   GitBranch,
-  HeartPulse,
   Server,
   ShieldCheck,
   Sparkles,
@@ -84,29 +81,29 @@ export const heroMetrics = [
 
 export const profiles: ProfileConfig[] = [
   {
-    name: "Bank-O-Boom",
-    role: "Banking and fintech data",
-    description: "Customers, accounts, balances, merchants, currencies, and transactions.",
-    tags: ["accounts", "transactions"],
-    icon: Banknote,
+    name: "Table-Boom",
+    role: "Relational table data",
+    description: "Key-safe relational datasets with CSV, JSON, and SQL exports.",
+    tags: ["tables", "foreign keys"],
+    icon: Database,
     selected: true,
     tone: "border-emerald-300/40 text-emerald-200",
   },
   {
-    name: "Health-Boom",
-    role: "Patient and clinical data",
-    description: "Patients, encounters, vitals, diagnosis codes, and insurance values.",
-    tags: ["patients", "vitals"],
-    icon: HeartPulse,
+    name: "Docu-Boom",
+    role: "NoSQL document data",
+    description: "MongoDB-style nested JSON and NDJSON collections with document previews.",
+    tags: ["json", "ndjson"],
+    icon: FileJson,
     selected: false,
     tone: "border-rose-300/40 text-rose-200",
   },
   {
-    name: "Schema-Boom",
-    role: "Schema-first fallback",
-    description: "Typed fake values for tables that do not need a domain overlay.",
-    tags: ["schema", "generic"],
-    icon: Blocks,
+    name: "Graph-Boom",
+    role: "Planned graph data",
+    description: "Node and edge datasets with labels, properties, and graph validation.",
+    tags: ["nodes", "edges"],
+    icon: GitBranch,
     selected: false,
     tone: "border-sky-300/40 text-sky-200",
   },
@@ -145,13 +142,13 @@ export const validationMetrics: ValidationMetricConfig[] = [
 
 export const demos: DemoDatasetConfig[] = [
   {
-    name: "Bank-O-Boom demo",
+    name: "Financial relational demo",
     tables: "customers, bank_accounts, transactions",
     rows: "1,100 rows",
     tone: "border-emerald-300/30",
   },
   {
-    name: "Health-Boom demo",
+    name: "Healthcare relational demo",
     tables: "patients, encounters, vitals",
     rows: "1,300 rows",
     tone: "border-rose-300/30",
@@ -162,14 +159,14 @@ export const roadmap: RoadmapItem[] = [
   {
     phase: "Phase 1",
     status: "achieved",
-    title: "Generator-Boom Schema-Boom foundation",
+    title: "Table-Boom relational foundation",
     description:
-      "Schema-Boom can generate deterministic relational data from PostgreSQL schema files and write validated local artifacts.",
+      "Table-Boom can generate deterministic relational data from PostgreSQL schema files and write validated local artifacts.",
     achieved: [
       "PostgreSQL DDL ingestion and normalized schema models.",
       "Relationship-aware generation with primary-key and foreign-key preservation.",
       "CSV, JSON, and SQL artifact export to local disk.",
-      "Bank-O-Boom and Health-Boom domain profiles plus demo CSV datasets.",
+      "Financial and healthcare demo profiles plus checked-in CSV datasets.",
       "100k-record benchmark with validation report.",
       "Static Next.js workbench with a reusable component structure.",
     ],
@@ -178,15 +175,16 @@ export const roadmap: RoadmapItem[] = [
   {
     phase: "Phase 2",
     status: "next",
-    title: "Generator-Boom scale, API, profiling, and Docu-Boom",
+    title: "Table-Boom scale, API, profiling, and Docu-Boom",
     description:
-      "The next phase expands Generator-Boom scale and access patterns, then adds Docu-Boom document generation for NoSQL use cases.",
+      "This phase expands Table-Boom scale and access patterns, then adds Docu-Boom document generation for NoSQL use cases.",
     achieved: [
       "FastAPI app scaffold with health and readiness endpoints.",
       "Synchronous API generation runs with SQL-backed metadata in Dockerized runs.",
       "Dashboard flow for demo login, product subscriptions, product generation, table previews, and downloads.",
-      "DataBoom Relational workspace with dataset navigation, spreadsheet previews, agent steps, and exports.",
+      "DataBoom workspace with product navigation, spreadsheet previews, document previews, agent steps, and exports.",
       "Demo login, product subscription, product-run generation, run detail, and table preview dashboard pages.",
+      "Docu-Boom JSON and NDJSON generation with document previews.",
       "Artifact listing and download endpoints for completed local runs.",
       "Optional API-key protection for run and artifact routes.",
       "CLI plan preview and artifact re-validation commands.",
@@ -196,7 +194,6 @@ export const roadmap: RoadmapItem[] = [
       "Harden generation toward 500k records with chunk-aware validation.",
       "Expand FastAPI run status, validation detail, and long-running job controls.",
       "Add live PostgreSQL profiling and metadata introspection.",
-      "Add Docu-Boom support, starting with JSON/NDJSON and MongoDB-style nested records.",
       "Add custom schema upload, custom domain mapping, and saved generation templates.",
     ],
   },
@@ -205,7 +202,7 @@ export const roadmap: RoadmapItem[] = [
     status: "planned",
     title: "LLM-assisted planning, Graph-Boom, and operator UX",
     description:
-      "Planning becomes more intelligent while Generator-Boom gains Graph-Boom support for connected datasets.",
+      "Planning becomes more intelligent while DataBoom gains Graph-Boom support for connected datasets.",
     achieved: [],
     future: [
       "Add prompt packs, prompt cache keys, and validated planner output schemas.",

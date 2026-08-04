@@ -25,6 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatBytes } from "@/components/product-console";
 import type {
   ArtifactList,
+  DocumentPreview,
   GenerationRun,
   Product,
   RunArtifact,
@@ -34,6 +35,7 @@ import type {
 import {
   apiUrl,
   createProductRun,
+  getDocumentPreview,
   getProducts,
   getRunArtifacts,
   getRuns,
@@ -44,18 +46,20 @@ import {
 import type { Session } from "@/lib/session";
 
 type PreviewMap = Record<string, TablePreview>;
+type DocumentPreviewMap = Record<string, DocumentPreview>;
 type AgentStatus = "idle" | "subscribing" | "generating" | "complete" | "error";
 
-export function RelationalWorkspace({ session }: { session: Session }) {
+export function DataWorkspace({ session }: { session: Session }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [runs, setRuns] = useState<GenerationRun[]>([]);
   const [artifacts, setArtifacts] = useState<ArtifactList | null>(null);
   const [previews, setPreviews] = useState<PreviewMap>({});
+  const [documentPreviews, setDocumentPreviews] = useState<DocumentPreviewMap>({});
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState("Generate relational demo data with realistic keys and values");
+  const [selectedResource, setSelectedResource] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState("Generate realistic data for the selected product");
   const [status, setStatus] = useState<AgentStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,27 +75,38 @@ export function RelationalWorkspace({ session }: { session: Session }) {
     if (!run) {
       setArtifacts(null);
       setPreviews({});
-      setSelectedTable(null);
+      setDocumentPreviews({});
       return;
     }
     const activeRun = run;
 
-    setSelectedTable((current) =>
-      current && activeRun.tables.some((table) => table.table_name === current)
+    setSelectedResource((current) =>
+      current && runResources(activeRun).includes(current)
         ? current
-        : activeRun.tables[0]?.table_name ?? null,
+        : runResources(activeRun)[0] ?? null,
     );
 
     let cancelled = false;
     async function loadRunSurface() {
       try {
-        const [nextArtifacts, nextPreviews] = await Promise.all([
+        const [nextArtifacts, nextTablePreviews, nextDocumentPreviews] = await Promise.all([
           getRunArtifacts(activeRun.run_id),
-          Promise.all(
-            activeRun.tables
-              .filter((table) => table.csv_path)
-              .map((table) => getTablePreview(activeRun.run_id, table.table_name, 10)),
-          ),
+          activeRun.kind === "relational"
+            ? Promise.all(
+                activeRun.tables
+                  .filter((table) => table.csv_path)
+                  .map((table) => getTablePreview(activeRun.run_id, table.table_name, 10)),
+              )
+            : Promise.resolve([]),
+          activeRun.kind === "document"
+            ? Promise.all(
+                activeRun.collections
+                  .filter((collection) => collection.json_path)
+                  .map((collection) =>
+                    getDocumentPreview(activeRun.run_id, collection.collection_name, 10),
+                  ),
+              )
+            : Promise.resolve([]),
         ]);
 
         if (cancelled) {
@@ -100,7 +115,12 @@ export function RelationalWorkspace({ session }: { session: Session }) {
 
         setArtifacts(nextArtifacts);
         setPreviews(
-          Object.fromEntries(nextPreviews.map((preview) => [preview.table_name, preview])),
+          Object.fromEntries(nextTablePreviews.map((preview) => [preview.table_name, preview])),
+        );
+        setDocumentPreviews(
+          Object.fromEntries(
+            nextDocumentPreviews.map((preview) => [preview.collection_name, preview]),
+          ),
         );
       } catch (caughtError) {
         if (!cancelled) {
@@ -117,21 +137,24 @@ export function RelationalWorkspace({ session }: { session: Session }) {
 
   const selectedProduct = products.find((product) => product.id === selectedProductId) ?? null;
   const selectedRun = runs.find((run) => run.run_id === selectedRunId) ?? null;
-  const selectedPreview = selectedTable ? previews[selectedTable] : null;
+  const selectedTablePreview = selectedResource ? previews[selectedResource] : null;
+  const selectedDocumentPreview = selectedResource ? documentPreviews[selectedResource] : null;
   const subscribedProductIds = useMemo(
     () => new Set(subscriptions.map((subscription) => subscription.product_id)),
     [subscriptions],
   );
   const subscribed = selectedProduct ? subscribedProductIds.has(selectedProduct.id) : false;
-  const tableNames = selectedRun
-    ? selectedRun.tables.map((table) => table.table_name)
-    : selectedProduct?.tables ?? [];
-  const visibleRows = selectedPreview?.rows ?? [];
+  const activeKind = selectedRun?.kind ?? selectedProduct?.kind ?? "relational";
+  const resourceNames = selectedRun ? runResources(selectedRun) : productResources(selectedProduct);
+  const visibleRows = selectedTablePreview?.rows.length ?? selectedDocumentPreview?.documents.length ?? 0;
   const agentSteps = useMemo(
     () => buildAgentSteps(status, selectedRun, selectedProduct),
     [selectedProduct, selectedRun, status],
   );
-  const insight = useMemo(() => buildInsight(selectedPreview), [selectedPreview]);
+  const insight = useMemo(
+    () => buildInsight(selectedTablePreview, selectedDocumentPreview),
+    [selectedDocumentPreview, selectedTablePreview],
+  );
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -143,11 +166,18 @@ export function RelationalWorkspace({ session }: { session: Session }) {
         getRuns(),
       ]);
       const newestRuns = nextRuns.slice().reverse();
+      const activeProductIds = new Set(nextProducts.map((product) => product.id));
+      const firstSubscribedProductId = nextSubscriptions.find((subscription) =>
+        activeProductIds.has(subscription.product_id),
+      )?.product_id;
       const firstProductId =
-        nextSubscriptions[0]?.product_id ?? nextProducts.find((product) => product.status === "active")?.id ?? "";
+        firstSubscribedProductId ??
+        nextProducts.find((product) => product.status === "active")?.id ??
+        nextProducts[0]?.id ??
+        "";
       const firstProduct = nextProducts.find((product) => product.id === firstProductId) ?? null;
       const firstRun = firstProduct
-        ? newestRuns.find((run) => runMatchesProduct(run, firstProduct)) ?? newestRuns[0]
+        ? newestRuns.find((run) => runMatchesProduct(run, firstProduct))
         : newestRuns[0];
 
       setProducts(nextProducts);
@@ -155,6 +185,9 @@ export function RelationalWorkspace({ session }: { session: Session }) {
       setRuns(nextRuns);
       setSelectedProductId(firstProductId);
       setSelectedRunId(firstRun?.run_id ?? null);
+      setSelectedResource(
+        firstRun ? runResources(firstRun)[0] ?? null : productResources(firstProduct)[0] ?? null,
+      );
       setStatus(firstRun ? "complete" : "idle");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to load workspace");
@@ -174,6 +207,9 @@ export function RelationalWorkspace({ session }: { session: Session }) {
     setSelectedProductId(product.id);
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
     setSelectedRunId(matchingRun?.run_id ?? null);
+    setSelectedResource(
+      matchingRun ? runResources(matchingRun)[0] ?? null : productResources(product)[0] ?? null,
+    );
     setStatus(matchingRun ? "complete" : "idle");
   }
 
@@ -201,19 +237,23 @@ export function RelationalWorkspace({ session }: { session: Session }) {
     if (!selectedProduct) {
       return;
     }
+    if (selectedProduct.status !== "active") {
+      setError(`${selectedProduct.name} is planned and is not runnable yet`);
+      return;
+    }
 
     setStatus("generating");
     setError(null);
     try {
       const run = await createProductRun(session.token, selectedProduct.id, {
         row_counts: selectedProduct.default_row_counts,
-        seed: `${selectedProduct.id}-relational-workspace`,
-        output_formats: Array.from(new Set(["csv", ...selectedProduct.output_formats])),
+        seed: `${selectedProduct.id}-workspace`,
+        output_formats: selectedProduct.output_formats,
       });
       const nextRuns = await getRuns();
       setRuns(nextRuns);
       setSelectedRunId(run.run_id);
-      setSelectedTable(run.tables[0]?.table_name ?? null);
+      setSelectedResource(runResources(run)[0] ?? null);
       setStatus("complete");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to generate data");
@@ -226,7 +266,7 @@ export function RelationalWorkspace({ session }: { session: Session }) {
       <div className="grid min-h-[calc(100vh-6rem)] place-items-center rounded-lg border border-white/10 bg-zinc-950">
         <div className="flex items-center gap-3 text-sm font-semibold text-zinc-300">
           <Loader2 className="h-5 w-5 animate-spin text-cyan-200" />
-          Loading DataBoom Relational
+          Loading DataBoom Workspace
         </div>
       </div>
     );
@@ -235,20 +275,22 @@ export function RelationalWorkspace({ session }: { session: Session }) {
   return (
     <section className="min-h-[calc(100vh-6rem)] overflow-hidden rounded-lg border border-white/10 bg-zinc-950 shadow-2xl">
       <div className="flex min-h-[calc(100vh-6rem)] flex-col xl:grid xl:grid-cols-[16rem_minmax(0,1fr)_25rem]">
-        <RelationalSidebar
+        <WorkspaceSidebar
+          activeKind={activeKind}
           products={products}
           selectedProductId={selectedProductId}
           subscribedProductIds={subscribedProductIds}
-          tableNames={tableNames}
-          selectedTable={selectedTable}
+          resourceNames={resourceNames}
+          selectedResource={selectedResource}
           onSelectProduct={chooseProduct}
-          onSelectTable={setSelectedTable}
+          onSelectResource={setSelectedResource}
         />
 
         <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
           <WorkspaceToolbar
             run={selectedRun}
-            selectedTable={selectedTable}
+            activeKind={activeKind}
+            selectedResource={selectedResource}
             artifacts={artifacts}
             isRefreshing={isRefreshing}
             onRefresh={refreshWorkspace}
@@ -261,7 +303,13 @@ export function RelationalWorkspace({ session }: { session: Session }) {
           ) : null}
 
           <div className="h-[calc(100vh-13rem)] min-h-[34rem] overflow-auto bg-white">
-            <DataTable preview={selectedPreview} selectedTable={selectedTable} />
+            <DataSurface
+              activeKind={activeKind}
+              documentPreview={selectedDocumentPreview}
+              product={selectedProduct}
+              selectedResource={selectedResource}
+              tablePreview={selectedTablePreview}
+            />
           </div>
         </main>
 
@@ -277,30 +325,34 @@ export function RelationalWorkspace({ session }: { session: Session }) {
           status={status}
           steps={agentSteps}
           subscribed={subscribed}
-          visibleRows={visibleRows.length}
+          visibleRows={visibleRows}
         />
       </div>
     </section>
   );
 }
 
-function RelationalSidebar({
+function WorkspaceSidebar({
+  activeKind,
   products,
   selectedProductId,
   subscribedProductIds,
-  tableNames,
-  selectedTable,
+  resourceNames,
+  selectedResource,
   onSelectProduct,
-  onSelectTable,
+  onSelectResource,
 }: {
+  activeKind: Product["kind"];
   products: Product[];
   selectedProductId: string;
   subscribedProductIds: Set<string>;
-  tableNames: string[];
-  selectedTable: string | null;
+  resourceNames: string[];
+  selectedResource: string | null;
   onSelectProduct: (product: Product) => void;
-  onSelectTable: (tableName: string) => void;
+  onSelectResource: (resourceName: string) => void;
 }) {
+  const ResourceIcon = activeKind === "document" ? FileJson : Table2;
+
   return (
     <aside className="bg-zinc-950 text-zinc-100">
       <div className="border-b border-white/10 px-4 py-4">
@@ -310,7 +362,7 @@ function RelationalSidebar({
           </span>
           <div>
             <p className="text-sm font-semibold uppercase text-white">DataBoom</p>
-            <p className="text-xs text-zinc-500">Relational</p>
+            <p className="text-xs text-zinc-500">{kindLabel(activeKind)}</p>
           </div>
         </div>
       </div>
@@ -341,21 +393,23 @@ function RelationalSidebar({
 
         <div>
           <div className="flex items-center justify-between px-2">
-            <p className="text-xs font-semibold uppercase text-zinc-600">Tables</p>
-            <span className="text-xs text-zinc-600">{tableNames.length}</span>
+            <p className="text-xs font-semibold uppercase text-zinc-600">
+              {activeKind === "document" ? "Collections" : "Resources"}
+            </p>
+            <span className="text-xs text-zinc-600">{resourceNames.length}</span>
           </div>
           <div className="mt-2 space-y-1">
-            {tableNames.map((tableName) => (
+            {resourceNames.map((tableName) => (
               <button
                 key={tableName}
                 className={`flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition ${
-                  selectedTable === tableName
+                  selectedResource === tableName
                     ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
                     : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
                 }`}
-                onClick={() => onSelectTable(tableName)}
+                onClick={() => onSelectResource(tableName)}
               >
-                <Table2 className="h-4 w-4 shrink-0" />
+                <ResourceIcon className="h-4 w-4 shrink-0" />
                 <span className="truncate">{shortTableName(tableName)}</span>
               </button>
             ))}
@@ -368,38 +422,43 @@ function RelationalSidebar({
 
 function WorkspaceToolbar({
   run,
-  selectedTable,
+  activeKind,
+  selectedResource,
   artifacts,
   isRefreshing,
   onRefresh,
 }: {
   run: GenerationRun | null;
-  selectedTable: string | null;
+  activeKind: Product["kind"];
+  selectedResource: string | null;
   artifacts: ArtifactList | null;
   isRefreshing: boolean;
   onRefresh: () => void;
 }) {
-  const table = run?.tables.find((item) => item.table_name === selectedTable);
+  const resource =
+    run?.tables.find((item) => item.table_name === selectedResource) ??
+    run?.collections.find((item) => item.collection_name === selectedResource);
 
   return (
     <header className="flex min-h-16 flex-col gap-3 border-b border-zinc-200 bg-white px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="truncate text-xl font-semibold text-zinc-950">
-            {selectedTable ? shortTableName(selectedTable) : "Relational workspace"}
+            {selectedResource ? shortTableName(selectedResource) : "Data workspace"}
           </h1>
           <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
-            {table ? `${table.row_count} records` : "No run"}
+            {resource ? `${resource.row_count} records` : "No run"}
           </span>
         </div>
         <p className="mt-1 truncate text-xs text-zinc-500">
-          {run ? run.run_id : "DataBoom Relational"}
+          {run ? run.run_id : "DataBoom Workspace"}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <ToolbarPill active icon={Table2} label="Table" />
+        <ToolbarPill active icon={Table2} label={activeKind === "document" ? "Document" : "Table"} />
         <ArtifactShortcut artifacts={artifacts} extension=".json" icon={FileJson} label="JSON" />
+        <ArtifactShortcut artifacts={artifacts} extension=".ndjson" icon={FileText} label="NDJSON" />
         <ArtifactShortcut artifacts={artifacts} extension=".sql" icon={FileText} label="SQL" />
         <ToolbarPill icon={MemoryStick} label="Postgres state" />
         <button
@@ -474,12 +533,36 @@ function ArtifactShortcut({
   );
 }
 
+function DataSurface({
+  activeKind,
+  documentPreview,
+  product,
+  selectedResource,
+  tablePreview,
+}: {
+  activeKind: Product["kind"];
+  documentPreview: DocumentPreview | null;
+  product: Product | null;
+  selectedResource: string | null;
+  tablePreview: TablePreview | null;
+}) {
+  if (activeKind === "document") {
+    return <DocumentList preview={documentPreview} selectedResource={selectedResource} />;
+  }
+
+  if (activeKind === "graph" || activeKind === "masking") {
+    return <PlannedSurface product={product} />;
+  }
+
+  return <DataTable preview={tablePreview} selectedResource={selectedResource} />;
+}
+
 function DataTable({
   preview,
-  selectedTable,
+  selectedResource,
 }: {
   preview: TablePreview | null;
-  selectedTable: string | null;
+  selectedResource: string | null;
 }) {
   if (!preview) {
     return (
@@ -487,7 +570,7 @@ function DataTable({
         <div>
           <Rows3 className="mx-auto h-10 w-10 text-zinc-300" />
           <p className="mt-4 text-lg font-semibold text-zinc-950">
-            {selectedTable ? shortTableName(selectedTable) : "No table selected"}
+            {selectedResource ? shortTableName(selectedResource) : "No table selected"}
           </p>
           <p className="mt-2 text-sm text-zinc-500">Generate a relational run to populate this grid.</p>
         </div>
@@ -537,6 +620,63 @@ function DataTable({
   );
 }
 
+function DocumentList({
+  preview,
+  selectedResource,
+}: {
+  preview: DocumentPreview | null;
+  selectedResource: string | null;
+}) {
+  if (!preview) {
+    return (
+      <div className="grid h-full place-items-center px-6 text-center">
+        <div>
+          <Rows3 className="mx-auto h-10 w-10 text-zinc-300" />
+          <p className="mt-4 text-lg font-semibold text-zinc-950">
+            {selectedResource ?? "No collection selected"}
+          </p>
+          <p className="mt-2 text-sm text-zinc-500">
+            Generate a Docu-Boom run to populate this document preview.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 p-5 xl:grid-cols-2">
+      {preview.documents.map((document, index) => (
+        <article key={index} className="rounded-md border border-zinc-200 bg-zinc-50">
+          <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2">
+            <p className="text-xs font-semibold uppercase text-zinc-400">Document {index + 1}</p>
+            <p className="text-xs font-semibold text-zinc-500">{preview.collection_name}</p>
+          </div>
+          <pre className="max-h-96 overflow-auto p-4 text-xs leading-5 text-zinc-800">
+            {JSON.stringify(document, null, 2)}
+          </pre>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function PlannedSurface({ product }: { product: Product | null }) {
+  return (
+    <div className="grid h-full place-items-center px-6 text-center">
+      <div className="max-w-lg">
+        <Sparkles className="mx-auto h-10 w-10 text-zinc-300" />
+        <p className="mt-4 text-lg font-semibold text-zinc-950">
+          {product?.name ?? "Planned product"}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">
+          This product is visible in the catalog but its runtime workspace is planned for a later
+          phase.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function AgentPanel({
   artifacts,
   insight,
@@ -573,7 +713,7 @@ function AgentPanel({
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase text-zinc-400">Agent workspace</p>
             <h2 className="mt-1 truncate text-lg font-semibold text-zinc-950">
-              DataBoom Relational
+              DataBoom Workspace
             </h2>
           </div>
           <span
@@ -606,7 +746,7 @@ function AgentPanel({
             {subscribed ? (
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={busy || !selectedProduct}
+                disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
                 onClick={onGenerate}
               >
                 {status === "generating" ? (
@@ -619,7 +759,7 @@ function AgentPanel({
             ) : (
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-md bg-cyan-700 px-3 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={busy || !selectedProduct}
+                disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
                 onClick={onSubscribe}
               >
                 {status === "subscribing" ? (
@@ -627,7 +767,7 @@ function AgentPanel({
                 ) : (
                   <Play className="h-4 w-4" />
                 )}
-                Subscribe
+                {selectedProduct?.status === "planned" ? "Planned" : "Subscribe"}
               </button>
             )}
           </div>
@@ -692,14 +832,17 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
       <h3 className="text-sm font-semibold text-zinc-950">Run summary</h3>
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Metric label="Rows" value={String(run.total_rows)} />
-        <Metric label="Tables" value={String(run.table_count)} />
+        <Metric
+          label={run.kind === "document" ? "Collections" : "Tables"}
+          value={String(run.table_count)}
+        />
         <Metric label="Preview" value={String(visibleRows)} />
       </div>
       <div className="mt-4 space-y-2">
-        {run.tables.map((table) => (
-          <div key={table.table_name} className="flex items-center justify-between gap-3 text-sm">
-            <span className="truncate text-zinc-600">{shortTableName(table.table_name)}</span>
-            <span className="font-semibold text-zinc-950">{table.row_count}</span>
+        {runResourcesWithCounts(run).map((resource) => (
+          <div key={resource.name} className="flex items-center justify-between gap-3 text-sm">
+            <span className="truncate text-zinc-600">{shortTableName(resource.name)}</span>
+            <span className="font-semibold text-zinc-950">{resource.rowCount}</span>
           </div>
         ))}
       </div>
@@ -722,9 +865,9 @@ function InsightPanel({ insight }: { insight: Insight | null }) {
       <section className="rounded-md border border-zinc-200 bg-white p-4">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-zinc-400" />
-          <h3 className="text-sm font-semibold text-zinc-950">Table insight</h3>
+          <h3 className="text-sm font-semibold text-zinc-950">Data insight</h3>
         </div>
-        <p className="mt-2 text-sm leading-6 text-zinc-500">No table distribution available.</p>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">No distribution available.</p>
       </section>
     );
   }
@@ -814,20 +957,25 @@ function buildAgentSteps(
 ): AgentStep[] {
   const done = status === "complete" || Boolean(run);
   const active = status === "generating";
+  const resourceCount = product ? productResources(product).length : 0;
+  const resourceLabel = product?.kind === "document" ? "collections" : "resources";
   return [
     {
-      label: "Read relational schema",
-      detail: product ? `${product.tables.length} tables in ${product.name}` : "Waiting for dataset",
+      label: product?.kind === "document" ? "Read document spec" : "Read data shape",
+      detail: product ? `${resourceCount} ${resourceLabel} in ${product.name}` : "Waiting for dataset",
       state: done ? "done" : active ? "active" : "waiting",
     },
     {
-      label: "Resolve keys and dependencies",
-      detail: "Primary keys, foreign keys, and generation order",
+      label: "Resolve identifiers",
+      detail:
+        product?.kind === "document"
+          ? "Object IDs, nested fields, arrays, and references"
+          : "Primary keys, foreign keys, and generation order",
       state: done ? "done" : active ? "active" : "waiting",
     },
     {
-      label: "Generate table rows",
-      detail: run ? `${run.total_rows} rows written` : "CSV-first artifact stream",
+      label: product?.kind === "document" ? "Generate documents" : "Generate rows",
+      detail: run ? `${run.total_rows} records written` : "Local artifact stream",
       state: done ? "done" : active ? "active" : "waiting",
     },
     {
@@ -838,29 +986,61 @@ function buildAgentSteps(
   ];
 }
 
-function buildInsight(preview: TablePreview | null): Insight | null {
-  if (!preview || preview.rows.length === 0) {
+function buildInsight(
+  tablePreview: TablePreview | null,
+  documentPreview: DocumentPreview | null,
+): Insight | null {
+  if (documentPreview) {
+    return buildDocumentInsight(documentPreview);
+  }
+  if (!tablePreview || tablePreview.rows.length === 0) {
     return null;
   }
 
   const preferredColumn =
     ["status", "gender", "age", "payment_method", "payment_method_id"].find((column) =>
-      preview.columns.includes(column),
-    ) ?? preview.columns.find((column) => new Set(preview.rows.map((row) => row[column])).size <= 6);
+      tablePreview.columns.includes(column),
+    ) ??
+    tablePreview.columns.find(
+      (column) => new Set(tablePreview.rows.map((row) => row[column])).size <= 6,
+    );
 
   if (!preferredColumn) {
     return null;
   }
 
   const counts = new Map<string, number>();
-  for (const row of preview.rows) {
+  for (const row of tablePreview.rows) {
     const label = bucketValue(preferredColumn, row[preferredColumn] ?? "empty");
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
 
-  const total = preview.rows.length;
+  const total = tablePreview.rows.length;
   return {
-    title: `${shortTableName(preview.table_name)} by ${preferredColumn}`,
+    title: `${shortTableName(tablePreview.table_name)} by ${preferredColumn}`,
+    values: Array.from(counts.entries()).map(([label, count]) => ({
+      label,
+      count,
+      percent: Math.max(4, Math.round((count / total) * 100)),
+    })),
+  };
+}
+
+function buildDocumentInsight(preview: DocumentPreview): Insight | null {
+  if (preview.documents.length === 0) {
+    return null;
+  }
+
+  const counts = new Map<string, number>();
+  for (const document of preview.documents) {
+    const value = document.status ?? document.event_name ?? document._id ?? "document";
+    const label = String(value);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+
+  const total = preview.documents.length;
+  return {
+    title: `${preview.collection_name} distribution`,
     values: Array.from(counts.entries()).map(([label, count]) => ({
       label,
       count,
@@ -908,8 +1088,54 @@ function inferColumnType(column: string, rows: Record<string, string>[]) {
 }
 
 function runMatchesProduct(run: GenerationRun, product: Product) {
-  const runTables = new Set(run.tables.map((table) => shortTableName(table.table_name)));
-  return product.tables.some((table) => runTables.has(table));
+  if (run.kind !== product.kind) {
+    return false;
+  }
+  const runResourceNames = new Set(runResources(run).map(shortTableName));
+  return productResources(product).some((resource) => runResourceNames.has(resource));
+}
+
+function runResources(run: GenerationRun) {
+  if (run.kind === "document") {
+    return run.collections.map((collection) => collection.collection_name);
+  }
+  return run.tables.map((table) => table.table_name);
+}
+
+function runResourcesWithCounts(run: GenerationRun) {
+  if (run.kind === "document") {
+    return run.collections.map((collection) => ({
+      name: collection.collection_name,
+      rowCount: collection.row_count,
+    }));
+  }
+  return run.tables.map((table) => ({ name: table.table_name, rowCount: table.row_count }));
+}
+
+function productResources(product: Product | null) {
+  if (!product) {
+    return [];
+  }
+  if (product.kind === "document") {
+    return product.collections;
+  }
+  if (product.kind === "relational") {
+    return product.tables;
+  }
+  return product.use_cases;
+}
+
+function kindLabel(kind: Product["kind"]) {
+  if (kind === "document") {
+    return "NoSQL documents";
+  }
+  if (kind === "graph") {
+    return "Graph data";
+  }
+  if (kind === "masking") {
+    return "Masking";
+  }
+  return "Relational";
 }
 
 function shortTableName(tableName: string) {

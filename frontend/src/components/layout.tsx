@@ -11,7 +11,7 @@ export function Announcement() {
         <div className="flex min-w-0 items-center gap-3">
           <span className="rounded-md bg-white/15 px-2 py-1 text-xs font-semibold">NEW</span>
           <span className="truncate font-medium">
-            Generator-Boom now has Schema-Boom, Bank-O-Boom, and Health-Boom foundations.
+            Table-Boom is active, Docu-Boom is in Phase 2, Graph-Boom and Masker-Boom are next.
           </span>
         </div>
         <X className="h-4 w-4 shrink-0 text-white/80" />

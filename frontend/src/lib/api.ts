@@ -30,12 +30,15 @@ export type Product = {
   name: string;
   family: string;
   module: string;
+  kind: "relational" | "document" | "graph" | "masking";
   status: "active" | "planned";
   description: string;
   domain: "general" | "financial" | "healthcare";
   default_row_counts: Record<string, number>;
   output_formats: string[];
   tables: string[];
+  collections: string[];
+  use_cases: string[];
   features: string[];
   plans: ProductPlan[];
 };
@@ -51,6 +54,7 @@ export type Subscription = {
 
 export type GenerationRun = {
   run_id: string;
+  kind: "relational" | "document" | "graph" | "masking";
   status: "completed" | "failed";
   created_at: string;
   completed_at: string | null;
@@ -62,6 +66,7 @@ export type GenerationRun = {
   total_rows: number;
   table_count: number;
   tables: GeneratedTable[];
+  collections: GeneratedCollection[];
   validation: {
     passed: boolean;
     checked_tables: string[];
@@ -76,6 +81,13 @@ export type GeneratedTable = {
   csv_path: string | null;
   json_path: string | null;
   sql_path: string | null;
+};
+
+export type GeneratedCollection = {
+  collection_name: string;
+  row_count: number;
+  json_path: string | null;
+  ndjson_path: string | null;
 };
 
 export type RunArtifact = {
@@ -97,6 +109,12 @@ export type TablePreview = {
   table_name: string;
   columns: string[];
   rows: Record<string, string>[];
+};
+
+export type DocumentPreview = {
+  run_id: string;
+  collection_name: string;
+  documents: Record<string, unknown>[];
 };
 
 let cachedApiBaseUrl: string | null = null;
@@ -165,6 +183,11 @@ export async function getRunArtifacts(runId: string) {
 export async function getTablePreview(runId: string, tableName: string, limit = 10) {
   const params = new URLSearchParams({ table: tableName, limit: String(limit) });
   return apiRequest<TablePreview>(`/runs/${runId}/preview?${params.toString()}`);
+}
+
+export async function getDocumentPreview(runId: string, collectionName: string, limit = 10) {
+  const params = new URLSearchParams({ collection: collectionName, limit: String(limit) });
+  return apiRequest<DocumentPreview>(`/runs/${runId}/document-preview?${params.toString()}`);
 }
 
 export async function apiUrl(path: string) {

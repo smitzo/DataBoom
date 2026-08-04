@@ -37,7 +37,7 @@ function RunsContent() {
       <PageHeader
         eyebrow="Runs"
         title="Generation run history."
-        description="Open a relational generation run to preview tables and download artifacts."
+        description="Open a generation run to preview tables or documents and download artifacts."
       />
 
       {error ? (

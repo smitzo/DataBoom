@@ -53,7 +53,7 @@ export function ControlCenter({ showApiPanel = true }: { showApiPanel?: boolean 
                 <p className="mt-2 text-sm text-zinc-500">PostgreSQL schema to local artifacts</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <StatusPill label="Bank-O-Boom profile" color="blue" />
+                <StatusPill label="Financial profile" color="blue" />
                 <StatusPill label="Validation on" color="green" />
               </div>
             </div>
