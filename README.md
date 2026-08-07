@@ -179,7 +179,7 @@ Then open:
 http://localhost:3000
 ```
 
-Login with email `demo` and password `demo`. The dashboard can subscribe to a product, generate data through the backend, show top-10 table previews, and link to downloadable CSV/JSON/SQL artifacts.
+Login with email `demo` and password `demo`. The dashboard can subscribe to active products, generate data through the backend, show top-10 relational table previews for Table-Boom, show MongoDB-style document previews for Docu-Boom, and link to downloadable artifacts.
 
 ## Docker
 

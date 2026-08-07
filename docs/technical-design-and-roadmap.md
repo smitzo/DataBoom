@@ -301,6 +301,8 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
+Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Formal 500k benchmarking, deeper structural profiling, and async long-run orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
+
 Technical objectives:
 
 - Improve generation toward 500k records.
@@ -320,6 +322,15 @@ Technical objectives:
 - Export NoSQL-oriented JSON and NDJSON artifacts.
 - Validate document shape, configured counts, required fields, and reference consistency where references exist.
 - Keep Masker-Boom in design only until Phase 4.
+
+Implemented MVP capabilities:
+
+- Product catalog with `kind` values for relational, document, graph, and masking products.
+- Table-Boom relational generation through product-run APIs.
+- Docu-Boom NoSQL document generation with nested objects, arrays, references, JSON, and NDJSON artifacts.
+- Document preview endpoint for top documents per collection.
+- SQL-backed demo auth, subscriptions, and run metadata in Dockerized API runs.
+- Generic frontend workspace that renders relational tables or MongoDB-style documents based on product kind.
 
 Recommended commits:
 

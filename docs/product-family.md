@@ -41,7 +41,7 @@ Phase 2 completes the local product workflow by adding:
 
 - API-backed product catalog and subscriptions,
 - persisted demo sessions, subscriptions, and run metadata,
-- DataBoom Relational workspace,
+- generic DataBoom workspace with relational and document surfaces,
 - Docu-Boom NoSQL document generation and preview,
 - local JSON/NDJSON artifacts for document runs,
 - documentation and reusable UI/backend contracts for product-kind based rendering.

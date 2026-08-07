@@ -68,6 +68,10 @@ Update [Understanding Log](understanding.md) when a change is significant enough
 - Use product `kind` and response shape to render product-specific surfaces. Avoid hard-coded demo names in logic.
 - Demo domains such as banking and healthcare can appear in examples, schemas, and profile labels, but they must not become separate product branches.
 
+## Reusable Implementation Rule
+
+Before adding a backend or frontend feature, first check whether an existing service, model, component, or helper already expresses the concept. Extend reusable code when the behavior is shared; create product-specific code only when the product kind needs a genuinely different data surface, such as relational tables, document collections, graph nodes/edges, or masking policy views.
+
 ## Immediate Next Objective
 
-Continue Phase 2 planning and implementation with scale, API workflows, profiling, and NoSQL document data support while keeping commits small and reviewable.
+Complete remaining Phase 2 hardening with 500k-scale benchmarking, structural profiling depth, and reliability checks while keeping the implemented Table-Boom and Docu-Boom workflows modular and reviewable.

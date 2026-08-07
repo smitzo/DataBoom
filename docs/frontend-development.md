@@ -21,6 +21,7 @@ The frontend should evolve in phases that match backend capability. It should be
 - Make DataBoom's product family visible: Table-Boom and Docu-Boom are active, while Graph-Boom and Masker-Boom are planned.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
+- Render operational views from product `kind` and resource shape instead of duplicating one dashboard per product.
 - Keep shared display data in one data module so roadmap steps, metrics, and
   profile cards can be updated without digging through page markup.
 - Prefer scannable operational UI over decorative hero content.
@@ -57,7 +58,8 @@ Goals:
 - Show run status. `complete for synchronous local runs and run history`
 - Display generated table output. `complete for synchronous local runs`
 - Download generated artifacts. `complete for CSV/JSON/manifest/validation artifacts`
-- Present `/dashboard` as the DataBoom Relational workspace with product/table navigation, spreadsheet-style previews, an agent run panel, and export links. `complete`
+- Present `/dashboard` as the generic DataBoom workspace with product navigation, relational table previews, NoSQL document previews, an agent run panel, and export links. `complete`
+- Render Table-Boom as a spreadsheet-style relational surface and Docu-Boom as a MongoDB-style JSON document surface from the same workspace shell. `complete`
 - Display manifest and validation report. `partial: validation pass/fail and downloads are visible; detailed report UI is still planned`
 - Surface validation failures clearly.
 - Keep Graph-Boom and Masker-Boom visible as planned work without building their runtime UI before their phases.

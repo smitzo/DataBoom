@@ -819,25 +819,25 @@ The Python package moved from `src/boom_data` to `src/databoom`, the CLI script 
 - Reinstall the editable package after pulling this change so `.venv/bin/databoom` is available.
 - Keep product-family naming separate from engine internals so sub-products do not leak into every module name.
 
-## Decision: split DataBoom into Generator-Boom and Masker-Boom
+## Decision: standardize the DataBoom product catalog
 
 ### Question
 
-How should DataBoom explain generation and masking without making the product feel like one overloaded tool?
+How should DataBoom explain its product family without turning every demo domain into a separate product?
 
 ### Answer
 
-Use DataBoom as the parent platform, then split the product into two families: Generator-Boom for creating synthetic data and Masker-Boom for future privacy-preserving transformations of existing sensitive data.
+Use DataBoom as the parent platform with four catalog products: Table-Boom for relational data, Docu-Boom for NoSQL document data, Graph-Boom for graph data, and Masker-Boom for future privacy-preserving masking and redaction.
 
 ### Why This Matters
 
-Generating synthetic data from scratch and masking real source data are related, but they create different expectations. Generator-Boom can be useful before privacy tooling exists because it does not need raw production records. Masker-Boom must be more careful: it needs classification, policies, stable tokenization, redaction, relationship preservation, audit reports, and controls that prevent raw sensitive values from leaking.
+Product names should describe the actual engine surface. Relational tables, document collections, graph nodes/edges, and masking policies require different contracts, previews, validation, and exports. Banking, healthcare, ecommerce, SaaS, insurance, and similar categories change examples and domain profiles, but they should not create separate product branches.
 
-The split also gives the project room for memorable module names without blurring scope. Schema-Boom, Bank-O-Boom, Health-Boom, Boom-Commerce, Auto-Boom, Docu-Boom, and Graph-Boom belong under Generator-Boom. Classify-Boom, Redact-Boom, Token-Boom, Shape-Boom, and Audit-Boom belong under Masker-Boom.
+This keeps the catalog memorable without blurring scope. Table-Boom can power financial or healthcare relational demos. Docu-Boom can power nested commerce, event, or customer-profile document demos. Graph-Boom and Masker-Boom stay visible in the roadmap without pretending they are implemented before their phases.
 
 ### Implementation Detail
 
-The docs now include a dedicated `docs/product-family.md` file as the canonical taxonomy. README, functional specs, technical roadmap, prompt caching notes, frontend plan, agent instructions, and frontend copy all point back to that split. The demo folders were renamed to product-style slugs: `demo/bank-o-boom` and `demo/health-boom`.
+The docs now include a dedicated `docs/product-family.md` file as the canonical taxonomy. README, functional specs, technical roadmap, prompt caching notes, frontend plan, agent instructions, and frontend copy all point back to that product map. Demo folders use use-case names such as `demo/financial-relational` and `demo/healthcare-relational`.
 
 The code still keeps boring package and enum names such as `databoom`, `financial`, and `healthcare`. That is intentional. Whacky product names belong in user-facing docs and UI; stable internal names make APIs and tests easier to maintain.
 
@@ -910,7 +910,7 @@ A full-stack app should prove that the user action travels through the browser, 
 
 ### Why This Matters
 
-DataBoom's core promise is not just "an API exists." The promise is that Generator-Boom can produce usable synthetic datasets. By showing generated table names, row counts, validation status, and artifact download links in the hero control center, the frontend now demonstrates the real product path with the current Phase 1/2 backend capabilities.
+DataBoom's core promise is not just "an API exists." The promise is that Table-Boom and Docu-Boom can produce usable synthetic datasets for their data surfaces. By showing generated table names, row counts, validation status, and artifact download links in the hero control center, the frontend now demonstrates the real product path with the current Phase 1/2 backend capabilities.
 
 This also keeps frontend work aligned with backend phases. The current UI still uses a small built-in schema so it remains fast and reliable, but the same shape can later support pasted DDL, row-count controls, domain selection, output-format switches, async run status, and detailed validation reports.
 
@@ -960,7 +960,7 @@ The frontend now has dedicated pages:
 - `/runs/[runId]` for table previews and downloads,
 - `/roadmap` for visible phase progress.
 
-The public route stays separate from the authenticated console. This mirrors mature product sites: the homepage explains value, product families, use cases, and trust signals, while the logged-in workspace owns operational workflows. In DataBoom terms, `/` explains Generator-Boom and Masker-Boom, then `/dashboard` becomes "My Dashboard" for subscribed product work.
+The public route stays separate from the authenticated console. This mirrors mature product sites: the homepage explains value, product families, use cases, and trust signals, while the logged-in workspace owns operational workflows. In DataBoom terms, `/` explains Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom, then `/dashboard` becomes "My Dashboard" for subscribed product work.
 
 The app shell brand now links back to `/` because the DataBoom logo is a product-home affordance, not a dashboard-only navigation item. Subscription details moved from the dashboard into `/settings/subscriptions`; this keeps the dashboard focused on operational status and recent runs while settings owns account/module state. The public header checks the local demo session before showing login actions, so logged-in users see "My dashboard" instead of a confusing login CTA.
 
@@ -1018,7 +1018,7 @@ The `StateStore` is like a service desk window. The rest of the app asks the win
 - Move long-running generation into background jobs before dashboard-triggered large runs become common.
 - Add artifact retention and cleanup rules so persisted run metadata cannot point to deleted files without an explicit status.
 
-## Decision: make the authenticated dashboard a DataBoom Relational workspace
+## Decision: make the authenticated dashboard a reusable data workspace
 
 ### Question
 
@@ -1026,22 +1026,22 @@ Why replace the card-style dashboard with a database-console layout inspired by 
 
 ### Answer
 
-The authenticated app should feel like a place where users work with generated relational data, not just a page that reports counts. DataBoom Relational now uses a three-panel workflow: dataset and table navigation on the left, spreadsheet-style rows in the center, and an agent/run panel on the right.
+The authenticated app should feel like a place where users inspect generated data, not just a page that reports counts. The workspace uses a three-panel workflow: product and resource navigation on the left, data preview in the center, and an agent/run panel on the right.
 
 ### Why This Matters
 
 Synthetic data products become easier to trust when users can immediately inspect the output. A run count is abstract. A table grid with columns, inferred types, row previews, validation status, generation steps, and export links is concrete. It proves that the backend generated real artifacts and that the frontend can browse them.
 
-This layout also maps better to how relational data users think. They expect databases, tables, records, SQL/JSON/CSV exports, and summaries. Keeping those concepts visible makes the product feel closer to a production data tool and less like a marketing dashboard.
+This layout also maps better to how data users think. Relational users expect databases, tables, records, SQL/JSON/CSV exports, and summaries. Document users expect collections, nested JSON, and JSON/NDJSON exports. Keeping those concepts visible makes the product feel closer to a production data tool and less like a marketing dashboard.
 
 ### Implementation Detail
 
-The new `RelationalWorkspace` component keeps the flow wired to the existing FastAPI backend:
+The `DataWorkspace` component keeps the flow wired to the existing FastAPI backend:
 
 - it loads products, subscriptions, and runs,
 - it lets the user subscribe to a product,
 - it generates a product run through `POST /products/{product_id}/runs`,
-- it loads table previews through the preview API,
+- it loads table or document previews through the preview APIs,
 - it lists downloadable artifacts through the artifact API,
 - it shows agent steps based on the selected run and validation state.
 
@@ -1049,13 +1049,49 @@ The UI does not claim to have a real LLM planner yet. The right panel uses agent
 
 ### Performance, Reliability, or Maintainability Impact
 
-The workspace improves perceived performance because users can inspect top rows instead of downloading full artifacts immediately. It also keeps large table output constrained to a scrollable grid, which avoids resizing the whole page when rows or columns are wide.
+The workspace improves perceived performance because users can inspect top records instead of downloading full artifacts immediately. It also keeps large output constrained to scrollable preview areas, which avoids resizing the whole page when rows, columns, or documents are wide.
 
-Maintainability improves because the workspace is componentized instead of embedded directly inside the dashboard page. The route now only handles authentication and delegates the product-specific operational UI to `RelationalWorkspace`.
+Maintainability improves because the workspace is componentized instead of embedded directly inside the dashboard page. The route now only handles authentication and delegates the product-specific operational UI to `DataWorkspace`.
 
 ### Follow-Up Notes
 
 - Add run progress events once backend jobs become asynchronous.
-- Add editable row-count and schema controls inside the relational workspace when custom-schema generation becomes the next focus.
+- Add editable row-count and schema/spec controls inside the workspace when custom generation becomes the next focus.
 - Add real prompt-to-plan behavior only after the planner interface and prompt cache strategy are implemented.
-- Consider a dedicated `/relational` route if DataBoom later has separate workspaces for Docu-Boom, Graph-Boom, and Masker-Boom.
+- Consider dedicated product routes only if the shared workspace becomes too constrained for graph or masking workflows.
+
+## Decision: render products by data surface instead of domain product names
+
+### Question
+
+Should DataBoom keep separate product branches such as banking, healthcare, commerce, and similar domain names, or should it keep a smaller catalog organized by the shape of data being generated?
+
+### Answer
+
+Keep four catalog products based on data surface and workflow: Table-Boom for relational data, Docu-Boom for NoSQL document data, Graph-Boom for graph data, and Masker-Boom for masking/redaction. Banking, healthcare, ecommerce, SaaS, and similar names should be demo use cases or domain profiles under those products, not standalone products.
+
+### Why This Matters
+
+Product boundaries should match the engine behavior. Relational tables, JSON documents, graph nodes/edges, and masking policies need different runtime models, previews, validations, and export shapes. Banking versus healthcare usually changes the schema, labels, value generators, or examples, but it does not require a totally separate engine.
+
+This keeps the project easier to scale. A new financial demo can reuse Table-Boom if it is relational. A healthcare document demo can reuse Docu-Boom if it is nested JSON. The frontend can show different surfaces by reading `product.kind` instead of hard-coding product IDs.
+
+### Details
+
+The backend catalog now exposes a stable `kind` for each product. The API can dispatch relational products to the existing table engine and document products to the Docu-Boom document generator. Planned graph and masking products stay visible in the catalog but return clear planned states until their runtime engines exist.
+
+The frontend uses one generic workspace shell:
+
+- relational products render resource navigation plus a spreadsheet-style table grid,
+- document products render collection navigation plus MongoDB-style JSON cards,
+- planned graph and masking products render planned-product states,
+- artifacts, generation steps, run summaries, and validation status are shared wherever possible.
+
+This is more maintainable than copying a dashboard for every product. If every use case had its own component and endpoint, the codebase would quickly contain duplicate subscription buttons, duplicate artifact lists, duplicate loading states, and duplicate run summaries. Shared workflow code makes future features easier to add and easier to test.
+
+### Follow-Up Notes
+
+- Table-Boom and Docu-Boom are active for local MVP workflows.
+- Graph-Boom should add node/edge models and previews in Phase 3.
+- Masker-Boom should add policy, redaction, tokenization, classification, and audit views in Phase 4.
+- Phase 2 still needs formal 500k benchmark evidence and deeper structural profiling before production-scale claims are made.
