@@ -222,6 +222,38 @@ def create_product_run(
 
 
 @router.post(
+    "/products/{product_id}/runs/async",
+    response_model=GenerationRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["products"],
+)
+def create_async_product_run(
+    request: Request,
+    product_id: str,
+    payload: ProductRunRequest,
+    user: DemoUserResponse = demo_user_dependency,
+) -> GenerationRunResponse:
+    """Start a catalog-backed generation run in the background."""
+
+    product = _get_product_or_404(product_id)
+    if _state_store(request).get_subscription(user.email, product.id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="subscribe to this product before generating data",
+        )
+
+    try:
+        return request.app.state.async_run_manager.submit_product_run(
+            product=product,
+            payload=payload,
+            settings=request.app.state.settings,
+            state_store=_state_store(request),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+
+@router.post(
     "/runs",
     response_model=GenerationRunResponse,
     status_code=status.HTTP_201_CREATED,
@@ -355,17 +387,19 @@ def preview_run_documents(
 
     run = _get_existing_run(request, run_id)
     collection_artifact = _find_collection_artifact(run, collection)
-    if collection_artifact.json_path is None:
+    if collection_artifact.json_path is None and collection_artifact.ndjson_path is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="collection does not have a JSON artifact",
+            detail="collection does not have a previewable artifact",
         )
 
-    path = collection_artifact.json_path.resolve()
-    if not path.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="JSON artifact not found")
+    documents = _read_document_preview(collection_artifact, limit)
+    if documents is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="document artifact not found",
+        )
 
-    documents = tuple(json.loads(path.read_text(encoding="utf-8"))[:limit])
     return DocumentPreviewResponse(
         run_id=run.run_id,
         collection_name=collection_artifact.collection_name,
@@ -374,10 +408,22 @@ def preview_run_documents(
 
 
 def _get_existing_run(request: Request, run_id: str) -> GenerationRunResponse:
-    run = _state_store(request).get_run(run_id)
+    run = request.app.state.async_run_manager.get_run(run_id)
+    if run is None:
+        run = _state_store(request).get_run(run_id)
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
     return run
+
+
+def _get_product_or_404(product_id: str) -> ProductCatalogEntry:
+    try:
+        return get_product(product_id)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="product not found",
+        ) from error
 
 
 def _state_store(request: Request) -> StateStore:
@@ -431,3 +477,38 @@ def _find_table_artifact(
         if table.table_name == table_name or short_name == table_name:
             return table
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="table not found")
+
+
+def _read_document_preview(
+    collection_artifact: CollectionArtifactResponse,
+    limit: int,
+) -> tuple[dict[str, object], ...] | None:
+    if collection_artifact.json_path is not None:
+        path = collection_artifact.json_path.resolve()
+        if path.is_file():
+            try:
+                return tuple(json.loads(path.read_text(encoding="utf-8"))[:limit])
+            except json.JSONDecodeError:
+                pass
+
+    if collection_artifact.ndjson_path is None:
+        return None
+
+    path = collection_artifact.ndjson_path.resolve()
+    if not path.is_file():
+        return None
+
+    documents: list[dict[str, object]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            if len(documents) >= limit:
+                break
+            if not line.strip():
+                continue
+            try:
+                document = json.loads(line)
+            except json.JSONDecodeError:
+                break
+            if isinstance(document, dict):
+                documents.append(document)
+    return tuple(documents)

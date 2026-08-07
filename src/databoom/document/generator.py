@@ -59,6 +59,9 @@ class DocumentGenerationResult:
 class DocumentGenerator:
     """Generate JSON and NDJSON collections from declarative specs."""
 
+    flush_interval = 1_000
+    preview_flush_rows = 20
+
     def __init__(
         self,
         *,
@@ -101,18 +104,36 @@ class DocumentGenerator:
 
     def _generate_collection(self, collection: DocumentCollectionSpec) -> DocumentArtifact:
         row_count = self.row_counts.get(collection.name, collection.default_count)
-        documents = tuple(self._document_for(collection, index) for index in range(row_count))
-        self.generated_ids[collection.name] = [
-            str(document.get("_id")) for document in documents if document.get("_id") is not None
-        ]
-
         json_path = self.output_dir / f"{collection.name}.json"
         ndjson_path = self.output_dir / f"{collection.name}.ndjson"
-        json_path.write_text(json.dumps(documents, indent=2), encoding="utf-8")
-        with ndjson_path.open("w", encoding="utf-8") as handle:
-            for document in documents:
-                handle.write(json.dumps(document, separators=(",", ":")))
-                handle.write("\n")
+        generated_ids: list[str] = []
+
+        with (
+            json_path.open("w", encoding="utf-8") as json_handle,
+            ndjson_path.open("w", encoding="utf-8") as ndjson_handle,
+        ):
+            json_handle.write("[\n")
+            for index in range(row_count):
+                document = self._document_for(collection, index)
+                document_id = document.get("_id")
+                if document_id is not None:
+                    generated_ids.append(str(document_id))
+
+                if index:
+                    json_handle.write(",\n")
+                json_handle.write(json.dumps(document, separators=(",", ":")))
+                ndjson_handle.write(json.dumps(document, separators=(",", ":")))
+                ndjson_handle.write("\n")
+
+                row_number = index + 1
+                should_flush_preview = row_number == self.preview_flush_rows
+                should_flush_interval = row_number % self.flush_interval == 0
+                if should_flush_preview or should_flush_interval:
+                    json_handle.flush()
+                    ndjson_handle.flush()
+            json_handle.write("\n]\n")
+
+        self.generated_ids[collection.name] = generated_ids
 
         return DocumentArtifact(
             collection_name=collection.name,

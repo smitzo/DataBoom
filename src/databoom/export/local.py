@@ -155,17 +155,31 @@ class _close_writers:
 
 
 class _CsvTableWriter:
+    flush_interval = 1_000
+    preview_flush_rows = 20
+
     def __init__(self, path: Path, table: TablePlan) -> None:
         self.path = path
         self.headers = tuple(column.name for column in table.columns)
         self.handle = path.open("w", newline="", encoding="utf-8")
-        self.writer = csv.DictWriter(self.handle, fieldnames=self.headers)
-        self.writer.writeheader()
+        self.writer = csv.writer(self.handle)
+        self.writer.writerow(self.headers)
+        self.handle.flush()
+        self.rows_written = 0
+        self.rows_since_flush = 0
 
     def write(self, row: GeneratedRow) -> None:
-        self.writer.writerow({key: _csv_value(row[key]) for key in self.headers})
+        self.writer.writerow([_csv_value(row[key]) for key in self.headers])
+        self.rows_written += 1
+        self.rows_since_flush += 1
+        should_flush_preview = self.rows_written == self.preview_flush_rows
+        should_flush_interval = self.rows_since_flush >= self.flush_interval
+        if should_flush_preview or should_flush_interval:
+            self.handle.flush()
+            self.rows_since_flush = 0
 
     def close(self) -> None:
+        self.handle.flush()
         self.handle.close()
 
 

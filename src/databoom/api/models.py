@@ -26,6 +26,16 @@ class HealthResponse(BaseModel):
 class RunStatus(StrEnum):
     """Lifecycle state for a generation run."""
 
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class OperationStatus(StrEnum):
+    """Lifecycle state for one measured run operation."""
+
+    PENDING = "pending"
+    RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -241,6 +251,18 @@ class ValidationSummaryResponse(BaseModel):
     issues: tuple[ValidationIssueResponse, ...]
 
 
+class OperationTimingResponse(BaseModel):
+    """Measured timing for one run operation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    operation: str
+    status: OperationStatus
+    elapsed_seconds: float
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
 class RunArtifactResponse(BaseModel):
     """API representation of one downloadable run artifact."""
 
@@ -301,6 +323,9 @@ class GenerationRunResponse(BaseModel):
     output_formats: tuple[str, ...]
     total_rows: int
     table_count: int
+    progress_percent: float = Field(default=0.0, ge=0.0, le=100.0)
+    expected_seconds: float | None = None
+    operation_timings: tuple[OperationTimingResponse, ...] = ()
     tables: tuple[TableArtifactResponse, ...] = ()
     collections: tuple[CollectionArtifactResponse, ...] = ()
     validation: ValidationSummaryResponse | None = None

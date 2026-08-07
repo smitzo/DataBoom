@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from databoom import __version__
+from databoom.api.async_jobs import AsyncRunManager
 from databoom.api.routes import router
 from databoom.api.state import StateStore, create_state_store
 from databoom.core.config import Settings, get_settings
@@ -25,6 +26,8 @@ def create_app(settings: Settings | None = None, state_store: StateStore | None 
     )
     app.state.settings = active_settings
     app.state.state_store = state_store or create_state_store(active_settings)
+    app.state.async_run_manager = AsyncRunManager()
+    app.router.on_shutdown.append(app.state.async_run_manager.shutdown)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(active_settings.cors_origins),
