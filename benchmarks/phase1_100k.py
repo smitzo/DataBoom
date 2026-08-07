@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import json
-import shutil
 import time
 import tracemalloc
 from pathlib import Path
+
+from common import directory_size, prepare_output_dir, write_metrics
 
 from databoom.export import ArtifactExporter
 from databoom.generation import OutputFormat, create_generation_plan
@@ -54,10 +54,7 @@ def main() -> None:
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
-    if args.output_dir.exists() and args.overwrite:
-        shutil.rmtree(args.output_dir)
-    if args.output_dir.exists() and any(args.output_dir.iterdir()):
-        raise SystemExit(f"output directory is not empty: {args.output_dir}")
+    prepare_output_dir(args.output_dir, overwrite=args.overwrite)
 
     tracemalloc.start()
     started_at = time.perf_counter()
@@ -81,22 +78,15 @@ def main() -> None:
         "tables": len(plan.tables),
         "elapsed_seconds": round(elapsed_seconds, 3),
         "peak_memory_mb": round(peak_bytes / 1024 / 1024, 3),
-        "artifact_size_mb": round(_directory_size(args.output_dir) / 1024 / 1024, 3),
+        "artifact_size_mb": round(directory_size(args.output_dir) / 1024 / 1024, 3),
         "validation_passed": report.passed,
         "issues": [issue.to_dict() for issue in report.issues],
         "output_dir": str(args.output_dir),
     }
-    metrics_path = args.output_dir / "metrics.json"
-    metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-    print(json.dumps(metrics, indent=2))
+    write_metrics(args.output_dir, metrics)
 
     if not report.passed:
         raise SystemExit(1)
-
-
-def _directory_size(path: Path) -> int:
-    return sum(file.stat().st_size for file in path.rglob("*") if file.is_file())
-
 
 if __name__ == "__main__":
     main()

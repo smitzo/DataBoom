@@ -34,6 +34,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - DataBoom workspace with product navigation, relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
+- 500k-record Phase 2 benchmark baseline.
 - Next.js and Tailwind frontend workbench.
 
 ## Roadmap Summary
@@ -106,6 +107,12 @@ Run the Phase 1 benchmark:
 
 ```bash
 .venv/bin/python benchmarks/phase1_100k.py --overwrite
+```
+
+Run the Phase 2 500k benchmark:
+
+```bash
+.venv/bin/python benchmarks/phase2_500k.py --overwrite
 ```
 
 Run the API locally:

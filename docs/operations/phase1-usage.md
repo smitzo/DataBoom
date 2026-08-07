@@ -141,7 +141,7 @@ These are generated through the CLI from the schemas in each demo folder.
 
 The command exits with code `1` if validation fails.
 
-## Benchmark
+## Benchmarks
 
 Run the Phase 1 100k-record benchmark:
 
@@ -169,6 +169,37 @@ Current baseline from this environment:
 - 50.71 MB peak memory
 - 5.312 MB artifact size
 - validation passed
+
+Run the Phase 2 500k-record benchmark:
+
+```bash
+.venv/bin/python benchmarks/phase2_500k.py --overwrite
+```
+
+The benchmark writes generated artifacts under:
+
+```text
+artifacts/benchmarks/phase2_500k
+```
+
+It also writes:
+
+```text
+artifacts/benchmarks/phase2_500k/metrics.json
+```
+
+Current baseline from this environment:
+
+- 500,000 records
+- 5 tables
+- 238.368 seconds total
+- 224.239 seconds export time
+- 14.105 seconds validation time
+- 262.044 MB peak memory
+- 35.96 MB artifact size
+- validation passed
+
+Use `--skip-validation` only for export-only experiments. Official benchmark numbers should keep validation enabled.
 
 ## Docker Compose
 

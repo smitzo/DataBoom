@@ -1132,3 +1132,31 @@ On the frontend, public pages now share a public shell with launch bar, header, 
 - Keep new docs inside the correct folder instead of recreating a flat docs directory.
 - Add architecture diagrams when new product surfaces or deployment boundaries are introduced.
 - Do not let public marketing pages duplicate authenticated dashboard workflows.
+
+## Decision: establish a 500k Phase 2 benchmark baseline
+
+### Question
+
+Can Table-Boom currently generate and validate 500k relational records, and what does that reveal about the next optimization target?
+
+### Answer
+
+Yes. The new Phase 2 benchmark generated and validated 500,000 CSV records across five related tables. The baseline passed validation in this environment with 238.368 seconds total runtime, 224.239 seconds spent exporting, 14.105 seconds spent validating, 262.044 MB peak memory, and 35.96 MB of artifacts.
+
+### Why This Matters
+
+The project previously had a 100k benchmark, but Phase 2 explicitly needs evidence toward larger local runs. A 500k benchmark gives us a repeatable measurement point before optimizing. Without the baseline, we could easily optimize the wrong thing.
+
+The numbers show that generation/export is currently the dominant runtime cost. Validation is much faster, but it still reads CSV artifacts into memory per table, so memory behavior should be hardened before moving toward million-record runs or background API jobs.
+
+### Details
+
+The benchmark uses a financial-style relational schema with customers, accounts, cards, transactions, and alerts. Those tables create parent-child dependency pressure without making the schema exotic. It writes CSV artifacts by default because CSV is the most common large local export path and keeps the first benchmark focused.
+
+The benchmark records separate timings for parsing, planning, exporting, validation, total elapsed time, peak memory, artifact size, output directory, validation result, and issues. It also has `--skip-validation` for export-only experiments, but official numbers should keep validation enabled.
+
+### Follow-Up Notes
+
+- Next optimization target: improve export throughput.
+- Next reliability target: make validation chunk-aware so it does not need full per-table CSV lists in memory.
+- Re-run the benchmark after each meaningful export or validation optimization.
