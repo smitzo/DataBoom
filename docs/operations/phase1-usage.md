@@ -192,10 +192,10 @@ Current baseline from this environment:
 
 - 500,000 records
 - 5 tables
-- 238.368 seconds total
-- 224.239 seconds export time
-- 14.105 seconds validation time
-- 262.044 MB peak memory
+- 233.707 seconds total
+- 222.365 seconds export time
+- 11.32 seconds validation time
+- 52.811 MB peak memory
 - 35.96 MB artifact size
 - validation passed
 

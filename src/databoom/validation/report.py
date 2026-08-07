@@ -53,7 +53,8 @@ def validate_export(plan: GenerationPlan, manifest: ExportManifest) -> Validatio
 
     issues: list[ValidationIssue] = []
     table_artifacts = {artifact.table_name: artifact for artifact in manifest.tables}
-    rows_by_table: dict[str, list[dict[str, str]]] = {}
+    referenced_keys = _referenced_parent_keys(plan)
+    keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] = {}
 
     for table in plan.tables:
         artifact = table_artifacts.get(table.table_name)
@@ -63,11 +64,19 @@ def validate_export(plan: GenerationPlan, manifest: ExportManifest) -> Validatio
 
         issues.extend(_validate_artifact_paths(plan, artifact))
         if artifact.csv_path is not None and artifact.csv_path.exists():
-            rows = _read_csv_rows(artifact.csv_path)
-            rows_by_table[table.table_name] = rows
-            issues.extend(_validate_csv_rows(table, rows))
+            table_keys, table_issues = _validate_csv_artifact(
+                table,
+                artifact.csv_path,
+                keys_by_table,
+                should_keep_primary_keys=(
+                    table.table_name,
+                    _primary_key_columns(table),
+                )
+                in referenced_keys,
+            )
+            keys_by_table.update(table_keys)
+            issues.extend(table_issues)
 
-    issues.extend(_validate_foreign_keys(plan, rows_by_table))
     return ValidationReport(
         passed=not issues,
         issues=tuple(issues),
@@ -97,93 +106,104 @@ def _validate_artifact_paths(
     return issues
 
 
-def _validate_csv_rows(table: TablePlan, rows: list[dict[str, str]]) -> list[ValidationIssue]:
+def _validate_csv_artifact(
+    table: TablePlan,
+    path: Path,
+    keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]],
+    *,
+    should_keep_primary_keys: bool,
+) -> tuple[dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]], list[ValidationIssue]]:
     issues: list[ValidationIssue] = []
-    if len(rows) != table.row_count:
-        issues.append(
-            _issue(
-                "csv_row_count_mismatch",
-                f"CSV row count {len(rows)} does not match plan row count {table.row_count}",
-                table.table_name,
-            )
-        )
-
     required_columns = tuple(
         column.name
         for column in table.columns
         if not column.nullable and column.strategy != ColumnStrategy.DEFAULT
     )
-    primary_key_columns = tuple(
-        column.name for column in table.columns if column.strategy == ColumnStrategy.PRIMARY_KEY
-    )
+    primary_key_columns = _primary_key_columns(table)
     seen_primary_keys: set[tuple[str, ...]] = set()
+    row_count = 0
 
-    for index, row in enumerate(rows, start=1):
-        for column_name in required_columns:
-            if row.get(column_name, "") == "":
-                issues.append(
-                    _issue(
-                        "required_value_missing",
-                        f"row {index} is missing required column {column_name}",
-                        table.table_name,
-                    )
-                )
-
-        if primary_key_columns:
-            primary_key = tuple(row[column] for column in primary_key_columns)
-            if primary_key in seen_primary_keys:
-                issues.append(
-                    _issue(
-                        "duplicate_primary_key",
-                        f"duplicate primary key {primary_key}",
-                        table.table_name,
-                    )
-                )
-            seen_primary_keys.add(primary_key)
-
-    return issues
-
-
-def _validate_foreign_keys(
-    plan: GenerationPlan,
-    rows_by_table: dict[str, list[dict[str, str]]],
-) -> list[ValidationIssue]:
-    issues: list[ValidationIssue] = []
-    keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] = {}
-
-    for table in plan.tables:
-        rows = rows_by_table.get(table.table_name)
-        if rows is None:
-            continue
-        primary_key_columns = tuple(
-            column.name for column in table.columns if column.strategy == ColumnStrategy.PRIMARY_KEY
-        )
-        if primary_key_columns:
-            keys_by_table[(table.table_name, primary_key_columns)] = {
-                tuple(row[column] for column in primary_key_columns)
-                for row in rows
-            }
-
-    for table in plan.tables:
-        rows = rows_by_table.get(table.table_name)
-        if rows is None:
-            continue
-        for source in _foreign_key_sources(table):
-            valid_parent_keys = keys_by_table.get(
-                (source.parent_table, source.parent_columns),
-                set(),
-            )
-            for index, row in enumerate(rows, start=1):
-                child_key = tuple(row[column] for column in source.child_columns)
-                if child_key not in valid_parent_keys:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for index, row in enumerate(reader, start=1):
+            row_count = index
+            for column_name in required_columns:
+                if row.get(column_name, "") == "":
                     issues.append(
                         _issue(
-                            "foreign_key_missing_parent",
-                            f"row {index} references missing parent key {child_key}",
+                            "required_value_missing",
+                            f"row {index} is missing required column {column_name}",
                             table.table_name,
                         )
                     )
+
+            if primary_key_columns:
+                primary_key = tuple(row[column] for column in primary_key_columns)
+                if primary_key in seen_primary_keys:
+                    issues.append(
+                        _issue(
+                            "duplicate_primary_key",
+                            f"duplicate primary key {primary_key}",
+                            table.table_name,
+                        )
+                    )
+                seen_primary_keys.add(primary_key)
+
+            issues.extend(_validate_row_foreign_keys(table, row, index, keys_by_table))
+
+    if row_count != table.row_count:
+        issues.append(
+            _issue(
+                "csv_row_count_mismatch",
+                f"CSV row count {row_count} does not match plan row count {table.row_count}",
+                table.table_name,
+            )
+        )
+
+    table_keys = {}
+    if primary_key_columns and should_keep_primary_keys:
+        table_keys[(table.table_name, primary_key_columns)] = seen_primary_keys
+    return table_keys, issues
+
+
+def _validate_row_foreign_keys(
+    table: TablePlan,
+    row: dict[str, str],
+    row_index: int,
+    keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]],
+) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    for source in _foreign_key_sources(table):
+        valid_parent_keys = keys_by_table.get(
+            (source.parent_table, source.parent_columns),
+            set(),
+        )
+        child_key = tuple(row[column] for column in source.child_columns)
+        if child_key not in valid_parent_keys:
+            issues.append(
+                _issue(
+                    "foreign_key_missing_parent",
+                    f"row {row_index} references missing parent key {child_key}",
+                    table.table_name,
+                )
+            )
     return issues
+
+
+def _referenced_parent_keys(
+    plan: GenerationPlan,
+) -> set[tuple[str, tuple[str, ...]]]:
+    return {
+        (source.parent_table, source.parent_columns)
+        for table in plan.tables
+        for source in _foreign_key_sources(table)
+    }
+
+
+def _primary_key_columns(table: TablePlan) -> tuple[str, ...]:
+    return tuple(
+        column.name for column in table.columns if column.strategy == ColumnStrategy.PRIMARY_KEY
+    )
 
 
 def _foreign_key_sources(table: TablePlan):
@@ -197,11 +217,6 @@ def _foreign_key_sources(table: TablePlan):
             continue
         seen.add(key)
         yield source
-
-
-def _read_csv_rows(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
 
 
 def _issue(code: str, message: str, table_name: str | None = None) -> ValidationIssue:

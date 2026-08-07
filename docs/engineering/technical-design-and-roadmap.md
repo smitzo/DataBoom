@@ -303,7 +303,7 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
-Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. A 500k benchmark baseline now exists; export speed, validation memory behavior, deeper structural profiling, and async long-run orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
+Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. A 500k benchmark baseline now exists, and validation is chunk-aware for CSV artifacts; export speed, deeper structural profiling, and async long-run orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
 
 Technical objectives:
 
@@ -334,6 +334,7 @@ Implemented MVP capabilities:
 - SQL-backed demo auth, subscriptions, and run metadata in Dockerized API runs.
 - Generic frontend workspace that renders relational tables or MongoDB-style documents based on product kind.
 - 500k relational benchmark baseline with export, validation, memory, and artifact-size metrics.
+- Chunk-aware CSV validation that avoids holding every generated row in memory.
 
 Recommended commits:
 

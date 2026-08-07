@@ -1160,3 +1160,37 @@ The benchmark records separate timings for parsing, planning, exporting, validat
 - Next optimization target: improve export throughput.
 - Next reliability target: make validation chunk-aware so it does not need full per-table CSV lists in memory.
 - Re-run the benchmark after each meaningful export or validation optimization.
+
+## Decision: make CSV validation chunk-aware
+
+### Question
+
+Why change validation if the 500k benchmark already passed?
+
+### Answer
+
+The benchmark passed, but validation still loaded each table's CSV rows into memory before checking row counts, required fields, primary keys, and foreign keys. That was acceptable at 500k, but it is the wrong shape for larger runs. The validator now streams each CSV once and keeps only the key sets needed for integrity checks.
+
+### Why This Matters
+
+For synthetic data generation, validation must scale with the artifact size. Loading full CSV rows into Python dictionaries multiplies memory use because every cell becomes an object. The generated artifact might be only tens of megabytes on disk, while the in-memory representation can be many times larger.
+
+The streaming validator changes the memory profile. On the same 500k benchmark, peak memory dropped from 262.044 MB to 52.811 MB. Validation time also improved from 14.105 seconds to 11.32 seconds. Export still dominates runtime, but validation is now much safer for larger runs.
+
+### Details
+
+The validator now processes one table at a time:
+
+- it checks required values while reading each row,
+- it tracks duplicate primary keys for the current table,
+- it validates child foreign keys against parent key sets already collected,
+- it stores only primary-key sets that future child tables need,
+- it discards full row dictionaries immediately.
+
+This works because relational generation already orders tables by dependency. Parent tables are validated before child tables, so parent keys are available when a child row is checked.
+
+### Follow-Up Notes
+
+- Export throughput is now the main 500k bottleneck.
+- Future million-record validation may need disk-backed or probabilistic strategies for very large parent key sets.
+- Re-run `benchmarks/phase2_500k.py --overwrite` after export optimizations to compare total runtime.

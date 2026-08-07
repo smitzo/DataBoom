@@ -55,6 +55,29 @@ def test_validate_export_detects_broken_foreign_key(tmp_path) -> None:
     assert report.issues[0].code == "foreign_key_missing_parent"
 
 
+def test_validate_export_detects_required_and_primary_key_errors(tmp_path) -> None:
+    database = parse_postgres_ddl(
+        "CREATE TABLE users (id bigint PRIMARY KEY, email text NOT NULL);"
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"users": 2},
+        seed=42,
+        output_formats=(OutputFormat.CSV,),
+    )
+    manifest = ArtifactExporter(plan, tmp_path).export()
+    users_csv = tmp_path / "public__users.csv"
+    users_csv.write_text("id,email\n1,\n1,user@example.com\n", encoding="utf-8")
+
+    report = validate_export(plan, manifest)
+
+    assert report.passed is False
+    assert {issue.code for issue in report.issues} == {
+        "required_value_missing",
+        "duplicate_primary_key",
+    }
+
+
 def test_validate_export_writes_json_report(tmp_path) -> None:
     database = parse_postgres_ddl("CREATE TABLE users (id bigint PRIMARY KEY);")
     plan = create_generation_plan(database, row_counts={"users": 1}, seed=42)
