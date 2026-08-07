@@ -6,15 +6,17 @@ This repository is in active implementation. Keep documentation, roadmap status,
 
 ## Documentation Map
 
-- [Prompt Caching and Instructions](docs/prompt-caching-and-instructions.md): prompt architecture, cache-friendly instruction layout, prompt library, and OpenAI/Codex instruction handling.
-- [DataBoom Product Family](docs/product-family.md): Table-Boom, Docu-Boom, Graph-Boom, Masker-Boom, and use-case naming rules.
-- [Engineering Standards](docs/engineering-standards.md): reusable frontend/backend code standards and product-kind rendering rules.
-- [Functional Specification](docs/functional-specification.md): users, workflows, product behavior, MVP scope, acceptance criteria, and out-of-scope items.
-- [Product Reasoning and FAQ](docs/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
-- [Technical Design and Roadmap](docs/technical-design-and-roadmap.md): stack, high-level design, low-level design, five-phase technical plan, deployment objectives, and commit sequence.
-- [Phase 1 Usage](docs/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
-- [Frontend Development Plan](docs/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
-- [Synthetic Data Inspiration Notes](docs/synthetic-data-inspiration.md): lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
+- [Docs Index](docs/README.md): documentation structure and separation of concerns.
+- [Prompt Caching and Instructions](docs/engineering/prompt-caching-and-instructions.md): prompt architecture, cache-friendly instruction layout, prompt library, and OpenAI/Codex instruction handling.
+- [DataBoom Product Family](docs/product/product-family.md): Table-Boom, Docu-Boom, Graph-Boom, Masker-Boom, and use-case naming rules.
+- [Engineering Architecture](docs/engineering/architecture.md): system diagrams, engine extensibility, API flow, frontend routes, and deployment topology.
+- [Engineering Standards](docs/engineering/engineering-standards.md): reusable frontend/backend code standards and product-kind rendering rules.
+- [Functional Specification](docs/product/functional-specification.md): users, workflows, product behavior, MVP scope, acceptance criteria, and out-of-scope items.
+- [Product Reasoning and FAQ](docs/product/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
+- [Technical Design and Roadmap](docs/engineering/technical-design-and-roadmap.md): stack, high-level design, low-level design, five-phase technical plan, deployment objectives, and commit sequence.
+- [Phase 1 Usage](docs/operations/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
+- [Frontend Development Plan](docs/engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
+- [Synthetic Data Inspiration Notes](docs/product/synthetic-data-inspiration.md): lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
 - [Agent Operating Guide](AGENTS.md): persistent Codex guidance for this repository, including commit labels, phase discipline, and documentation rules.
 - [Understanding Log](understanding.md): detailed beginner-friendly explanations for significant design, architecture, performance, reliability, and product decisions.
 
@@ -57,7 +59,7 @@ Build this project as a clear sequence of small commits. Each commit should repr
 - `performance: reduce relationship lookup memory`
 - `security: add api key authentication`
 
-Every phase in [Technical Design and Roadmap](docs/technical-design-and-roadmap.md) includes a recommended commit sequence.
+Every phase in [Technical Design and Roadmap](docs/engineering/technical-design-and-roadmap.md) includes a recommended commit sequence.
 
 Update [Understanding Log](understanding.md) when a change is significant enough that future contributors should understand the reasoning, tradeoffs, or performance impact.
 

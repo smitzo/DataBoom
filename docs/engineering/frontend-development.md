@@ -14,13 +14,16 @@ The frontend should evolve in phases that match backend capability. It should be
 
 - Use Tailwind utility classes, not raw handwritten CSS.
 - Keep the dashboard calm and focused on the primary subscription-to-generation path.
-- Keep `/` as the public hero/product page, then route authenticated relational work to `/dashboard`.
-- Use dedicated pages for login, dashboard, products, runs, and roadmap once backend capability exists.
+- Keep `/` as the public landing page, then route authenticated generation work to `/dashboard`.
+- Use dedicated public pages for `/products`, `/demos`, `/roadmap`, and `/contact` instead of keeping all marketing content in one long SPA.
+- Use dedicated authenticated pages for login, dashboard, runs, product execution, and subscription settings.
 - Use wide desktop space intentionally with operational panels, tables, and artifact actions.
 - Make domain profiles visible and easy to understand.
 - Make DataBoom's product family visible: Table-Boom and Docu-Boom are active, while Graph-Boom and Masker-Boom are planned.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
+- Keep public shell components reusable: launch bar, header, theme toggle, sections, and footer sitemap.
+- Support public light and dark themes through shared theme tokens instead of duplicating pages.
 - Render operational views from product `kind` and resource shape instead of duplicating one dashboard per product.
 - Keep shared display data in one data module so roadmap steps, metrics, and
   profile cards can be updated without digging through page markup.
@@ -28,20 +31,20 @@ The frontend should evolve in phases that match backend capability. It should be
 
 ## Phase F1: Static Workbench Foundation
 
-Status: complete for the static shell.
+Status: complete for the route-based public shell.
 
 Goals:
 
 - Create a Next.js app under `frontend/`.
 - Add Tailwind.
-- Build a polished static single-page workbench shell.
+- Build a polished public site shell.
 - Split the page into reusable components under `frontend/src/components`.
 - Keep product UI data under `frontend/src/data/workbench.ts`.
 - Keep the first viewport uncluttered, but use the full desktop width with a
   left product story and right generation-control preview.
-- Show product modules, output formats, pipeline steps, validation summary, and demo datasets.
-- Add a roadmap section where major completed functionality is moved into
-  achieved steps and future phase work stays visible.
+- Show product modules, output formats, pipeline steps, validation summary, and demo datasets on dedicated public pages.
+- Add a roadmap page where major completed functionality is moved into achieved steps and future phase work stays visible.
+- Add a footer sitemap so the public site behaves like a standard website.
 - Keep the UI ready for API wiring without requiring the API to exist yet.
 
 ## Phase F2: Local API Integration

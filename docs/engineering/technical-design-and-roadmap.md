@@ -1,5 +1,7 @@
 # Technical Design and Roadmap
 
+For system-level diagrams, API flow, frontend route architecture, deployment topology, and engine extensibility, see [Architecture](architecture.md).
+
 ## Stack
 
 - Language: Python 3.12.

@@ -11,7 +11,7 @@ DataBoom is a synthetic data and masking platform for teams that need realistic,
 | `Graph-Boom` | Node and edge generation for graph datasets. | Planned for Phase 3 |
 | `Masker-Boom` | Redaction, masking, tokenization, and integrity-preserving privacy workflows. | Planned for Phase 4 |
 
-See [DataBoom Product Family](docs/product-family.md) for the canonical product taxonomy.
+See [DataBoom Product Family](docs/product/product-family.md) for the canonical product taxonomy.
 
 The current implementation includes Table-Boom relational generation and the Phase 2 Docu-Boom foundation. Banking, healthcare, ecommerce, SaaS, and similar domains are demo use cases or profiles, not separate products.
 
@@ -164,7 +164,20 @@ Open:
 http://localhost:3000
 ```
 
-The root route `/` is the public hero/product page. Use `/login` for demo auth, `/dashboard` for the authenticated product console, and `/settings/subscriptions` for subscription management.
+Public routes:
+
+- `/`: landing page with core product positioning and engine proof.
+- `/products`: product catalog for Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom.
+- `/demos`: demo data, use cases, output formats, and validation baseline.
+- `/roadmap`: phase roadmap with achieved and future steps.
+- `/contact`: evaluation checklist and implementation guidance.
+
+Authenticated routes:
+
+- `/login`: demo auth.
+- `/dashboard`: product workspace.
+- `/runs`: generated run history.
+- `/settings/subscriptions`: subscription management.
 
 For the Dockerized backend currently running on alternate local ports, start the frontend like this:
 
@@ -228,19 +241,21 @@ docker compose --profile tools run --rm app
 - `frontend`: Next.js, TypeScript, Tailwind frontend workbench.
 - `frontend/src/components`: reusable frontend UI components.
 - `frontend/src/data`: shared frontend display data, including roadmap entries.
-- `docs`: product, technical, roadmap, usage, prompt, reasoning, and frontend planning documents.
+- `docs`: product, engineering, and operations documentation.
 
 ## Docs Guide
 
 - `instructions.md`: project entrypoint and commit discipline.
-- `docs/product-family.md`: DataBoom platform products and use-case naming rules.
-- `docs/engineering-standards.md`: reusable backend/frontend code standards.
-- `docs/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
-- `docs/technical-design-and-roadmap.md`: system design, phase roadmap, objectives, and commit sequence.
-- `docs/frontend-development.md`: frontend design principles and phased UI plan.
-- `docs/phase1-usage.md`: current backend setup, CLI, benchmark, and Docker usage.
-- `docs/product-reasoning-faq.md`: 4W1H reasoning and competitive/product FAQ.
-- `docs/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
-- `docs/synthetic-data-inspiration.md`: lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
+- `docs/README.md`: documentation index and separation of concerns.
+- `docs/product/product-family.md`: DataBoom platform products and use-case naming rules.
+- `docs/product/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
+- `docs/product/product-reasoning-faq.md`: 4W1H reasoning and competitive/product FAQ.
+- `docs/product/synthetic-data-inspiration.md`: lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
+- `docs/engineering/architecture.md`: architecture diagrams, extensibility model, API flow, frontend routes, and deployment topology.
+- `docs/engineering/engineering-standards.md`: reusable backend/frontend code standards.
+- `docs/engineering/technical-design-and-roadmap.md`: system design, phase roadmap, objectives, and commit sequence.
+- `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
+- `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
+- `docs/operations/phase1-usage.md`: current backend setup, CLI, benchmark, and Docker usage.
 - `AGENTS.md`: operating rules for coding agents working in this repo.
 - `understanding.md`: explanation log for significant decisions.

@@ -56,7 +56,7 @@ Rules:
 
 - Never include raw database values.
 - Never include secrets, connection strings, user emails, or organization names unless explicitly approved.
-- Use product-family namespaces such as `generator-boom` or `masker-boom`.
+- Use product-family namespaces such as `table-boom`, `docu-boom`, `graph-boom`, or `masker-boom`.
 - Use a schema fingerprint based on normalized metadata, not sampled data.
 - Rotate the key when the stable prompt pack changes.
 - Log cache usage metrics, not prompt contents.

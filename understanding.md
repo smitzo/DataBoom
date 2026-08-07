@@ -1095,3 +1095,40 @@ This is more maintainable than copying a dashboard for every product. If every u
 - Graph-Boom should add node/edge models and previews in Phase 3.
 - Masker-Boom should add policy, redaction, tokenization, classification, and audit views in Phase 4.
 - Phase 2 still needs formal 500k benchmark evidence and deeper structural profiling before production-scale claims are made.
+
+## Decision: split docs and public site by concern
+
+### Question
+
+How should the project keep architecture docs and public website content understandable as the product grows?
+
+### Answer
+
+Split documentation into `docs/product`, `docs/engineering`, and `docs/operations`, then give architecture diagrams their own engineering document. Split the public website into real routes for home, products, demos, roadmap, and contact instead of keeping every marketing section in one scrolling page.
+
+### Why This Matters
+
+The docs folder was starting to mix product scope, technical architecture, frontend planning, prompt strategy, and usage commands at one level. That works for a tiny project, but it becomes noisy once the engine has multiple products and deployment concerns. A concern-based folder structure makes it obvious where a future contributor should place product strategy, architecture, or local run instructions.
+
+The public website had a similar issue. A long single page made the landing page carry product catalog, pipeline explanation, roadmap, validation, demos, and dashboard links all at once. Standard product sites usually separate these concerns. The homepage should explain the core value quickly. Product details, demos, roadmap, and contact/evaluation content deserve their own routes.
+
+### Details
+
+The new architecture document explains DataBoom through several diagrams:
+
+- system context,
+- product surface model,
+- engine pipeline,
+- API run sequence,
+- frontend route architecture,
+- Docker deployment topology.
+
+The key extensibility rule is that new products should branch by data surface through `product.kind`, not by demo domain or product name. The engine is extendable because each product kind can add its own spec/model, generator, validator, exports, and preview surface while sharing catalog resolution, seed management, artifacts, manifests, run metadata, and API download behavior.
+
+On the frontend, public pages now share a public shell with launch bar, header, theme toggle, sections, and footer sitemap. Public pages support light and dark themes with CSS tokens. Authenticated dashboard pages remain focused on operational work.
+
+### Follow-Up Notes
+
+- Keep new docs inside the correct folder instead of recreating a flat docs directory.
+- Add architecture diagrams when new product surfaces or deployment boundaries are introduced.
+- Do not let public marketing pages duplicate authenticated dashboard workflows.

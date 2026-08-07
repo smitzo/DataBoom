@@ -8,17 +8,19 @@ DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its catalo
 
 ## Current Phase
 
-Start with Phase 1: backend engine foundation.
+Current work is Phase 2 hardening: 500k benchmark evidence, structural profiling, run lifecycle reliability, and reusable frontend/backend polish. Phase 3 has not started yet.
 
 Before implementation, read:
 
 - `instructions.md`
-- `docs/functional-specification.md`
-- `docs/technical-design-and-roadmap.md`
-- `docs/product-family.md`
-- `docs/engineering-standards.md`
-- `docs/prompt-caching-and-instructions.md`
-- `docs/product-reasoning-faq.md`
+- `docs/README.md`
+- `docs/product/functional-specification.md`
+- `docs/engineering/technical-design-and-roadmap.md`
+- `docs/product/product-family.md`
+- `docs/engineering/architecture.md`
+- `docs/engineering/engineering-standards.md`
+- `docs/engineering/prompt-caching-and-instructions.md`
+- `docs/product/product-reasoning-faq.md`
 - `understanding.md`
 
 ## Working Rules
