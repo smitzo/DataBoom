@@ -18,7 +18,7 @@ const statusCopy: Record<RoadmapStatus, { label: string; className: string }> = 
   },
   planned: {
     label: "Planned",
-    className: "border-white/10 bg-white/[0.03] text-zinc-300",
+    className: "border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-secondary)]",
   },
 };
 
@@ -116,8 +116,8 @@ function RoadmapTimelineItem({
         <span
           className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-lg border transition duration-500 ${
             isActive
-              ? "border-cyan-300/60 bg-cyan-300/10 text-cyan-200 shadow-[0_0_28px_rgba(34,211,238,0.45)]"
-              : "border-white/10 bg-white/[0.03] text-zinc-500"
+              ? "border-cyan-300/60 bg-cyan-300/10 text-cyan-500 shadow-[0_0_28px_rgba(34,211,238,0.35)]"
+              : "border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-faint)]"
           }`}
         >
           <StatusIcon status={item.status} />
@@ -127,15 +127,15 @@ function RoadmapTimelineItem({
       <div
         className={`rounded-lg border p-5 transition duration-500 ${
           isActive
-            ? "border-cyan-300/35 bg-white/[0.05] shadow-2xl shadow-cyan-950/20"
-            : "border-white/10 bg-white/[0.03]"
+            ? "border-cyan-300/35 bg-[var(--surface-strong)] shadow-2xl shadow-cyan-950/20"
+            : "border-[color:var(--border)] bg-[var(--surface)]"
         }`}
       >
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase text-zinc-500">{item.phase}</p>
-            <h3 className="mt-2 text-xl font-semibold text-white">{item.title}</h3>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
+            <p className="text-sm font-semibold uppercase text-[color:var(--text-faint)]">{item.phase}</p>
+            <h3 className="mt-2 text-xl font-semibold text-[color:var(--text-primary)]">{item.title}</h3>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-[color:var(--text-muted)]">
               {item.description}
             </p>
           </div>
@@ -168,7 +168,7 @@ function TimelineSegment({ progress }: { progress: number }) {
       viewBox="0 0 2 100"
       aria-hidden="true"
     >
-      <line x1="1" y1="0" x2="1" y2="100" stroke="rgba(255,255,255,0.12)" />
+      <line x1="1" y1="0" x2="1" y2="100" stroke="rgba(148,163,184,0.35)" />
       <line
         x1="1"
         y1="0"
@@ -206,18 +206,18 @@ function RoadmapList({
   empty: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-      <p className="text-sm font-semibold text-white">{title}</p>
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+      <p className="text-sm font-semibold text-[color:var(--text-primary)]">{title}</p>
       <div className="mt-4 space-y-3">
         {items.length > 0 ? (
           items.map((item) => (
             <div key={item} className="flex gap-3">
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-300" />
-              <p className="text-sm leading-6 text-zinc-400">{item}</p>
+              <p className="text-sm leading-6 text-[color:var(--text-muted)]">{item}</p>
             </div>
           ))
         ) : (
-          <p className="text-sm leading-6 text-zinc-600">{empty}</p>
+          <p className="text-sm leading-6 text-[color:var(--text-faint)]">{empty}</p>
         )}
       </div>
     </div>

@@ -17,7 +17,7 @@ export function PublicHeaderActions() {
       {loggedIn ? (
         <a
           href="/dashboard"
-          className="inline-flex h-11 items-center rounded-full bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
+          className="inline-flex h-11 items-center rounded-full bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
         >
           My dashboard
         </a>
@@ -25,13 +25,13 @@ export function PublicHeaderActions() {
         <>
           <a
             href="/login"
-            className="inline-flex h-11 items-center rounded-full border border-white/10 px-5 text-sm font-semibold text-white transition hover:border-white/30"
+            className="inline-flex h-11 items-center rounded-full border border-[color:var(--border)] px-5 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[var(--surface)]"
           >
             Log in
           </a>
           <a
             href="/login"
-            className="inline-flex h-11 items-center rounded-full bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
+            className="inline-flex h-11 items-center rounded-full bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
           >
             Start generating
           </a>
@@ -45,14 +45,14 @@ export function HeroActions() {
   const loggedIn = useLoggedIn();
 
   if (loggedIn === null) {
-    return <div className="h-12 w-64 rounded-md border border-white/10 bg-white/[0.04]" />;
+    return <div className="h-12 w-64 rounded-md border border-[color:var(--border)] bg-[var(--surface)]" />;
   }
 
   if (loggedIn) {
     return (
       <a
         href="/dashboard"
-        className="inline-flex h-12 items-center gap-2 rounded-md bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
+        className="inline-flex h-12 items-center gap-2 rounded-md bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
       >
         My dashboard
         <ArrowRight className="h-4 w-4" />
@@ -64,14 +64,14 @@ export function HeroActions() {
     <>
       <a
         href="/login"
-        className="inline-flex h-12 items-center gap-2 rounded-md bg-white px-6 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-100"
+        className="inline-flex h-12 items-center gap-2 rounded-md bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
       >
         <Play className="h-4 w-4" />
         Start generating
       </a>
       <a
         href="/dashboard"
-        className="inline-flex h-12 items-center gap-2 rounded-md border border-white/15 px-6 text-sm font-semibold text-white transition hover:border-white/35"
+        className="inline-flex h-12 items-center gap-2 rounded-md border border-[color:var(--border)] px-6 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[var(--surface)]"
       >
         My dashboard
         <ArrowRight className="h-4 w-4" />

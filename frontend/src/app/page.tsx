@@ -1,40 +1,24 @@
+import { ArrowRight, Database, FileJson, ShieldCheck } from "lucide-react";
+
 import {
-  ArtifactPanel,
-  DemoDataset,
   PipelineCard,
   ProfileCard,
   ValidationMetric,
 } from "@/components/cards";
 import { Hero } from "@/components/hero";
-import { Announcement, Header, Section } from "@/components/layout";
-import { Roadmap } from "@/components/roadmap";
-import { demos, pipeline, profiles, validationMetrics } from "@/data/workbench";
+import { PublicShell, Section } from "@/components/layout";
+import { pipeline, profiles, validationMetrics } from "@/data/workbench";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-black text-zinc-100">
-      <Announcement />
-      <Header />
+    <PublicShell>
       <Hero />
 
       <Section
-        id="profiles"
-        eyebrow="Product modules"
-        title="Start public, then enter your dashboard."
-        subtitle="The public page explains the product family. The dashboard is where you subscribe to modules, generate data, preview tables, and download outputs."
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {profiles.map((profile) => (
-            <ProfileCard key={profile.name} profile={profile} />
-          ))}
-        </div>
-      </Section>
-
-      <Section
-        id="pipeline"
-        eyebrow="Full-stack flow"
-        title="Plan, generate, validate, preview, download."
-        subtitle="Inspired by mature synthetic-data product flows: marketing explains the value, login opens the workspace, and each product drives a repeatable backend run."
+        id="platform"
+        eyebrow="Core platform"
+        title="Synthetic data generation needs an engine, not a giant text response."
+        subtitle="DataBoom reads structure, plans dependencies, generates records deterministically, exports artifacts, and validates the result. The LLM can help plan later; the engine does the high-volume work."
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pipeline.map((step) => (
@@ -44,62 +28,72 @@ export default function Home() {
       </Section>
 
       <Section
-        id="dashboard"
-        eyebrow="My dashboard"
-        title="Already logged in? Jump straight into your workspace."
-        subtitle="Your dashboard keeps subscribed products, recent runs, generated table previews, and artifact downloads together."
+        id="products"
+        eyebrow="Products"
+        title="Four product surfaces, one shared generation workflow."
+        subtitle="Table-Boom and Docu-Boom are runnable today. Graph-Boom and Masker-Boom stay visible because the architecture already separates product kind from demo domain."
       >
-        <div className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-6">
-          <p className="text-xl font-semibold text-white">DataBoom product console</p>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-400">
-            Use demo credentials on the login page, subscribe to Table-Boom or Docu-Boom,
-            then generate data through the FastAPI backend.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <a
-              href="/dashboard"
-              className="inline-flex h-11 items-center rounded-md bg-white px-5 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-100"
-            >
-              Open My Dashboard
-            </a>
-            <a
-              href="/login"
-              className="inline-flex h-11 items-center rounded-md border border-white/15 px-5 text-sm font-semibold text-white transition hover:border-white/35"
-            >
-              Login with demo
-            </a>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {profiles.map((profile) => (
+            <ProfileCard key={profile.name} profile={profile} />
+          ))}
         </div>
+        <a
+          href="/products"
+          className="mt-6 inline-flex h-11 items-center gap-2 rounded-md bg-emerald-300 px-5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+        >
+          View products
+          <ArrowRight className="h-4 w-4" />
+        </a>
       </Section>
 
-      <Roadmap />
-
       <Section
-        id="validation"
-        eyebrow="Validation snapshot"
-        title="Current baseline is visible by default."
-        subtitle="Phase 1 generated and validated a 100k-record benchmark with local artifacts."
+        id="proof"
+        eyebrow="Current proof"
+        title="The local MVP already runs end to end."
+        subtitle="The stack can log in, subscribe to active products, run the FastAPI backend, preview generated records, and download local artifacts."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {validationMetrics.map((metric) => (
             <ValidationMetric key={metric.label} metric={metric} />
           ))}
         </div>
-      </Section>
-
-      <Section
-        id="demos"
-        eyebrow="Demo data"
-        title="Checked-in datasets for product demos and regression checks."
-        subtitle="Financial and healthcare CSVs are checked in as Table-Boom demo use cases."
-      >
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
-          {demos.map((demo) => (
-            <DemoDataset key={demo.name} demo={demo} />
-          ))}
-          <ArtifactPanel />
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <ProofCard
+            icon={Database}
+            title="Relational"
+            detail="Table-Boom preserves primary keys, foreign keys, row counts, and local CSV/JSON/SQL exports."
+          />
+          <ProofCard
+            icon={FileJson}
+            title="Documents"
+            detail="Docu-Boom writes nested JSON and NDJSON collections with top-document previews."
+          />
+          <ProofCard
+            icon={ShieldCheck}
+            title="Validation"
+            detail="Runs produce manifests and validation reports before the frontend exposes artifacts."
+          />
         </div>
       </Section>
-    </main>
+    </PublicShell>
+  );
+}
+
+function ProofCard({
+  icon: Icon,
+  title,
+  detail,
+}: {
+  icon: typeof Database;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <article className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+      <Icon className="h-5 w-5 text-emerald-300" />
+      <h3 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">{title}</h3>
+      <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">{detail}</p>
+    </article>
   );
 }

@@ -5,7 +5,6 @@ import {
   Database,
   LayoutDashboard,
   LogOut,
-  PackageCheck,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +15,6 @@ import { clearSession, type Session } from "@/lib/session";
 
 const navItems = [
   { href: "/dashboard", label: "Workspace", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: PackageCheck },
   { href: "/runs", label: "Runs", icon: BarChart3 },
   { href: "/settings/subscriptions", label: "Settings", icon: Settings },
 ];

@@ -2,18 +2,15 @@
 
 import {
   Activity,
-  ArrowRight,
   CheckCircle2,
   Download,
   FileJson,
   FileSpreadsheet,
   FileText,
   Loader2,
-  PackageCheck,
 } from "lucide-react";
-import Link from "next/link";
 
-import type { ArtifactList, Product, RunArtifact, TablePreview } from "@/lib/api";
+import type { ArtifactList, RunArtifact, TablePreview } from "@/lib/api";
 import { apiUrl } from "@/lib/api";
 import { useEffect, useState } from "react";
 
@@ -32,58 +29,6 @@ export function StatTile({
       <p className="mt-3 text-2xl font-semibold text-white">{value}</p>
       <p className="mt-2 text-sm text-zinc-500">{hint}</p>
     </div>
-  );
-}
-
-export function ProductCard({
-  product,
-  subscribed,
-}: {
-  product: Product;
-  subscribed: boolean;
-}) {
-  const resources = product.collections.length
-    ? product.collections
-    : product.tables.length
-      ? product.tables
-      : product.use_cases;
-
-  return (
-    <Link
-      href={`/products/${product.id}`}
-      className="block rounded-lg border border-white/10 bg-white/[0.03] p-5 transition hover:border-cyan-300/40 hover:bg-white/[0.06]"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-md bg-cyan-300/10 text-cyan-200">
-          <PackageCheck className="h-5 w-5" />
-        </span>
-        <span
-          className={`rounded-md border px-2 py-1 text-xs font-semibold uppercase ${
-            subscribed
-              ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200"
-              : "border-white/10 bg-white/[0.03] text-zinc-400"
-          }`}
-        >
-          {subscribed ? "Subscribed" : product.status}
-        </span>
-      </div>
-      <p className="mt-6 text-xl font-semibold text-white">{product.name}</p>
-      <p className="mt-1 text-sm font-semibold uppercase text-cyan-300">{product.module}</p>
-      <p className="mt-4 min-h-12 text-sm leading-6 text-zinc-400">{product.description}</p>
-      <div className="mt-6 flex flex-wrap gap-2">
-        {resources.slice(0, 4).map((resource) => (
-          <span
-            key={resource}
-            className="rounded-md border border-white/10 px-2 py-1 text-xs text-zinc-500"
-          >
-            {resource}
-          </span>
-        ))}
-      </div>
-      <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
-        Open product <ArrowRight className="h-4 w-4" />
-      </span>
-    </Link>
   );
 }
 

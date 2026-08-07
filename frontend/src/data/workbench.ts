@@ -64,13 +64,10 @@ export type RoadmapItem = {
 };
 
 export const navItems = [
-  { label: "Platform", href: "#platform" },
-  { label: "Products", href: "#profiles" },
-  { label: "Pipeline", href: "#pipeline" },
-  { label: "Dashboard", href: "#dashboard" },
-  { label: "Roadmap", href: "#roadmap" },
-  { label: "Validation", href: "#validation" },
-  { label: "Demos", href: "#demos" },
+  { label: "Products", href: "/products" },
+  { label: "Demos", href: "/demos" },
+  { label: "Roadmap", href: "/roadmap" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export const heroMetrics = [

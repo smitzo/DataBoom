@@ -19,23 +19,39 @@ export function MetricTile({
   tone: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-sm text-zinc-500">{label}</p>
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-4">
+      <p className="text-sm text-[color:var(--text-muted)]">{label}</p>
       <p className={`mt-2 text-lg font-semibold ${tone}`}>{value}</p>
     </div>
   );
 }
 
-export function FormatRow({ format }: { format: FormatConfig }) {
+export function FormatRow({
+  format,
+  variant = "theme",
+}: {
+  format: FormatConfig;
+  variant?: "theme" | "dark";
+}) {
   const Icon = format.icon;
+  const className =
+    variant === "dark"
+      ? "flex items-center justify-between gap-4 rounded-md border border-white/10 bg-black/25 px-4 py-3"
+      : "flex items-center justify-between gap-4 rounded-md border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 py-3";
+  const textClassName =
+    variant === "dark" ? "text-sm font-medium text-white" : "text-sm font-medium text-[color:var(--text-primary)]";
+  const stateClassName =
+    variant === "dark"
+      ? "text-xs font-medium uppercase text-zinc-500"
+      : "text-xs font-medium uppercase text-[color:var(--text-faint)]";
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-white/10 bg-black/25 px-4 py-3">
+    <div className={className}>
       <div className="flex items-center gap-3">
         <Icon className="h-4 w-4 text-amber-200" />
-        <span className="text-sm font-medium text-white">{format.name}</span>
+        <span className={textClassName}>{format.name}</span>
       </div>
-      <span className="text-xs font-medium uppercase text-zinc-500">{format.state}</span>
+      <span className={stateClassName}>{format.state}</span>
     </div>
   );
 }
@@ -44,29 +60,29 @@ export function ProfileCard({ profile }: { profile: ProfileConfig }) {
   const Icon = profile.icon;
 
   return (
-    <button
-      className={`min-h-72 rounded-lg border bg-white/[0.03] p-5 text-left transition hover:bg-white/[0.05] ${profile.tone}`}
+    <article
+      className={`min-h-72 rounded-lg border bg-[var(--surface)] p-5 text-left transition hover:bg-[var(--surface-strong)] ${profile.tone}`}
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="flex h-10 w-10 items-center justify-center rounded-md bg-white/5">
+        <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--surface-strong)]">
           <Icon className="h-5 w-5" />
         </span>
         {profile.selected ? <BadgeCheck className="h-5 w-5 text-emerald-300" /> : null}
       </div>
-      <p className="mt-6 text-lg font-semibold text-white">{profile.name}</p>
+      <p className="mt-6 text-lg font-semibold text-[color:var(--text-primary)]">{profile.name}</p>
       <p className="mt-1 text-sm font-semibold uppercase text-current">{profile.role}</p>
-      <p className="mt-4 text-sm leading-6 text-zinc-400">{profile.description}</p>
+      <p className="mt-4 text-sm leading-6 text-[color:var(--text-muted)]">{profile.description}</p>
       <div className="mt-6 flex flex-wrap gap-2">
         {profile.tags.map((tag) => (
           <span
             key={tag}
-            className="rounded-md border border-white/10 px-2 py-1 text-xs uppercase text-zinc-500"
+            className="rounded-md border border-[color:var(--border)] px-2 py-1 text-xs uppercase text-[color:var(--text-faint)]"
           >
             {tag}
           </span>
         ))}
       </div>
-    </button>
+    </article>
   );
 }
 
@@ -74,10 +90,10 @@ export function PipelineCard({ step }: { step: PipelineStepConfig }) {
   const Icon = step.icon;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
       <Icon className="h-5 w-5 text-indigo-300" />
-      <p className="mt-5 font-semibold text-white">{step.label}</p>
-      <p className="mt-2 text-sm text-zinc-500">{step.detail}</p>
+      <p className="mt-5 font-semibold text-[color:var(--text-primary)]">{step.label}</p>
+      <p className="mt-2 text-sm text-[color:var(--text-muted)]">{step.detail}</p>
     </div>
   );
 }
@@ -86,16 +102,16 @@ export function ValidationMetric({ metric }: { metric: ValidationMetricConfig })
   const Icon = metric.icon;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-zinc-500">{metric.label}</p>
-        <Icon className={metric.success ? "h-5 w-5 text-emerald-300" : "h-5 w-5 text-zinc-500"} />
+        <p className="text-sm text-[color:var(--text-muted)]">{metric.label}</p>
+        <Icon className={metric.success ? "h-5 w-5 text-emerald-300" : "h-5 w-5 text-[color:var(--text-faint)]"} />
       </div>
       <p
         className={
           metric.success
             ? "mt-5 text-2xl font-semibold text-emerald-300"
-            : "mt-5 text-2xl font-semibold text-white"
+            : "mt-5 text-2xl font-semibold text-[color:var(--text-primary)]"
         }
       >
         {metric.value}
@@ -106,24 +122,24 @@ export function ValidationMetric({ metric }: { metric: ValidationMetricConfig })
 
 export function DemoDataset({ demo }: { demo: DemoDatasetConfig }) {
   return (
-    <div className={`rounded-lg border bg-white/[0.03] p-5 ${demo.tone}`}>
+    <div className={`rounded-lg border bg-[var(--surface)] p-5 ${demo.tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-lg font-semibold text-white">{demo.name}</p>
-          <p className="mt-3 text-sm leading-6 text-zinc-400">{demo.tables}</p>
+          <p className="text-lg font-semibold text-[color:var(--text-primary)]">{demo.name}</p>
+          <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">{demo.tables}</p>
         </div>
         <BadgeCheck className="h-5 w-5 text-emerald-300" />
       </div>
-      <p className="mt-8 text-sm font-semibold text-zinc-100">{demo.rows}</p>
+      <p className="mt-8 text-sm font-semibold text-[color:var(--text-secondary)]">{demo.rows}</p>
     </div>
   );
 }
 
 export function ArtifactPanel() {
   return (
-    <div className="rounded-lg border border-amber-300/25 bg-amber-400/10 p-5">
-      <p className="text-lg font-semibold text-white">Output formats</p>
-      <p className="mt-3 text-sm leading-6 text-zinc-400">
+    <div className="rounded-lg border border-amber-300/35 bg-amber-400/10 p-5">
+      <p className="text-lg font-semibold text-[color:var(--text-primary)]">Output formats</p>
+      <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
         The engine can export the same run into multiple local artifact types for
         analysts, backend tests, and database loading.
       </p>

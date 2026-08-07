@@ -84,7 +84,7 @@ export function ControlCenter({ showApiPanel = true }: { showApiPanel?: boolean 
                 <p className="font-semibold text-white">Export queue</p>
                 <div className="mt-5 space-y-3">
                   {formats.map((format) => (
-                    <FormatRow key={format.name} format={format} />
+                    <FormatRow key={format.name} format={format} variant="dark" />
                   ))}
                 </div>
               </div>

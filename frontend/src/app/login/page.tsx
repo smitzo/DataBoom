@@ -102,14 +102,14 @@ export default function LoginPage() {
         <section className="hidden border-l border-white/10 bg-zinc-950 px-10 py-12 lg:block">
           <div className="flex h-full flex-col justify-between rounded-lg border border-white/10 bg-black/40 p-8">
             <div>
-              <p className="text-sm font-semibold uppercase text-cyan-300">Full-stack flow</p>
+              <p className="text-sm font-semibold uppercase text-cyan-300">Demo workflow</p>
               <div className="mt-8 grid gap-4">
                 {[
                   "Authenticate demo user",
-                  "Subscribe to product modules",
-                  "Generate data through FastAPI",
-                  "Preview top rows in collapsible tables",
-                  "Download generated CSV/JSON/SQL artifacts",
+                  "Subscribe to Table-Boom or Docu-Boom",
+                  "Generate records through FastAPI",
+                  "Preview table rows or JSON documents",
+                  "Download generated artifacts and validation reports",
                 ].map((step, index) => (
                   <div
                     key={step}
