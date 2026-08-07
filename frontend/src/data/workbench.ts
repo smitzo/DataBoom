@@ -174,7 +174,7 @@ export const roadmap: RoadmapItem[] = [
   },
   {
     phase: "Phase 2",
-    status: "next",
+    status: "achieved",
     title: "Table-Boom scale, API, profiling, and Docu-Boom",
     description:
       "This phase expands Table-Boom scale and access patterns, then adds Docu-Boom document generation for NoSQL use cases.",
