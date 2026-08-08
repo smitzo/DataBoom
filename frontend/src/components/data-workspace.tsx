@@ -917,6 +917,7 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Metric label="Rows" value={String(run.total_rows)} />
+        <Metric label="Generated" value={`${run.generated_rows}/${run.total_rows}`} />
         <Metric
           label={run.kind === "document" ? "Collections" : "Tables"}
           value={String(run.table_count)}
@@ -930,6 +931,7 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
               : formatDuration(totalRunSeconds(run))
           }
         />
+        <Metric label="Rate" value={formatRate(run.rows_per_second)} />
       </div>
       <div className="mt-4">
         <div className="mb-1 flex items-center justify-between text-xs font-semibold text-zinc-500">
@@ -942,6 +944,18 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
             style={{ width: `${progress}%` }}
           />
         </div>
+        {run.status === "running" ? (
+          <p className="mt-2 truncate text-xs font-semibold text-zinc-500">
+            {run.current_resource
+              ? `${formatOperationName(run.current_operation ?? "generate")} · ${shortTableName(
+                  run.current_resource,
+                )}`
+              : formatOperationName(run.current_operation ?? "starting")}
+            {run.remaining_seconds !== null
+              ? ` · ${formatDuration(run.remaining_seconds)} remaining`
+              : ""}
+          </p>
+        ) : null}
       </div>
       <div className="mt-4 space-y-2">
         {runResourcesWithCounts(run).map((resource) => (
@@ -1156,6 +1170,16 @@ function formatDuration(seconds: number | null | undefined) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.round(seconds % 60);
   return `${minutes}m ${remainingSeconds}s`;
+}
+
+function formatRate(rowsPerSecond: number | null | undefined) {
+  if (!rowsPerSecond) {
+    return "Pending";
+  }
+  if (rowsPerSecond < 1) {
+    return `${rowsPerSecond.toFixed(2)}/s`;
+  }
+  return `${Math.round(rowsPerSecond).toLocaleString()}/s`;
 }
 
 function formatOperationName(operation: string) {

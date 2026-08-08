@@ -65,8 +65,13 @@ export type GenerationRun = {
   output_formats: string[];
   total_rows: number;
   table_count: number;
+  generated_rows: number;
   progress_percent: number;
   expected_seconds: number | null;
+  remaining_seconds: number | null;
+  current_operation: string | null;
+  current_resource: string | null;
+  rows_per_second: number | null;
   operation_timings: OperationTiming[];
   tables: GeneratedTable[];
   collections: GeneratedCollection[];
