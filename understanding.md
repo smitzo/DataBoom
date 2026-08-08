@@ -1217,11 +1217,19 @@ The current implementation uses an in-process `AsyncRunManager`. It creates a ru
 
 This is the right Phase 2 shape because it gives the product the correct API contract without prematurely adding Celery, Kafka, or a distributed worker platform. Those tools are useful when we need retries, distributed workers, durable queues, priority scheduling, or event streaming. For the local MVP, a small background manager is simpler and easier to reason about.
 
+Progress is now based on row counters emitted by the generation pipeline. Table-Boom's artifact exporter reports generated rows by table. Docu-Boom reports generated documents by collection. The async manager turns those callbacks into generated-row counts, current resource, rows per second, remaining seconds, and progress percentage.
+
+This is better than a timer-only progress bar. A timer can guess that a job is halfway done because half of the expected time has passed, but that can be wrong when a table is unusually wide, the disk is slow, or validation takes longer than normal. Row counters are grounded in actual work completed. The ETA still exists, but it is now supported by observed throughput.
+
 The API now reports:
 
 - run status: running, completed, or failed,
+- generated rows,
+- current table or collection,
 - progress percentage,
+- rows per second,
 - expected seconds,
+- remaining seconds,
 - operation timings,
 - generated resource metadata,
 - validation summary when complete.
@@ -1232,7 +1240,7 @@ The exporter flushes early preview rows to disk. That lets the frontend read the
 
 - The local async manager is not a production queue.
 - A later production worker should preserve the same run response contract.
-- Real progress should eventually come from row counters per table/collection, not only elapsed-time estimation.
+- Future production progress can add per-stage validation progress and persisted running-job heartbeats.
 - Add structured logs with run IDs before production deployment.
 
 ## Decision: explain how DataBoom generates synthetic data

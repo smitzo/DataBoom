@@ -303,7 +303,7 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
-Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. A 500k benchmark baseline now exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs can execute asynchronously with progress, ETA, and operation timings. Export speed, deeper structural profiling, and production-grade distributed worker orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
+Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. A 500k benchmark baseline now exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs can execute asynchronously with row-level progress, ETA, throughput, and operation timings. Export speed, deeper structural profiling, and production-grade distributed worker orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
 
 Technical objectives:
 
@@ -313,6 +313,7 @@ Technical objectives:
 - Add structural profiling for row counts, null rates, cardinality, ranges, and categorical hints.
 - Add FastAPI run endpoints.
 - Add asynchronous product-run lifecycle with polling-friendly status responses.
+- Track generated rows, current resource, rows per second, and remaining time for running jobs.
 - Report operation timings for parsing, planning, exporting, validation, and total runtime.
 - Add FastAPI artifact listing and download endpoints.
 - Add API-key authentication.
@@ -335,8 +336,8 @@ Implemented MVP capabilities:
 - Document preview endpoint for top documents per collection.
 - SQL-backed demo auth, subscriptions, and run metadata in Dockerized API runs.
 - Generic frontend workspace that renders relational tables or MongoDB-style documents based on product kind.
-- Async product-run endpoint with in-process background execution, progress percentage, expected seconds, and operation timings.
-- Frontend polling that shows live run status and attempts top-20 table/document previews during generation.
+- Async product-run endpoint with in-process background execution, generated row counters, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.
+- Frontend polling that shows live run status, row progress, throughput, and attempts top-20 table/document previews during generation.
 - 500k relational benchmark baseline with export, validation, memory, and artifact-size metrics.
 - Chunk-aware CSV validation that avoids holding every generated row in memory.
 

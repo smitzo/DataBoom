@@ -174,7 +174,7 @@ Current local deployment uses Docker Compose for FastAPI, PostgreSQL, and Redis.
 The Phase 2 local API exposes a lightweight asynchronous run lifecycle:
 
 - `POST /products/{product_id}/runs/async` creates a running run immediately.
-- `GET /runs/{run_id}` returns status, progress percentage, expected seconds, and operation timings.
+- `GET /runs/{run_id}` returns status, generated rows, current resource, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.
 - Table previews read flushed CSV rows while generation is still running.
 - Document previews read completed JSON arrays or partially flushed NDJSON lines.
 - Completed relational runs report timings for schema parsing, plan building, export, validation, and total runtime.
