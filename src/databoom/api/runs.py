@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from mimetypes import guess_type
 from pathlib import Path
@@ -34,6 +35,8 @@ from databoom.generation.plan import OutputFormat
 from databoom.ingest import parse_postgres_ddl
 from databoom.validation import ValidationReport, validate_export
 
+RunProgressCallback = Callable[[int, str], None]
+
 
 def execute_generation_run(
     request: GenerationRunRequest,
@@ -42,6 +45,7 @@ def execute_generation_run(
     run_id: str | None = None,
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
+    progress_callback: RunProgressCallback | None = None,
 ) -> GenerationRunResponse:
     """Execute a synchronous local generation run."""
 
@@ -66,7 +70,11 @@ def execute_generation_run(
     timings.append(_completed_timing("build_plan", plan_started))
 
     export_started = _started_at()
-    manifest = ArtifactExporter(plan, artifact_dir).export()
+    manifest = ArtifactExporter(
+        plan,
+        artifact_dir,
+        progress_callback=progress_callback,
+    ).export()
     timings.append(_completed_timing("export_artifacts", export_started))
 
     validation_started = _started_at()
@@ -98,6 +106,7 @@ def execute_product_generation_run(
     run_id: str | None = None,
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
+    progress_callback: RunProgressCallback | None = None,
 ) -> GenerationRunResponse:
     """Execute a catalog-backed generation run for the product kind."""
 
@@ -119,6 +128,7 @@ def execute_product_generation_run(
                 run_id=run_id,
                 created_at=created_at,
                 artifact_dir=artifact_dir,
+                progress_callback=progress_callback,
             )
         case DataProductKind.DOCUMENT:
             return execute_document_generation_run(
@@ -128,6 +138,7 @@ def execute_product_generation_run(
                 run_id=run_id,
                 created_at=created_at,
                 artifact_dir=artifact_dir,
+                progress_callback=progress_callback,
             )
         case DataProductKind.GRAPH | DataProductKind.MASKING:
             raise ValueError(f"{product.name} is planned and is not runnable yet")
@@ -141,6 +152,7 @@ def execute_document_generation_run(
     run_id: str | None = None,
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
+    progress_callback: RunProgressCallback | None = None,
 ) -> GenerationRunResponse:
     """Execute a synchronous local Docu-Boom generation run."""
 
@@ -153,8 +165,10 @@ def execute_document_generation_run(
         row_counts=payload.row_counts or product.default_counts,
         seed=payload.seed,
         output_dir=artifact_dir,
+        progress_callback=progress_callback,
     ).generate()
     completed_at = datetime.now(UTC)
+    total_seconds = max((completed_at - created_at).total_seconds(), 0.0)
 
     return GenerationRunResponse(
         run_id=run_id,
@@ -169,7 +183,9 @@ def execute_document_generation_run(
         output_formats=tuple(payload.output_formats or product.output_formats),
         total_rows=result.total_rows,
         table_count=len(result.manifest.collections),
+        generated_rows=result.total_rows,
         progress_percent=100.0,
+        rows_per_second=_rows_per_second(result.total_rows, total_seconds),
         operation_timings=(
             _completed_timing("generate_documents", generation_started),
             _elapsed_timing("total_run", created_at, completed_at),
@@ -258,7 +274,12 @@ def _completed_response(
         output_formats=tuple(str(output_format) for output_format in plan.output_formats),
         total_rows=plan.total_rows,
         table_count=len(plan.tables),
+        generated_rows=plan.total_rows,
         progress_percent=100.0,
+        rows_per_second=_rows_per_second(
+            plan.total_rows,
+            _total_timing_seconds(operation_timings),
+        ),
         operation_timings=operation_timings,
         tables=tuple(
             TableArtifactResponse(
@@ -328,3 +349,17 @@ def _elapsed_timing(
         started_at=started_at,
         completed_at=completed_at,
     )
+
+
+def _total_timing_seconds(operation_timings: tuple[OperationTimingResponse, ...]) -> float | None:
+    total_timing = next(
+        (timing for timing in operation_timings if timing.operation == "total_run"),
+        None,
+    )
+    return total_timing.elapsed_seconds if total_timing is not None else None
+
+
+def _rows_per_second(total_rows: int, seconds: float | None) -> float | None:
+    if seconds is None or seconds <= 0:
+        return None
+    return round(total_rows / seconds, 2)

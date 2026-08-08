@@ -57,6 +57,7 @@ def test_product_flow_subscribe_generate_preview_and_download(tmp_path: Path) ->
     assert run_payload["kind"] == "relational"
     assert run_payload["status"] == "completed"
     assert run_payload["total_rows"] == 14
+    assert run_payload["generated_rows"] == 14
     assert run_payload["validation"]["passed"] is True
 
     preview = client.get(
@@ -102,6 +103,7 @@ def test_document_product_flow_generates_json_and_preview(tmp_path: Path) -> Non
     run_payload = run.json()
     assert run_payload["kind"] == "document"
     assert run_payload["total_rows"] == 9
+    assert run_payload["generated_rows"] == 9
     assert {collection["collection_name"] for collection in run_payload["collections"]} == {
         "customers",
         "orders",
@@ -199,11 +201,14 @@ def test_async_product_run_reports_progress_and_timings(tmp_path: Path) -> None:
     assert response.status_code == 202, response.text
     payload = response.json()
     assert payload["status"] == "running"
+    assert payload["generated_rows"] == 0
+    assert payload["current_operation"] == "export_artifacts"
     assert payload["expected_seconds"] > 0
     assert payload["operation_timings"][0]["status"] == "running"
 
     completed = _wait_for_run(client, payload["run_id"])
     assert completed["status"] == "completed"
+    assert completed["generated_rows"] == completed["total_rows"]
     assert completed["progress_percent"] == 100
     assert completed["validation"]["passed"] is True
     assert {timing["operation"] for timing in completed["operation_timings"]} >= {

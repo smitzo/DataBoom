@@ -32,12 +32,22 @@ BASELINE_RECORDS_PER_SECOND = 500_000 / 233.707
 
 
 @dataclass
+class RunProgressState:
+    """Latest observed row progress for one background run."""
+
+    generated_rows: int = 0
+    current_resource: str | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
 class AsyncRunManager:
     """Track background generation runs for the local API process."""
 
     max_workers: int = 2
     executor: ThreadPoolExecutor = field(init=False)
     _runs: dict[str, GenerationRunResponse] = field(default_factory=dict, init=False)
+    _progress: dict[str, RunProgressState] = field(default_factory=dict, init=False)
     _lock: Lock = field(default_factory=Lock, init=False)
 
     def __post_init__(self) -> None:
@@ -85,11 +95,12 @@ class AsyncRunManager:
 
         with self._lock:
             run = self._runs.get(run_id)
+            progress = self._progress.get(run_id, RunProgressState())
         if run is None:
             return None
         if run.status != RunStatus.RUNNING:
             return run
-        return _with_running_progress(run)
+        return _with_running_progress(run, progress)
 
     def shutdown(self) -> None:
         """Release background worker threads when the API application stops."""
@@ -114,6 +125,11 @@ class AsyncRunManager:
                 run_id=run_id,
                 created_at=created_at,
                 artifact_dir=artifact_dir,
+                progress_callback=lambda generated_rows, current_resource: self._update_progress(
+                    run_id,
+                    generated_rows,
+                    current_resource,
+                ),
             )
         except Exception as error:  # pragma: no cover - defensive path
             run = _failed_response(
@@ -130,6 +146,19 @@ class AsyncRunManager:
     def _set_run(self, run: GenerationRunResponse) -> None:
         with self._lock:
             self._runs[run.run_id] = run
+
+    def _update_progress(
+        self,
+        run_id: str,
+        generated_rows: int,
+        current_resource: str,
+    ) -> None:
+        with self._lock:
+            self._progress[run_id] = RunProgressState(
+                generated_rows=generated_rows,
+                current_resource=current_resource,
+                updated_at=datetime.now(UTC),
+            )
 
 
 def _running_product_response(
@@ -170,8 +199,10 @@ def _running_product_response(
         output_formats=output_formats,
         total_rows=total_rows,
         table_count=table_count,
+        generated_rows=0,
         progress_percent=0.0,
         expected_seconds=_expected_seconds(total_rows),
+        current_operation="export_artifacts",
         operation_timings=(
             OperationTimingResponse(
                 operation="generate_async",
@@ -262,7 +293,9 @@ def _failed_response(
         output_formats=tuple(payload.output_formats or product.output_formats),
         total_rows=total_rows,
         table_count=len(product.tables or product.collections),
+        generated_rows=0,
         progress_percent=100.0,
+        current_operation="failed",
         operation_timings=(
             OperationTimingResponse(
                 operation="generate_async",
@@ -276,13 +309,29 @@ def _failed_response(
     )
 
 
-def _with_running_progress(run: GenerationRunResponse) -> GenerationRunResponse:
+def _with_running_progress(
+    run: GenerationRunResponse,
+    progress: RunProgressState,
+) -> GenerationRunResponse:
     elapsed_seconds = max((datetime.now(UTC) - run.created_at).total_seconds(), 0.0)
     expected_seconds = run.expected_seconds or _expected_seconds(run.total_rows)
-    progress_percent = min((elapsed_seconds / expected_seconds) * 95.0, 95.0)
+    generated_rows = max(progress.generated_rows, 0)
+    row_progress_percent = _row_progress_percent(generated_rows, run.total_rows)
+    elapsed_progress_percent = min((elapsed_seconds / expected_seconds) * 5.0, 5.0)
+    progress_percent = row_progress_percent if generated_rows else elapsed_progress_percent
+    rows_per_second = _rows_per_second(generated_rows, elapsed_seconds)
     return run.model_copy(
         update={
+            "generated_rows": generated_rows,
             "progress_percent": round(progress_percent, 2),
+            "remaining_seconds": _remaining_seconds(
+                total_rows=run.total_rows,
+                generated_rows=generated_rows,
+                rows_per_second=rows_per_second,
+            ),
+            "current_operation": "export_artifacts",
+            "current_resource": progress.current_resource,
+            "rows_per_second": rows_per_second,
             "operation_timings": (
                 OperationTimingResponse(
                     operation="generate_async",
@@ -297,6 +346,29 @@ def _with_running_progress(run: GenerationRunResponse) -> GenerationRunResponse:
 
 def _expected_seconds(total_rows: int) -> float:
     return round(max(total_rows / BASELINE_RECORDS_PER_SECOND, 1.0), 3)
+
+
+def _row_progress_percent(generated_rows: int, total_rows: int) -> float:
+    if total_rows <= 0:
+        return 95.0
+    return min((generated_rows / total_rows) * 95.0, 95.0)
+
+
+def _rows_per_second(generated_rows: int, elapsed_seconds: float) -> float | None:
+    if generated_rows <= 0 or elapsed_seconds <= 0:
+        return None
+    return round(generated_rows / elapsed_seconds, 2)
+
+
+def _remaining_seconds(
+    *,
+    total_rows: int,
+    generated_rows: int,
+    rows_per_second: float | None,
+) -> float | None:
+    if rows_per_second is None or rows_per_second <= 0:
+        return None
+    return round(max(total_rows - generated_rows, 0) / rows_per_second, 3)
 
 
 def _safe_filename(value: str) -> str:

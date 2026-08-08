@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -10,6 +11,8 @@ from typing import Any
 
 from databoom.document.models import DocumentCollectionSpec, DocumentFieldSpec
 from databoom.generation import SeedManager
+
+ProgressCallback = Callable[[int, str], None]
 
 
 @dataclass(frozen=True)
@@ -69,20 +72,27 @@ class DocumentGenerator:
         row_counts: dict[str, int],
         seed: int | str,
         output_dir: Path,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         self.collections = collections
         self.row_counts = row_counts
         self.seed_manager = SeedManager(seed)
         self.output_dir = output_dir
         self.generated_ids: dict[str, list[str]] = {}
+        self.progress_callback = progress_callback
 
     def generate(self) -> DocumentGenerationResult:
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        artifacts = tuple(self._generate_collection(collection) for collection in self.collections)
+        artifacts: list[DocumentArtifact] = []
+        completed_rows = 0
+        for collection in self.collections:
+            artifact = self._generate_collection(collection, completed_rows)
+            artifacts.append(artifact)
+            completed_rows += artifact.row_count
         manifest = DocumentManifest(
             output_dir=self.output_dir,
             manifest_path=self.output_dir / "manifest.json",
-            collections=artifacts,
+            collections=tuple(artifacts),
         )
         manifest.manifest_path.write_text(
             json.dumps(manifest.to_dict(), indent=2),
@@ -102,7 +112,11 @@ class DocumentGenerator:
             validation=validation,
         )
 
-    def _generate_collection(self, collection: DocumentCollectionSpec) -> DocumentArtifact:
+    def _generate_collection(
+        self,
+        collection: DocumentCollectionSpec,
+        completed_before_collection: int,
+    ) -> DocumentArtifact:
         row_count = self.row_counts.get(collection.name, collection.default_count)
         json_path = self.output_dir / f"{collection.name}.json"
         ndjson_path = self.output_dir / f"{collection.name}.ndjson"
@@ -131,9 +145,15 @@ class DocumentGenerator:
                 if should_flush_preview or should_flush_interval:
                     json_handle.flush()
                     ndjson_handle.flush()
+                if row_number % self.flush_interval == 0:
+                    self._report_progress(
+                        completed_before_collection + row_number,
+                        collection.name,
+                    )
             json_handle.write("\n]\n")
 
         self.generated_ids[collection.name] = generated_ids
+        self._report_progress(completed_before_collection + row_count, collection.name)
 
         return DocumentArtifact(
             collection_name=collection.name,
@@ -141,6 +161,10 @@ class DocumentGenerator:
             json_path=json_path,
             ndjson_path=ndjson_path,
         )
+
+    def _report_progress(self, completed_rows: int, collection_name: str) -> None:
+        if self.progress_callback is not None:
+            self.progress_callback(completed_rows, collection_name)
 
     def _document_for(
         self,

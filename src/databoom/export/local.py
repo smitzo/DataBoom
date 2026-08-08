@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -49,25 +50,38 @@ class ExportManifest:
         }
 
 
+ProgressCallback = Callable[[int, str], None]
+
+
 class ArtifactExporter:
     """Stream a generation plan to local CSV and SQL artifacts."""
 
-    def __init__(self, plan: GenerationPlan, output_dir: Path) -> None:
+    progress_interval = 1_000
+
+    def __init__(
+        self,
+        plan: GenerationPlan,
+        output_dir: Path,
+        progress_callback: ProgressCallback | None = None,
+    ) -> None:
         self.plan = plan
         self.output_dir = output_dir
+        self.progress_callback = progress_callback
 
     def export(self) -> ExportManifest:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         row_generator = RowGenerator.from_plan(self.plan)
-        table_artifacts = tuple(
-            self._export_table(row_generator, table)
-            for table in self.plan.tables
-        )
+        table_artifacts: list[TableArtifact] = []
+        completed_rows = 0
+        for table in self.plan.tables:
+            artifact = self._export_table(row_generator, table, completed_rows)
+            table_artifacts.append(artifact)
+            completed_rows += artifact.row_count
         manifest = ExportManifest(
             output_dir=self.output_dir,
             manifest_path=self.output_dir / "manifest.json",
-            tables=table_artifacts,
+            tables=tuple(table_artifacts),
         )
         manifest.manifest_path.write_text(
             json.dumps(manifest.to_dict(), indent=2),
@@ -75,7 +89,12 @@ class ArtifactExporter:
         )
         return manifest
 
-    def _export_table(self, row_generator: RowGenerator, table: TablePlan) -> TableArtifact:
+    def _export_table(
+        self,
+        row_generator: RowGenerator,
+        table: TablePlan,
+        completed_before_table: int,
+    ) -> TableArtifact:
         csv_writer = None
         json_writer = None
         sql_writer = None
@@ -105,6 +124,10 @@ class ArtifactExporter:
                     json_writer.write(row)
                 if sql_writer is not None:
                     sql_writer.write(row)
+                if row_count % self.progress_interval == 0:
+                    self._report_progress(completed_before_table + row_count, table.table_name)
+
+        self._report_progress(completed_before_table + row_count, table.table_name)
 
         return TableArtifact(
             table_name=table.table_name,
@@ -113,6 +136,10 @@ class ArtifactExporter:
             json_path=json_writer.path if json_writer is not None else None,
             sql_path=sql_writer.path if sql_writer is not None else None,
         )
+
+    def _report_progress(self, completed_rows: int, table_name: str) -> None:
+        if self.progress_callback is not None:
+            self.progress_callback(completed_rows, table_name)
 
 
 def load_export_manifest(path: Path) -> ExportManifest:

@@ -53,6 +53,32 @@ def test_artifact_exporter_writes_csv_sql_and_manifest(tmp_path) -> None:
     assert loaded_manifest.tables[1].csv_path == users_csv
 
 
+def test_artifact_exporter_reports_progress(tmp_path) -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            email text NOT NULL
+        );
+        """
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"users": 3},
+        seed=42,
+        output_formats=(OutputFormat.CSV,),
+    )
+    progress: list[tuple[int, str]] = []
+
+    ArtifactExporter(
+        plan,
+        tmp_path,
+        progress_callback=lambda rows, table: progress.append((rows, table)),
+    ).export()
+
+    assert progress[-1] == (3, "public.users")
+
+
 def test_artifact_exporter_writes_json_format(tmp_path) -> None:
     database = parse_postgres_ddl("CREATE TABLE users (id bigint PRIMARY KEY, email text);")
     plan = create_generation_plan(

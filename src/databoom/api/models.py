@@ -323,8 +323,13 @@ class GenerationRunResponse(BaseModel):
     output_formats: tuple[str, ...]
     total_rows: int
     table_count: int
+    generated_rows: int = Field(default=0, ge=0)
     progress_percent: float = Field(default=0.0, ge=0.0, le=100.0)
     expected_seconds: float | None = None
+    remaining_seconds: float | None = None
+    current_operation: str | None = None
+    current_resource: str | None = None
+    rows_per_second: float | None = None
     operation_timings: tuple[OperationTimingResponse, ...] = ()
     tables: tuple[TableArtifactResponse, ...] = ()
     collections: tuple[CollectionArtifactResponse, ...] = ()
