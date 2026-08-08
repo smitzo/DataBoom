@@ -1,14 +1,16 @@
-import { Database, KeyRound, X } from "lucide-react";
+import { KeyRound, X } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { BrandLogo } from "@/components/brand";
 import { PublicHeaderActions } from "@/components/public-session-actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navItems } from "@/data/workbench";
 
 export function Announcement() {
   return (
-    <div className="bg-gradient-to-r from-emerald-600 via-slate-950 to-sky-600">
-      <div className="mx-auto flex h-10 max-w-[1680px] items-center justify-between gap-4 px-5 text-sm text-white sm:px-8 lg:px-12 xl:px-16">
+    <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-slate-950 to-sky-600">
+      <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-70 motion-safe:animate-pulse" />
+      <div className="relative mx-auto flex h-11 max-w-[1680px] items-center justify-between gap-4 px-5 text-sm text-white sm:px-8 lg:px-12 xl:px-16">
         <div className="flex min-w-0 items-center gap-3">
           <span className="rounded-md bg-white/15 px-2 py-1 text-xs font-semibold">NEW</span>
           <span className="truncate font-medium">
@@ -24,22 +26,15 @@ export function Announcement() {
 export function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--header-bg)] backdrop-blur">
-      <div className="mx-auto flex h-20 max-w-[1680px] items-center justify-between gap-5 px-5 sm:px-8 lg:px-12 xl:px-16">
-        <a href="/" className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
-            <Database className="h-5 w-5" />
-          </span>
-          <span className="text-sm font-semibold uppercase text-[color:var(--text-primary)]">
-            DataBoom
-          </span>
-        </a>
+      <div className="mx-auto flex h-24 max-w-[1680px] items-center justify-between gap-5 px-5 sm:px-8 lg:px-12 xl:px-16">
+        <BrandLogo size="lg" sublabel="Synthetic data engine" />
 
-        <nav className="hidden items-center gap-2 lg:flex">
+        <nav className="hidden items-center gap-3 lg:flex">
           {navItems.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-[color:var(--text-muted)] transition hover:bg-[var(--surface)] hover:text-[color:var(--text-primary)]"
+              className="rounded-md px-4 py-3 text-sm font-semibold text-[color:var(--text-muted)] transition hover:bg-[var(--surface)] hover:text-[color:var(--text-primary)]"
             >
               {item.label}
             </a>
@@ -110,14 +105,7 @@ export function PublicFooter() {
     <footer className="border-t border-[color:var(--border)] bg-[var(--page-bg)]">
       <div className="mx-auto grid max-w-[1680px] gap-8 px-5 py-12 sm:px-8 lg:grid-cols-[1fr_1.4fr] lg:px-12 xl:px-16">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
-              <Database className="h-5 w-5" />
-            </span>
-            <span className="text-sm font-semibold uppercase text-[color:var(--text-primary)]">
-              DataBoom
-            </span>
-          </div>
+          <BrandLogo size="md" sublabel="Table-Boom, Docu-Boom, Graph-Boom, Masker-Boom" />
           <p className="mt-4 max-w-md text-sm leading-6 text-[color:var(--text-muted)]">
             Synthetic relational and document data generation today, graph and masking workflows next.
           </p>

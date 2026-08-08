@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleAlert,
-  Database,
   Download,
   FileJson,
   FileSpreadsheet,
@@ -22,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { BrandLogo } from "@/components/brand";
 import { formatBytes } from "@/components/product-console";
 import type {
   ArtifactList,
@@ -405,15 +405,12 @@ function WorkspaceSidebar({
   return (
     <aside className="bg-zinc-950 text-zinc-100">
       <div className="border-b border-white/10 px-4 py-4">
-        <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-md border border-cyan-300/25 bg-cyan-300/10">
-            <Database className="h-4 w-4 text-cyan-200" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold uppercase text-white">DataBoom</p>
-            <p className="text-xs text-zinc-500">{kindLabel(activeKind)}</p>
-          </div>
-        </div>
+        <BrandLogo
+          href={null}
+          size="sm"
+          sublabel={kindLabel(activeKind)}
+          className="[--text-primary:#ffffff] [--text-faint:#71717a]"
+        />
       </div>
 
       <div className="space-y-5 p-3">

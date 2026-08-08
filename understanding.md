@@ -1294,3 +1294,45 @@ So the data is not production data, and it is not copied from a sensitive databa
 - Phase 3 can use an LLM to help plan generation intent, but the deterministic engine should still execute the plan.
 - Phase 4 Masker-Boom should add privacy policies for real sensitive source data.
 - More domain profiles can improve realism without changing the core engine contract.
+
+## Decision: centralize DataBoom branding and fix roadmap progress geometry
+
+### Question
+
+Why add a reusable logo component instead of editing each navbar, sidebar, login page, and dashboard logo separately?
+
+### Answer
+
+The logo is now a shared frontend component. That matters because product identity should not drift as the app grows. Public pages, login, dashboard shell, and the data workbench all need to feel like the same product. If each screen hand-builds its own logo, small differences in icon size, color, subtitle text, spacing, and animation quickly make the product feel less polished.
+
+The shared component gives DataBoom one reusable brand mark and wordmark. It also makes future changes cheaper. If we later add a real SVG asset, update the mark, or change the product subtitle, we can do it in one place instead of hunting through every route.
+
+### Question
+
+Why was the roadmap progress line changed from per-card segments to one continuous track?
+
+### Answer
+
+The old roadmap drew a separate progress segment inside each phase item. That looked correct only when the spacing and card heights happened to align. Once a card became taller, the line could stop before the next icon and create visible gaps. The user was right to call this out: timelines should feel physically connected.
+
+The new approach draws one continuous vertical track behind all roadmap icons. The icon tiles sit above that track and cover the line inside the square, so the line appears centered and connected without visually cutting through the icons. Scroll progress now fills that single track smoothly instead of lighting up disconnected chunks.
+
+This is better for three reasons:
+
+- it removes geometry bugs caused by variable card height,
+- it preserves the scroll-based progress behavior,
+- it makes the roadmap easier to maintain when phases gain or lose content.
+
+### Question
+
+Why add subtle animation instead of large decorative effects?
+
+### Answer
+
+DataBoom is a technical product, so the UI should feel alive but still operational. The new animation is intentionally restrained: the logo has a soft pulse, the announcement bar has slight movement, the hero has a data-rail pulse, and cards lift on hover. These details make the website feel more finished without turning the product into a flashy landing page that distracts from the actual engine.
+
+### Follow-Up Notes
+
+- Replace the CSS-built brand mark with a dedicated vector logo when final brand design exists.
+- Wire the contact scaffold to a real email, CRM, or backend endpoint during deployment hardening.
+- Keep roadmap progress as a single track if future phase cards become more complex.

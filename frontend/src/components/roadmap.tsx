@@ -65,15 +65,14 @@ export function Roadmap() {
       subtitle="As each phase lands, important functionality moves from upcoming work into achieved steps so the product story stays current."
     >
       <div ref={sectionRef} className="relative">
-        <div className="space-y-6">
+        <TimelineTrack progress={progress} />
+        <div className="relative z-10 space-y-8">
           {roadmap.map((item, index) => (
             <RoadmapTimelineItem
               key={item.phase}
               item={item}
               index={index}
               activeIndex={activeIndex}
-              isLast={index === roadmap.length - 1}
-              progress={progress}
             />
           ))}
         </div>
@@ -86,38 +85,21 @@ function RoadmapTimelineItem({
   item,
   index,
   activeIndex,
-  isLast,
-  progress,
 }: {
   item: RoadmapItem;
   index: number;
   activeIndex: number;
-  isLast: boolean;
-  progress: number;
 }) {
   const isActive = index <= activeIndex;
-  const totalSegments = Math.max(roadmap.length - 1, 1);
-  const segmentStart = index / totalSegments;
-  const segmentEnd = (index + 1) / totalSegments;
-  const segmentProgress = Math.min(
-    Math.max((progress - segmentStart) / (segmentEnd - segmentStart), 0),
-    1,
-  );
 
   return (
-    <article className="relative grid gap-4 md:grid-cols-[72px_1fr]">
+    <article className="relative grid grid-cols-[68px_1fr] gap-4 md:grid-cols-[80px_1fr]">
       <div className="relative flex justify-center">
-        {!isLast ? (
-          <>
-            <TimelineSegment progress={segmentProgress} />
-            <span className="absolute top-16 bottom-[-1.5rem] w-px bg-white/10 md:hidden" />
-          </>
-        ) : null}
         <span
-          className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-lg border transition duration-500 ${
+          className={`relative z-10 flex h-16 w-16 items-center justify-center rounded-xl border transition duration-500 ${
             isActive
-              ? "border-cyan-300/60 bg-cyan-300/10 text-cyan-500 shadow-[0_0_28px_rgba(34,211,238,0.35)]"
-              : "border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-faint)]"
+              ? "border-cyan-300/60 bg-[var(--section-bg)] text-cyan-400 shadow-[0_0_28px_rgba(34,211,238,0.35)]"
+              : "border-[color:var(--border)] bg-[var(--section-bg)] text-[color:var(--text-faint)]"
           }`}
         >
           <StatusIcon status={item.status} />
@@ -160,27 +142,17 @@ function RoadmapTimelineItem({
   );
 }
 
-function TimelineSegment({ progress }: { progress: number }) {
+function TimelineTrack({ progress }: { progress: number }) {
   return (
-    <svg
-      className="pointer-events-none absolute left-1/2 top-16 bottom-[-1.5rem] hidden w-1 -translate-x-1/2 md:block"
-      preserveAspectRatio="none"
-      viewBox="0 0 2 100"
+    <div
+      className="pointer-events-none absolute bottom-8 left-[34px] top-16 z-0 w-px overflow-hidden bg-[var(--border)] md:left-10"
       aria-hidden="true"
     >
-      <line x1="1" y1="0" x2="1" y2="100" stroke="rgba(148,163,184,0.35)" />
-      <line
-        x1="1"
-        y1="0"
-        x2="1"
-        y2="100"
-        stroke="rgb(34,211,238)"
-        strokeLinecap="round"
-        strokeDasharray="100"
-        strokeDashoffset={100 - progress * 100}
-        pathLength="100"
+      <span
+        className="block w-px bg-gradient-to-b from-emerald-300 via-cyan-300 to-sky-300 shadow-[0_0_18px_rgba(34,211,238,0.75)] transition-[height] duration-150 ease-out"
+        style={{ height: `${Math.round(progress * 100)}%` }}
       />
-    </svg>
+    </div>
   );
 }
 

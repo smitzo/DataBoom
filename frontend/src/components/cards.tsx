@@ -19,7 +19,7 @@ export function MetricTile({
   tone: string;
 }) {
   return (
-    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-4">
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-4 transition duration-300 hover:-translate-y-0.5 hover:bg-[var(--surface-strong)]">
       <p className="text-sm text-[color:var(--text-muted)]">{label}</p>
       <p className={`mt-2 text-lg font-semibold ${tone}`}>{value}</p>
     </div>
@@ -61,7 +61,7 @@ export function ProfileCard({ profile }: { profile: ProfileConfig }) {
 
   return (
     <article
-      className={`min-h-72 rounded-lg border bg-[var(--surface)] p-5 text-left transition hover:bg-[var(--surface-strong)] ${profile.tone}`}
+      className={`min-h-72 rounded-lg border bg-[var(--surface)] p-5 text-left transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)] hover:shadow-2xl hover:shadow-[color:var(--shadow-soft)] ${profile.tone}`}
     >
       <div className="flex items-start justify-between gap-4">
         <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--surface-strong)]">
@@ -90,7 +90,7 @@ export function PipelineCard({ step }: { step: PipelineStepConfig }) {
   const Icon = step.icon;
 
   return (
-    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]">
       <Icon className="h-5 w-5 text-indigo-300" />
       <p className="mt-5 font-semibold text-[color:var(--text-primary)]">{step.label}</p>
       <p className="mt-2 text-sm text-[color:var(--text-muted)]">{step.detail}</p>
@@ -102,7 +102,7 @@ export function ValidationMetric({ metric }: { metric: ValidationMetricConfig })
   const Icon = metric.icon;
 
   return (
-    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-[color:var(--text-muted)]">{metric.label}</p>
         <Icon className={metric.success ? "h-5 w-5 text-emerald-300" : "h-5 w-5 text-[color:var(--text-faint)]"} />
@@ -122,7 +122,7 @@ export function ValidationMetric({ metric }: { metric: ValidationMetricConfig })
 
 export function DemoDataset({ demo }: { demo: DemoDatasetConfig }) {
   return (
-    <div className={`rounded-lg border bg-[var(--surface)] p-5 ${demo.tone}`}>
+    <div className={`rounded-lg border bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)] ${demo.tone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-semibold text-[color:var(--text-primary)]">{demo.name}</p>

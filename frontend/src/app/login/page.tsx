@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, Database, KeyRound, Loader2 } from "lucide-react";
+import { ArrowRight, KeyRound, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import { BrandLogo } from "@/components/brand";
 import { login as loginRequest } from "@/lib/api";
 import { loadSession, saveSession } from "@/lib/session";
 
@@ -41,15 +42,7 @@ export default function LoginPage() {
       <div className="grid min-h-screen lg:grid-cols-[0.95fr_1.05fr]">
         <section className="flex items-center px-6 py-10 sm:px-10 lg:px-16">
           <div className="w-full max-w-md">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-md border border-emerald-300/30 bg-emerald-300/10 text-emerald-200">
-                <Database className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold uppercase text-white">DataBoom</p>
-                <p className="text-xs text-zinc-500">Product workspace</p>
-              </div>
-            </div>
+            <BrandLogo size="lg" sublabel="Product workspace" className="[--text-primary:#ffffff] [--text-faint:#71717a]" />
 
             <h1 className="mt-12 text-4xl font-semibold leading-tight text-white sm:text-5xl">
               Login to subscribe, generate, preview, and download synthetic data.
