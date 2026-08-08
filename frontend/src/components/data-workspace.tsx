@@ -34,9 +34,10 @@ import type {
 } from "@/lib/api";
 import {
   apiUrl,
-  createProductRun,
+  createAsyncProductRun,
   getDocumentPreview,
   getProducts,
+  getRun,
   getRunArtifacts,
   getRuns,
   getSubscriptions,
@@ -88,48 +89,96 @@ export function DataWorkspace({ session }: { session: Session }) {
 
     let cancelled = false;
     async function loadRunSurface() {
-      try {
-        const [nextArtifacts, nextTablePreviews, nextDocumentPreviews] = await Promise.all([
-          getRunArtifacts(activeRun.run_id),
-          activeRun.kind === "relational"
-            ? Promise.all(
-                activeRun.tables
-                  .filter((table) => table.csv_path)
-                  .map((table) => getTablePreview(activeRun.run_id, table.table_name, 10)),
-              )
-            : Promise.resolve([]),
-          activeRun.kind === "document"
-            ? Promise.all(
-                activeRun.collections
-                  .filter((collection) => collection.json_path)
-                  .map((collection) =>
-                    getDocumentPreview(activeRun.run_id, collection.collection_name, 10),
-                  ),
-              )
-            : Promise.resolve([]),
-        ]);
+      const [nextArtifacts, nextTablePreviews, nextDocumentPreviews] = await Promise.all([
+        getRunArtifacts(activeRun.run_id).catch(() => null),
+        activeRun.kind === "relational"
+          ? Promise.all(
+              activeRun.tables
+                .filter((table) => table.csv_path)
+                .map((table) => loadTablePreviewSafe(activeRun.run_id, table.table_name)),
+            )
+          : Promise.resolve([]),
+        activeRun.kind === "document"
+          ? Promise.all(
+              activeRun.collections
+                .filter((collection) => collection.json_path)
+                .map((collection) =>
+                  loadDocumentPreviewSafe(activeRun.run_id, collection.collection_name),
+                ),
+            )
+          : Promise.resolve([]),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      setArtifacts(nextArtifacts);
+      setPreviews(
+        Object.fromEntries(
+          nextTablePreviews
+            .filter((preview): preview is TablePreview => Boolean(preview))
+            .map((preview) => [preview.table_name, preview]),
+        ),
+      );
+      setDocumentPreviews(
+        Object.fromEntries(
+          nextDocumentPreviews
+            .filter((preview): preview is DocumentPreview => Boolean(preview))
+            .map((preview) => [preview.collection_name, preview]),
+        ),
+      );
+    }
+
+    loadRunSurface();
+    return () => {
+      cancelled = true;
+    };
+  }, [runs, selectedRunId]);
+
+  useEffect(() => {
+    const run = runs.find((item) => item.run_id === selectedRunId);
+    if (!run || run.status !== "running") {
+      return;
+    }
+
+    const runId = run.run_id;
+    let cancelled = false;
+    setStatus("generating");
+
+    async function pollRun() {
+      while (!cancelled) {
+        await delay(1_000);
+        const nextRun = await getRun(runId);
 
         if (cancelled) {
           return;
         }
 
-        setArtifacts(nextArtifacts);
-        setPreviews(
-          Object.fromEntries(nextTablePreviews.map((preview) => [preview.table_name, preview])),
+        setRuns((current) => upsertRun(current, nextRun));
+        setSelectedResource((current) =>
+          current && runResources(nextRun).includes(current)
+            ? current
+            : runResources(nextRun)[0] ?? null,
         );
-        setDocumentPreviews(
-          Object.fromEntries(
-            nextDocumentPreviews.map((preview) => [preview.collection_name, preview]),
-          ),
-        );
-      } catch (caughtError) {
-        if (!cancelled) {
-          setError(caughtError instanceof Error ? caughtError.message : "Unable to load run");
+
+        if (nextRun.status !== "running") {
+          setStatus(runAgentStatus(nextRun));
+          if (nextRun.status === "failed") {
+            setError(nextRun.error ?? "Generation failed");
+          }
+          return;
         }
       }
     }
 
-    loadRunSurface();
+    pollRun().catch((caughtError) => {
+      if (!cancelled) {
+        setError(caughtError instanceof Error ? caughtError.message : "Unable to poll generation");
+        setStatus("error");
+      }
+    });
+
     return () => {
       cancelled = true;
     };
@@ -188,7 +237,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       setSelectedResource(
         firstRun ? runResources(firstRun)[0] ?? null : productResources(firstProduct)[0] ?? null,
       );
-      setStatus(firstRun ? "complete" : "idle");
+      setStatus(firstRun ? runAgentStatus(firstRun) : "idle");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to load workspace");
       setStatus("error");
@@ -210,7 +259,7 @@ export function DataWorkspace({ session }: { session: Session }) {
     setSelectedResource(
       matchingRun ? runResources(matchingRun)[0] ?? null : productResources(product)[0] ?? null,
     );
-    setStatus(matchingRun ? "complete" : "idle");
+    setStatus(matchingRun ? runAgentStatus(matchingRun) : "idle");
   }
 
   async function subscribe() {
@@ -245,16 +294,15 @@ export function DataWorkspace({ session }: { session: Session }) {
     setStatus("generating");
     setError(null);
     try {
-      const run = await createProductRun(session.token, selectedProduct.id, {
+      const run = await createAsyncProductRun(session.token, selectedProduct.id, {
         row_counts: selectedProduct.default_row_counts,
         seed: `${selectedProduct.id}-workspace`,
         output_formats: selectedProduct.output_formats,
       });
-      const nextRuns = await getRuns();
-      setRuns(nextRuns);
+      setRuns((current) => upsertRun(current, run));
       setSelectedRunId(run.run_id);
       setSelectedResource(runResources(run)[0] ?? null);
-      setStatus("complete");
+      setStatus(runAgentStatus(run));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to generate data");
       setStatus("error");
@@ -306,6 +354,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             <DataSurface
               activeKind={activeKind}
               documentPreview={selectedDocumentPreview}
+              isGenerating={selectedRun?.status === "running" || status === "generating"}
               product={selectedProduct}
               selectedResource={selectedResource}
               tablePreview={selectedTablePreview}
@@ -536,31 +585,47 @@ function ArtifactShortcut({
 function DataSurface({
   activeKind,
   documentPreview,
+  isGenerating,
   product,
   selectedResource,
   tablePreview,
 }: {
   activeKind: Product["kind"];
   documentPreview: DocumentPreview | null;
+  isGenerating: boolean;
   product: Product | null;
   selectedResource: string | null;
   tablePreview: TablePreview | null;
 }) {
   if (activeKind === "document") {
-    return <DocumentList preview={documentPreview} selectedResource={selectedResource} />;
+    return (
+      <DocumentList
+        isGenerating={isGenerating}
+        preview={documentPreview}
+        selectedResource={selectedResource}
+      />
+    );
   }
 
   if (activeKind === "graph" || activeKind === "masking") {
     return <PlannedSurface product={product} />;
   }
 
-  return <DataTable preview={tablePreview} selectedResource={selectedResource} />;
+  return (
+    <DataTable
+      isGenerating={isGenerating}
+      preview={tablePreview}
+      selectedResource={selectedResource}
+    />
+  );
 }
 
 function DataTable({
+  isGenerating,
   preview,
   selectedResource,
 }: {
+  isGenerating: boolean;
   preview: TablePreview | null;
   selectedResource: string | null;
 }) {
@@ -572,7 +637,11 @@ function DataTable({
           <p className="mt-4 text-lg font-semibold text-zinc-950">
             {selectedResource ? shortTableName(selectedResource) : "No table selected"}
           </p>
-          <p className="mt-2 text-sm text-zinc-500">Generate a relational run to populate this grid.</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {isGenerating
+              ? "Waiting for the first streamed rows from the generator."
+              : "Generate a relational run to populate this grid."}
+          </p>
         </div>
       </div>
     );
@@ -621,9 +690,11 @@ function DataTable({
 }
 
 function DocumentList({
+  isGenerating,
   preview,
   selectedResource,
 }: {
+  isGenerating: boolean;
   preview: DocumentPreview | null;
   selectedResource: string | null;
 }) {
@@ -636,7 +707,9 @@ function DocumentList({
             {selectedResource ?? "No collection selected"}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
-            Generate a Docu-Boom run to populate this document preview.
+            {isGenerating
+              ? "Waiting for the first streamed documents from the generator."
+              : "Generate a Docu-Boom run to populate this document preview."}
           </p>
         </div>
       </div>
@@ -704,7 +777,14 @@ function AgentPanel({
   subscribed: boolean;
   visibleRows: number;
 }) {
-  const busy = status === "generating" || status === "subscribing";
+  const busy = status === "generating" || status === "subscribing" || run?.status === "running";
+  const runState = runStateLabel(run);
+  const runStateClass =
+    run?.status === "running"
+      ? "border-cyan-200 bg-cyan-50 text-cyan-700"
+      : run?.validation?.passed
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : "border-zinc-200 bg-zinc-50 text-zinc-500";
 
   return (
     <aside className="flex min-h-full flex-col bg-zinc-50 text-zinc-950">
@@ -717,18 +797,16 @@ function AgentPanel({
             </h2>
           </div>
           <span
-            className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-semibold ${
-              run?.validation?.passed
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-zinc-200 bg-zinc-50 text-zinc-500"
-            }`}
+            className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-semibold ${runStateClass}`}
           >
-            {run?.validation?.passed ? (
+            {run?.status === "running" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : run?.validation?.passed ? (
               <CheckCircle2 className="h-3.5 w-3.5" />
             ) : (
               <CircleAlert className="h-3.5 w-3.5" />
             )}
-            {run?.validation?.passed ? "Validated" : "Waiting"}
+            {runState}
           </span>
         </div>
 
@@ -754,7 +832,7 @@ function AgentPanel({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Run
+                {status === "generating" ? "Generating" : "Run"}
               </button>
             ) : (
               <button
@@ -827,16 +905,43 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
     );
   }
 
+  const progress = progressPercent(run);
+
   return (
     <section className="rounded-md border border-zinc-200 bg-white p-4">
-      <h3 className="text-sm font-semibold text-zinc-950">Run summary</h3>
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-zinc-950">Run summary</h3>
+        <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
+          {run.status}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <Metric label="Rows" value={String(run.total_rows)} />
         <Metric
           label={run.kind === "document" ? "Collections" : "Tables"}
           value={String(run.table_count)}
         />
         <Metric label="Preview" value={String(visibleRows)} />
+        <Metric
+          label={run.status === "running" ? "Expected" : "Duration"}
+          value={
+            run.status === "running"
+              ? formatDuration(run.expected_seconds)
+              : formatDuration(totalRunSeconds(run))
+          }
+        />
+      </div>
+      <div className="mt-4">
+        <div className="mb-1 flex items-center justify-between text-xs font-semibold text-zinc-500">
+          <span>Progress</span>
+          <span>{progress}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
       <div className="mt-4 space-y-2">
         {runResourcesWithCounts(run).map((resource) => (
@@ -846,6 +951,29 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
           </div>
         ))}
       </div>
+      {run.operation_timings.length ? (
+        <div className="mt-4 border-t border-zinc-100 pt-4">
+          <p className="text-xs font-semibold uppercase text-zinc-400">Operation timings</p>
+          <div className="mt-2 space-y-2">
+            {run.operation_timings.map((timing) => (
+              <div
+                key={timing.operation}
+                className="flex items-center justify-between gap-3 text-xs"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${statusDotClass(timing.status)}`} />
+                  <span className="truncate font-semibold text-zinc-600">
+                    {formatOperationName(timing.operation)}
+                  </span>
+                </span>
+                <span className="shrink-0 font-semibold text-zinc-950">
+                  {formatDuration(timing.elapsed_seconds)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -950,12 +1078,118 @@ type Insight = {
   values: { label: string; count: number; percent: number }[];
 };
 
+async function loadTablePreviewSafe(runId: string, tableName: string) {
+  try {
+    return await getTablePreview(runId, tableName, 20);
+  } catch {
+    return null;
+  }
+}
+
+async function loadDocumentPreviewSafe(runId: string, collectionName: string) {
+  try {
+    return await getDocumentPreview(runId, collectionName, 20);
+  } catch {
+    return null;
+  }
+}
+
+function upsertRun(runs: GenerationRun[], run: GenerationRun) {
+  const exists = runs.some((item) => item.run_id === run.run_id);
+  if (!exists) {
+    return [...runs, run];
+  }
+  return runs.map((item) => (item.run_id === run.run_id ? run : item));
+}
+
+function runAgentStatus(run: GenerationRun): AgentStatus {
+  if (run.status === "running" || run.status === "pending") {
+    return "generating";
+  }
+  if (run.status === "failed") {
+    return "error";
+  }
+  return "complete";
+}
+
+function runStateLabel(run: GenerationRun | null) {
+  if (!run) {
+    return "Waiting";
+  }
+  if (run.status === "running") {
+    return "Running";
+  }
+  if (run.status === "failed") {
+    return "Failed";
+  }
+  if (run.validation?.passed) {
+    return "Validated";
+  }
+  return "Completed";
+}
+
+function progressPercent(run: GenerationRun) {
+  if (run.status === "completed") {
+    return 100;
+  }
+  return Math.min(100, Math.max(0, Math.round(run.progress_percent ?? 0)));
+}
+
+function totalRunSeconds(run: GenerationRun) {
+  return (
+    run.operation_timings.find((timing) => timing.operation === "total_run")?.elapsed_seconds ??
+    run.operation_timings.at(-1)?.elapsed_seconds ??
+    null
+  );
+}
+
+function formatDuration(seconds: number | null | undefined) {
+  if (seconds === null || seconds === undefined) {
+    return "Pending";
+  }
+  if (seconds < 1) {
+    return `${Math.max(0.01, seconds).toFixed(2)}s`;
+  }
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+function formatOperationName(operation: string) {
+  return operation
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function statusDotClass(status: string) {
+  if (status === "completed") {
+    return "bg-emerald-500";
+  }
+  if (status === "running") {
+    return "bg-cyan-500";
+  }
+  if (status === "failed") {
+    return "bg-red-500";
+  }
+  return "bg-zinc-300";
+}
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+}
+
 function buildAgentSteps(
   status: AgentStatus,
   run: GenerationRun | null,
   product: Product | null,
 ): AgentStep[] {
-  const done = status === "complete" || Boolean(run);
+  const done = status === "complete" || run?.status === "completed";
   const active = status === "generating";
   const resourceCount = product ? productResources(product).length : 0;
   const resourceLabel = product?.kind === "document" ? "collections" : "resources";

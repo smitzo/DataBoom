@@ -55,7 +55,7 @@ export type Subscription = {
 export type GenerationRun = {
   run_id: string;
   kind: "relational" | "document" | "graph" | "masking";
-  status: "completed" | "failed";
+  status: "pending" | "running" | "completed" | "failed";
   created_at: string;
   completed_at: string | null;
   artifact_dir: string;
@@ -65,6 +65,9 @@ export type GenerationRun = {
   output_formats: string[];
   total_rows: number;
   table_count: number;
+  progress_percent: number;
+  expected_seconds: number | null;
+  operation_timings: OperationTiming[];
   tables: GeneratedTable[];
   collections: GeneratedCollection[];
   validation: {
@@ -73,6 +76,14 @@ export type GenerationRun = {
     issues: { code: string; message: string; table_name: string | null }[];
   } | null;
   error: string | null;
+};
+
+export type OperationTiming = {
+  operation: string;
+  status: "pending" | "running" | "completed" | "failed";
+  elapsed_seconds: number;
+  started_at: string | null;
+  completed_at: string | null;
 };
 
 export type GeneratedTable = {
@@ -160,6 +171,21 @@ export async function createProductRun(
 ) {
   return apiRequest<GenerationRun>(
     `/products/${productId}/runs`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function createAsyncProductRun(
+  token: string,
+  productId: string,
+  payload: { row_counts: Record<string, number>; seed: string; output_formats: string[] },
+) {
+  return apiRequest<GenerationRun>(
+    `/products/${productId}/runs/async`,
     {
       method: "POST",
       body: JSON.stringify(payload),
