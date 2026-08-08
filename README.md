@@ -27,11 +27,12 @@ The current implementation includes Table-Boom relational generation and the Pha
 - CLI generation, plan preview, and artifact validation workflows.
 - FastAPI app scaffold with health and readiness endpoints.
 - API generation run endpoint for synchronous local relational runs.
+- Async product-run endpoint with progress percentage, expected seconds, and operation timing telemetry.
 - API artifact listing, downloads, and optional API-key protection.
 - Demo auth with `demo` / `demo` credentials.
 - Product catalog, subscription, product-run, table-preview, and document-preview API endpoints.
 - SQL-backed demo sessions, subscriptions, and run metadata in Dockerized API runs.
-- DataBoom workspace with product navigation, relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
+- DataBoom workspace with product navigation, live top-20 relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Live PostgreSQL schema introspection foundation.
 - 100k-record Phase 1 benchmark.
 - 500k-record Phase 2 benchmark baseline.
@@ -199,7 +200,7 @@ Then open:
 http://localhost:3000
 ```
 
-Login with email `demo` and password `demo`. The dashboard can subscribe to active products, generate data through the backend, show top-10 relational table previews for Table-Boom, show MongoDB-style document previews for Docu-Boom, and link to downloadable artifacts.
+Login with email `demo` and password `demo`. The dashboard can subscribe to active products, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display expected run time and operation timings, and link to downloadable artifacts.
 
 ## Docker
 

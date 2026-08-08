@@ -16,6 +16,8 @@ flowchart LR
     CLI --> Engine[DataBoom engine]
     API --> Engine
 
+    API --> AsyncRuns[AsyncRunManager local background runs]
+    AsyncRuns --> Engine
     API --> StateStore[StateStore boundary]
     StateStore --> MetadataDB[(PostgreSQL metadata)]
     API --> Redis[(Redis future run/cache helper)]
@@ -108,15 +110,19 @@ sequenceDiagram
     UI->>API: POST /subscriptions
     API->>Catalog: validate product and plan
     API->>Store: save subscription
-    UI->>API: POST /products/{product_id}/runs
+    UI->>API: POST /products/{product_id}/runs/async
     API->>Store: verify subscription
     API->>Catalog: resolve product kind and defaults
-    API->>Engine: execute product generation
-    Engine->>Disk: write artifacts, manifest, validation
-    API->>Store: save run metadata
-    API-->>UI: run response
+    API->>Store: save running run metadata
+    API-->>UI: running run response with ETA
+    API->>Engine: execute product generation in background
+    Engine->>Disk: stream artifacts and flush preview rows
+    UI->>API: GET /runs/{run_id}
+    API-->>UI: progress and operation timings
     UI->>API: GET preview/artifacts
-    API-->>UI: top records and download links
+    API-->>UI: top records and current download links
+    Engine->>Disk: write manifest and validation
+    API->>Store: save completed run metadata
 ```
 
 ## Frontend Route Architecture
@@ -162,6 +168,18 @@ flowchart LR
 ```
 
 Current local deployment uses Docker Compose for FastAPI, PostgreSQL, and Redis. Next.js runs as the local frontend during development. Phase 5 should add a production frontend container, CI, structured logging, retention controls, and deployment documentation.
+
+## Run Observability
+
+The Phase 2 local API exposes a lightweight asynchronous run lifecycle:
+
+- `POST /products/{product_id}/runs/async` creates a running run immediately.
+- `GET /runs/{run_id}` returns status, progress percentage, expected seconds, and operation timings.
+- Table previews read flushed CSV rows while generation is still running.
+- Document previews read completed JSON arrays or partially flushed NDJSON lines.
+- Completed relational runs report timings for schema parsing, plan building, export, validation, and total runtime.
+
+The current `AsyncRunManager` is intentionally in-process. It is enough for local MVP workflows, demos, and frontend progress polling. A production worker queue can replace this boundary later without changing the frontend run contract.
 
 ## How To Add A New Product Kind
 

@@ -1194,3 +1194,95 @@ This works because relational generation already orders tables by dependency. Pa
 - Export throughput is now the main 500k bottleneck.
 - Future million-record validation may need disk-backed or probabilistic strategies for very large parent key sets.
 - Re-run `benchmarks/phase2_500k.py --overwrite` after export optimizations to compare total runtime.
+
+## Decision: make dashboard generation asynchronous and observable
+
+### Question
+
+Why should product generation run asynchronously, and why do we need operation timings instead of only a final success/failure response?
+
+### Answer
+
+Dashboard-triggered generation should return a run immediately, then continue in the background. The frontend can poll that run to show status, progress, expected time, preview rows, artifact availability, and operation timings.
+
+### Why This Matters
+
+A synchronous API request is fine for tiny demos, but it is a bad user experience for larger generation. The browser waits without useful feedback, reverse proxies can time out, and the user cannot inspect partial output. Synthetic data generation is naturally a long-running job, so the product should treat it as a run lifecycle rather than one blocking HTTP call.
+
+Operation timings also keep performance work honest. If we only know "the run took 50 seconds", we do not know whether parsing, planning, exporting, validation, or file I/O caused the delay. Timings let us optimize the right stage.
+
+### Details
+
+The current implementation uses an in-process `AsyncRunManager`. It creates a run ID, saves a running placeholder, starts generation in a background thread, and lets `GET /runs/{run_id}` return updated progress while the backend is still writing artifacts.
+
+This is the right Phase 2 shape because it gives the product the correct API contract without prematurely adding Celery, Kafka, or a distributed worker platform. Those tools are useful when we need retries, distributed workers, durable queues, priority scheduling, or event streaming. For the local MVP, a small background manager is simpler and easier to reason about.
+
+The API now reports:
+
+- run status: running, completed, or failed,
+- progress percentage,
+- expected seconds,
+- operation timings,
+- generated resource metadata,
+- validation summary when complete.
+
+The exporter flushes early preview rows to disk. That lets the frontend read the first 20 CSV rows while a large relational run is still active. Docu-Boom also streams JSON and NDJSON artifacts, and the preview endpoint can read partially flushed NDJSON lines before the final JSON array is complete.
+
+### Follow-Up Notes
+
+- The local async manager is not a production queue.
+- A later production worker should preserve the same run response contract.
+- Real progress should eventually come from row counters per table/collection, not only elapsed-time estimation.
+- Add structured logs with run IDs before production deployment.
+
+## Decision: explain how DataBoom generates synthetic data
+
+### Question
+
+Does DataBoom generate data from thin air? Is it random? Is ChatGPT creating every row?
+
+### Answer
+
+DataBoom does not create useful data from nothing, and ChatGPT is not writing every row. The engine creates deterministic synthetic data from inputs: schema definitions, document specs, row counts, domain profiles, constraints, output formats, and a seed. The generated values use controlled pseudo-randomness plus rules, templates, and relationship tracking.
+
+### Why This Matters
+
+This distinction is the whole reason an engine is needed. A one-off prompt can produce a small sample, but it cannot reliably produce hundreds of thousands of rows with primary keys, foreign keys, output files, validation reports, repeatable seeds, and predictable performance.
+
+DataBoom acts like a factory. The schema/spec is the blueprint. The seed is the machine setting. The generator is the assembly line. The validator is quality control.
+
+### Details
+
+For Table-Boom relational generation, the flow is:
+
+1. Parse the PostgreSQL DDL into normalized schema models.
+2. Validate that tables, columns, primary keys, foreign keys, and constraints make structural sense.
+3. Build a relationship graph so parent tables are generated before child tables.
+4. Build a generation plan with row counts, column strategies, domain profile, output formats, and seed.
+5. Create deterministic random streams from the seed.
+6. Generate rows table by table.
+7. Register generated parent keys so child rows can reference real parent rows.
+8. Stream CSV, JSON, and SQL artifacts to local disk.
+9. Validate required fields, row counts, primary keys, and foreign keys.
+
+For Docu-Boom document generation, the flow is similar but uses collection specs instead of SQL DDL. A collection spec declares fields, nested objects, arrays, object IDs, and references. The generator uses those specs to write JSON and NDJSON documents.
+
+The "random" part is controlled pseudo-randomness. That means the values look varied, but the same seed and same input plan produce the same output again. This is important for debugging, demos, tests, and repeatable benchmarks.
+
+Examples:
+
+- A primary key can be generated as a stable sequence.
+- A foreign key is chosen from parent keys that were already generated.
+- A status field is chosen from a controlled list such as `active`, `pending`, or `blocked`.
+- A timestamp is produced from a base date plus a seeded offset.
+- A money value is produced from a seeded numeric range.
+- An email can be created from a deterministic template.
+- A document object ID comes from a stable seed-derived hexadecimal value.
+
+So the data is not production data, and it is not copied from a sensitive database. It is synthetic data shaped by the schema, rules, and seed. Later privacy phases can add masking and profiling, but the current generator already avoids the fragile pattern of asking an LLM to directly emit giant files.
+
+### Follow-Up Notes
+
+- Phase 3 can use an LLM to help plan generation intent, but the deterministic engine should still execute the plan.
+- Phase 4 Masker-Boom should add privacy policies for real sensitive source data.
+- More domain profiles can improve realism without changing the core engine contract.
