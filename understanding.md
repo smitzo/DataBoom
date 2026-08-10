@@ -996,3 +996,73 @@ So the data is not production data, and it is not copied from a sensitive databa
 - Phase 3 can use an LLM to help plan generation intent, but the deterministic engine should still execute the plan.
 - Phase 4 Masker-Boom should add privacy policies for real sensitive source data.
 - More domain profiles can improve realism without changing the core engine contract.
+
+## Decision: add cooperative cancel and retry for async product runs
+
+### Question
+
+Why add cancel and retry controls to async runs before adding Celery, Kafka, or a distributed worker system?
+
+### Answer
+
+The API already has long-running run state. Once a run can be `running`, users and operators need basic control actions:
+
+- cancel a run that is no longer wanted,
+- retry a run that failed because of a transient bug, bad input, or runtime interruption,
+- preserve enough context to know what was retried.
+
+Phase 2 can support those controls inside the current in-process async manager. Celery, Kafka, or a distributed worker can come later when we need durable queues, multi-process workers, priority scheduling, or cross-machine execution.
+
+### Why This Matters
+
+Long-running data generation is not like a normal CRUD request. A normal request either returns quickly or fails quickly. A generation run may write many files over many seconds or minutes. Without cancel/retry, the API can start work but cannot operate it.
+
+This is a reliability feature more than a latency optimization. It does not make a successful 500k run faster by itself. It reduces wasted runtime when a run should stop, and it gives failed runs a clean recovery path without requiring the user to rebuild the whole request manually.
+
+### OS and Python Detail
+
+Python threads cannot be safely killed from the outside. A thread may be holding a file handle, writing a CSV row, updating shared state, or executing cleanup code. Force-killing it could leave partial files, locked resources, or corrupted process state.
+
+The safer pattern is cooperative cancellation:
+
+1. The API marks a run as canceled.
+2. The async manager sets a cancellation event for that run.
+3. The generation pipeline checks that event at progress checkpoints.
+4. When cancellation is noticed, the worker raises an internal cancellation signal.
+5. The manager records a final `canceled` run state with elapsed time and partial progress.
+
+This is why the implementation uses a `threading.Event` instead of trying to terminate a thread.
+
+### Implementation Detail
+
+The async manager now stores:
+
+- a `Future` for the submitted background task,
+- a cancellation `Event`,
+- the original product-run context,
+- latest generated-row progress,
+- the latest run response.
+
+`POST /runs/{run_id}/cancel` marks a running run as `canceled`. If the task has not started yet, `Future.cancel()` may prevent it from running at all. If it is already running, the cancellation event stops it at the next progress callback.
+
+`POST /runs/{run_id}/retry` starts a fresh async run from the original product and payload. The new run records `retry_of_run_id`, so the retry lineage is visible in the API response.
+
+Failed runs now return clearer error strings such as `RuntimeError: forced generation failure` instead of only the raw message. That helps beginners and operators see whether the failure came from validation, a value error, an unexpected runtime error, or another exception type.
+
+### Tradeoffs
+
+This is not yet a production distributed job system:
+
+- cancellation is cooperative, not instant,
+- retry context is in the current API process,
+- a process restart can preserve saved run state but not in-memory retry context,
+- queued/running work still belongs to one local process.
+
+That is acceptable for Phase 2 because it keeps the API contract correct without adding heavy infrastructure too early.
+
+### Follow-Up Notes
+
+- Move retry context into persisted run metadata before multi-process deployment.
+- Add durable queues when jobs need to survive API process restarts while running.
+- Add per-stage cancellation checks if validation and future profiling stages become long-running.
+- Add cleanup policy for canceled partial artifacts so local disk does not grow forever.

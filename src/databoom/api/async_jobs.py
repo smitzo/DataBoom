@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock
 from uuid import uuid4
 
 from databoom.api.models import (
@@ -31,6 +31,18 @@ from databoom.ingest import parse_postgres_ddl
 BASELINE_RECORDS_PER_SECOND = 500_000 / 233.707
 
 
+class RunControlError(ValueError):
+    """Raised when a run cannot accept the requested control action."""
+
+
+class RunNotFoundError(KeyError):
+    """Raised when the async manager does not know a requested run."""
+
+
+class RunCancelledError(Exception):
+    """Internal cooperative cancellation signal for background runs."""
+
+
 @dataclass
 class RunProgressState:
     """Latest observed row progress for one background run."""
@@ -38,6 +50,15 @@ class RunProgressState:
     generated_rows: int = 0
     current_resource: str | None = None
     updated_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class ProductRunContext:
+    """Original async product-run inputs needed for retries."""
+
+    product: ProductCatalogEntry
+    payload: ProductRunRequest
+    retry_of_run_id: str | None = None
 
 
 @dataclass
@@ -48,6 +69,9 @@ class AsyncRunManager:
     executor: ThreadPoolExecutor = field(init=False)
     _runs: dict[str, GenerationRunResponse] = field(default_factory=dict, init=False)
     _progress: dict[str, RunProgressState] = field(default_factory=dict, init=False)
+    _contexts: dict[str, ProductRunContext] = field(default_factory=dict, init=False)
+    _futures: dict[str, Future[None]] = field(default_factory=dict, init=False)
+    _cancel_events: dict[str, Event] = field(default_factory=dict, init=False)
     _lock: Lock = field(default_factory=Lock, init=False)
 
     def __post_init__(self) -> None:
@@ -63,22 +87,29 @@ class AsyncRunManager:
         payload: ProductRunRequest,
         settings: Settings,
         state_store: StateStore,
+        retry_of_run_id: str | None = None,
     ) -> GenerationRunResponse:
         """Create a running placeholder and execute the product run in the background."""
 
         created_at = datetime.now(UTC)
         run_id = uuid4().hex
         artifact_dir = ensure_artifact_root(settings) / "runs" / run_id
+        cancel_event = Event()
         placeholder = _running_product_response(
             product=product,
             payload=payload,
             run_id=run_id,
             created_at=created_at,
             artifact_dir=artifact_dir,
+            retry_of_run_id=retry_of_run_id,
         )
-        self._set_run(placeholder)
+        self._register_run(
+            placeholder,
+            ProductRunContext(product=product, payload=payload, retry_of_run_id=retry_of_run_id),
+            cancel_event,
+        )
         state_store.save_run(placeholder)
-        self.executor.submit(
+        future = self.executor.submit(
             self._execute_product_run,
             product,
             payload,
@@ -87,7 +118,11 @@ class AsyncRunManager:
             run_id,
             created_at,
             artifact_dir,
+            cancel_event,
+            retry_of_run_id,
         )
+        with self._lock:
+            self._futures[run_id] = future
         return self.get_run(run_id) or placeholder
 
     def get_run(self, run_id: str) -> GenerationRunResponse | None:
@@ -101,6 +136,62 @@ class AsyncRunManager:
         if run.status != RunStatus.RUNNING:
             return run
         return _with_running_progress(run, progress)
+
+    def cancel_run(self, run_id: str, state_store: StateStore) -> GenerationRunResponse:
+        """Request cooperative cancellation for a running background run."""
+
+        with self._lock:
+            run = self._runs.get(run_id)
+            progress = self._progress.get(run_id, RunProgressState())
+            cancel_event = self._cancel_events.get(run_id)
+            future = self._futures.get(run_id)
+
+        if run is None:
+            raise RunNotFoundError(run_id)
+        if run.status != RunStatus.RUNNING:
+            raise RunControlError(
+                f"only running runs can be canceled; current status is {run.status}"
+            )
+
+        if cancel_event is not None:
+            cancel_event.set()
+        if future is not None:
+            future.cancel()
+
+        canceled = _canceled_response(run, progress)
+        self._set_run(canceled)
+        state_store.save_run(canceled)
+        return canceled
+
+    def retry_run(
+        self,
+        run_id: str,
+        *,
+        settings: Settings,
+        state_store: StateStore,
+    ) -> GenerationRunResponse:
+        """Start a new async run from a failed or canceled run's original request."""
+
+        with self._lock:
+            run = self._runs.get(run_id)
+            context = self._contexts.get(run_id)
+
+        if run is None:
+            raise RunNotFoundError(run_id)
+        if run.status not in {RunStatus.FAILED, RunStatus.CANCELED}:
+            raise RunControlError(
+                f"only failed or canceled runs can be retried; current status is {run.status}"
+            )
+        if context is None:
+            raise RunControlError("run retry context is unavailable")
+
+        return self.submit_product_run(
+            product=context.product,
+            payload=context.payload,
+            settings=settings,
+            state_store=state_store,
+            retry_of_run_id=run_id,
+        )
 
     def shutdown(self) -> None:
         """Release background worker threads when the API application stops."""
@@ -116,8 +207,11 @@ class AsyncRunManager:
         run_id: str,
         created_at: datetime,
         artifact_dir: Path,
+        cancel_event: Event,
+        retry_of_run_id: str | None,
     ) -> None:
         try:
+            _raise_if_canceled(cancel_event)
             run = execute_product_generation_run(
                 product,
                 payload,
@@ -129,19 +223,67 @@ class AsyncRunManager:
                     run_id,
                     generated_rows,
                     current_resource,
+                    cancel_event,
                 ),
             )
+            if retry_of_run_id is not None:
+                run = run.model_copy(update={"retry_of_run_id": retry_of_run_id})
+            if cancel_event.is_set():
+                run = _canceled_response(run, self._progress.get(run_id, RunProgressState()))
+        except RunCancelledError:
+            with self._lock:
+                current_run = self._runs.get(run_id)
+                progress = self._progress.get(run_id, RunProgressState())
+            if current_run is None:
+                current_run = _running_product_response(
+                    product=product,
+                    payload=payload,
+                    run_id=run_id,
+                    created_at=created_at,
+                    artifact_dir=artifact_dir,
+                    retry_of_run_id=retry_of_run_id,
+                )
+            run = _canceled_response(current_run, progress)
         except Exception as error:  # pragma: no cover - defensive path
-            run = _failed_response(
-                product=product,
-                payload=payload,
-                run_id=run_id,
-                created_at=created_at,
-                artifact_dir=artifact_dir,
-                error=error,
-            )
+            if cancel_event.is_set():
+                with self._lock:
+                    current_run = self._runs.get(run_id)
+                    progress = self._progress.get(run_id, RunProgressState())
+                run = _canceled_response(
+                    current_run
+                    or _running_product_response(
+                        product=product,
+                        payload=payload,
+                        run_id=run_id,
+                        created_at=created_at,
+                        artifact_dir=artifact_dir,
+                        retry_of_run_id=retry_of_run_id,
+                    ),
+                    progress,
+                )
+            else:
+                run = _failed_response(
+                    product=product,
+                    payload=payload,
+                    run_id=run_id,
+                    created_at=created_at,
+                    artifact_dir=artifact_dir,
+                    error=error,
+                    retry_of_run_id=retry_of_run_id,
+                )
         self._set_run(run)
         state_store.save_run(run)
+
+    def _register_run(
+        self,
+        run: GenerationRunResponse,
+        context: ProductRunContext,
+        cancel_event: Event,
+    ) -> None:
+        with self._lock:
+            self._runs[run.run_id] = run
+            self._contexts[run.run_id] = context
+            self._cancel_events[run.run_id] = cancel_event
 
     def _set_run(self, run: GenerationRunResponse) -> None:
         with self._lock:
@@ -152,13 +294,16 @@ class AsyncRunManager:
         run_id: str,
         generated_rows: int,
         current_resource: str,
+        cancel_event: Event,
     ) -> None:
+        _raise_if_canceled(cancel_event)
         with self._lock:
             self._progress[run_id] = RunProgressState(
                 generated_rows=generated_rows,
                 current_resource=current_resource,
                 updated_at=datetime.now(UTC),
             )
+        _raise_if_canceled(cancel_event)
 
 
 def _running_product_response(
@@ -168,6 +313,7 @@ def _running_product_response(
     run_id: str,
     created_at: datetime,
     artifact_dir: Path,
+    retry_of_run_id: str | None = None,
 ) -> GenerationRunResponse:
     row_counts = payload.row_counts or product.default_counts
     output_formats = tuple(payload.output_formats or product.output_formats)
@@ -191,6 +337,7 @@ def _running_product_response(
 
     return GenerationRunResponse(
         run_id=run_id,
+        retry_of_run_id=retry_of_run_id,
         kind=product.kind,
         status=RunStatus.RUNNING,
         created_at=created_at,
@@ -279,11 +426,13 @@ def _failed_response(
     created_at: datetime,
     artifact_dir: Path,
     error: Exception,
+    retry_of_run_id: str | None = None,
 ) -> GenerationRunResponse:
     completed_at = datetime.now(UTC)
     total_rows = sum((payload.row_counts or product.default_counts).values())
     return GenerationRunResponse(
         run_id=run_id,
+        retry_of_run_id=retry_of_run_id,
         kind=product.kind,
         status=RunStatus.FAILED,
         created_at=created_at,
@@ -305,7 +454,43 @@ def _failed_response(
                 completed_at=completed_at,
             ),
         ),
-        error=str(error),
+        error=_format_error(error),
+    )
+
+
+def _canceled_response(
+    run: GenerationRunResponse,
+    progress: RunProgressState,
+) -> GenerationRunResponse:
+    completed_at = datetime.now(UTC)
+    elapsed_seconds = max((completed_at - run.created_at).total_seconds(), 0.0)
+    generated_rows = max(progress.generated_rows, run.generated_rows, 0)
+    rows_per_second = _rows_per_second(generated_rows, elapsed_seconds)
+    progress_percent = max(
+        run.progress_percent,
+        _row_progress_percent(generated_rows, run.total_rows),
+    )
+    return run.model_copy(
+        update={
+            "status": RunStatus.CANCELED,
+            "completed_at": completed_at,
+            "generated_rows": generated_rows,
+            "progress_percent": round(progress_percent, 2),
+            "remaining_seconds": None,
+            "current_operation": "canceled",
+            "current_resource": progress.current_resource,
+            "rows_per_second": rows_per_second,
+            "operation_timings": (
+                OperationTimingResponse(
+                    operation="generate_async",
+                    status=OperationStatus.CANCELED,
+                    elapsed_seconds=round(elapsed_seconds, 3),
+                    started_at=run.created_at,
+                    completed_at=completed_at,
+                ),
+            ),
+            "error": "run canceled by user",
+        }
     )
 
 
@@ -369,6 +554,18 @@ def _remaining_seconds(
     if rows_per_second is None or rows_per_second <= 0:
         return None
     return round(max(total_rows - generated_rows, 0) / rows_per_second, 3)
+
+
+def _raise_if_canceled(cancel_event: Event) -> None:
+    if cancel_event.is_set():
+        raise RunCancelledError
+
+
+def _format_error(error: Exception) -> str:
+    message = str(error).strip()
+    if message:
+        return f"{type(error).__name__}: {message}"
+    return type(error).__name__
 
 
 def _safe_filename(value: str) -> str:

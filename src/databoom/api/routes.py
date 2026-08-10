@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from databoom import __version__
+from databoom.api.async_jobs import RunControlError, RunNotFoundError
 from databoom.api.models import (
     CollectionArtifactResponse,
     DemoUserResponse,
@@ -295,6 +296,61 @@ def get_run(request: Request, run_id: str) -> GenerationRunResponse:
     """Return one generation run by ID."""
 
     return _get_existing_run(request, run_id)
+
+
+@router.post(
+    "/runs/{run_id}/cancel",
+    response_model=GenerationRunResponse,
+    tags=["runs"],
+    dependencies=[protected_route],
+)
+def cancel_run(request: Request, run_id: str) -> GenerationRunResponse:
+    """Request cooperative cancellation for a running async run."""
+
+    try:
+        return request.app.state.async_run_manager.cancel_run(run_id, _state_store(request))
+    except RunNotFoundError as error:
+        if _state_store(request).get_run(run_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="run not found",
+            ) from error
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="run is not active in this API process",
+        ) from error
+    except RunControlError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+
+@router.post(
+    "/runs/{run_id}/retry",
+    response_model=GenerationRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["runs"],
+    dependencies=[protected_route],
+)
+def retry_run(request: Request, run_id: str) -> GenerationRunResponse:
+    """Retry a failed or canceled async product run."""
+
+    try:
+        return request.app.state.async_run_manager.retry_run(
+            run_id,
+            settings=request.app.state.settings,
+            state_store=_state_store(request),
+        )
+    except RunNotFoundError as error:
+        if _state_store(request).get_run(run_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="run not found",
+            ) from error
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="run retry context is unavailable in this API process",
+        ) from error
+    except RunControlError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
 
 @router.get(

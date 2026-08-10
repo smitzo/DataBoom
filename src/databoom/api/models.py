@@ -29,6 +29,7 @@ class RunStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELED = "canceled"
 
 
 class OperationStatus(StrEnum):
@@ -38,6 +39,7 @@ class OperationStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELED = "canceled"
 
 
 class ProductStatus(StrEnum):
@@ -312,6 +314,7 @@ class GenerationRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     run_id: str
+    retry_of_run_id: str | None = None
     kind: DataProductKind = DataProductKind.RELATIONAL
     status: RunStatus
     created_at: datetime

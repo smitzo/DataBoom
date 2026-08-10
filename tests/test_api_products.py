@@ -1,9 +1,16 @@
+from datetime import UTC, datetime
 from pathlib import Path
 from time import sleep
 
 from fastapi.testclient import TestClient
 
 from databoom.api import create_app
+from databoom.api.models import (
+    GenerationRunResponse,
+    OperationStatus,
+    OperationTimingResponse,
+    RunStatus,
+)
 from databoom.api.state import SQLAlchemyStateStore
 from databoom.core.config import Settings
 
@@ -226,6 +233,138 @@ def test_async_product_run_reports_progress_and_timings(tmp_path: Path) -> None:
     assert preview.status_code == 200
     assert len(preview.json()["rows"]) == 2
 
+    retry_completed = client.post(f"/runs/{payload['run_id']}/retry")
+    assert retry_completed.status_code == 409
+
+
+def test_async_product_run_can_cancel_running_run(tmp_path: Path, monkeypatch) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    subscription = client.post(
+        "/subscriptions",
+        headers=_auth_headers(token),
+        json={"product_id": "table-boom", "plan_id": "starter"},
+    )
+    assert subscription.status_code == 201, subscription.text
+
+    def slow_execute(
+        product,
+        payload,
+        settings,
+        *,
+        run_id=None,
+        created_at=None,
+        artifact_dir=None,
+        progress_callback=None,
+    ):
+        created_at = created_at or datetime.now(UTC)
+        for generated_rows in range(1, 50):
+            if progress_callback is not None:
+                progress_callback(generated_rows, "customers")
+            sleep(0.01)
+        return _fake_completed_product_run(
+            product,
+            payload,
+            run_id=run_id,
+            created_at=created_at,
+            artifact_dir=artifact_dir or tmp_path,
+            total_rows=50,
+        )
+
+    monkeypatch.setattr(
+        "databoom.api.async_jobs.execute_product_generation_run",
+        slow_execute,
+    )
+
+    response = client.post(
+        "/products/table-boom/runs/async",
+        headers=_auth_headers(token),
+        json={"row_counts": {"customers": 50}, "seed": "cancel-flow", "output_formats": ["csv"]},
+    )
+    assert response.status_code == 202, response.text
+    run_id = response.json()["run_id"]
+
+    canceled = client.post(f"/runs/{run_id}/cancel")
+    assert canceled.status_code == 200, canceled.text
+    canceled_payload = canceled.json()
+    assert canceled_payload["status"] == "canceled"
+    assert canceled_payload["error"] == "run canceled by user"
+    assert canceled_payload["operation_timings"][0]["status"] == "canceled"
+
+    stored = client.get(f"/runs/{run_id}")
+    assert stored.status_code == 200
+    assert stored.json()["status"] == "canceled"
+
+
+def test_async_product_run_retries_failed_run(tmp_path: Path, monkeypatch) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    subscription = client.post(
+        "/subscriptions",
+        headers=_auth_headers(token),
+        json={"product_id": "table-boom", "plan_id": "starter"},
+    )
+    assert subscription.status_code == 201, subscription.text
+
+    calls = 0
+
+    def flaky_execute(
+        product,
+        payload,
+        settings,
+        *,
+        run_id=None,
+        created_at=None,
+        artifact_dir=None,
+        progress_callback=None,
+    ):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("forced generation failure")
+        created_at = created_at or datetime.now(UTC)
+        if progress_callback is not None:
+            progress_callback(3, "customers")
+        return _fake_completed_product_run(
+            product,
+            payload,
+            run_id=run_id,
+            created_at=created_at,
+            artifact_dir=artifact_dir or tmp_path,
+            total_rows=3,
+        )
+
+    monkeypatch.setattr(
+        "databoom.api.async_jobs.execute_product_generation_run",
+        flaky_execute,
+    )
+
+    response = client.post(
+        "/products/table-boom/runs/async",
+        headers=_auth_headers(token),
+        json={"row_counts": {"customers": 3}, "seed": "retry-flow", "output_formats": ["csv"]},
+    )
+    assert response.status_code == 202, response.text
+
+    failed = _wait_for_run(client, response.json()["run_id"])
+    assert failed["status"] == "failed"
+    assert failed["error"] == "RuntimeError: forced generation failure"
+
+    retry = client.post(f"/runs/{failed['run_id']}/retry")
+    assert retry.status_code == 202, retry.text
+    retry_payload = retry.json()
+    assert retry_payload["status"] == "running"
+    assert retry_payload["retry_of_run_id"] == failed["run_id"]
+
+    completed = _wait_for_run(client, retry_payload["run_id"])
+    assert completed["status"] == "completed"
+    assert completed["retry_of_run_id"] == failed["run_id"]
+    assert completed["generated_rows"] == 3
+
 
 def test_product_run_requires_subscription(tmp_path: Path) -> None:
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
@@ -334,6 +473,42 @@ def _login(client: TestClient) -> str:
 
 def _auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _fake_completed_product_run(
+    product,
+    payload,
+    *,
+    run_id: str | None,
+    created_at: datetime,
+    artifact_dir: Path,
+    total_rows: int,
+) -> GenerationRunResponse:
+    completed_at = datetime.now(UTC)
+    return GenerationRunResponse(
+        run_id=run_id or "fake-run",
+        kind=product.kind,
+        status=RunStatus.COMPLETED,
+        created_at=created_at,
+        completed_at=completed_at,
+        artifact_dir=artifact_dir,
+        domain=product.domain,
+        output_formats=tuple(payload.output_formats or product.output_formats),
+        total_rows=total_rows,
+        table_count=1,
+        generated_rows=total_rows,
+        progress_percent=100.0,
+        current_operation="complete",
+        operation_timings=(
+            OperationTimingResponse(
+                operation="generate_async",
+                status=OperationStatus.COMPLETED,
+                elapsed_seconds=round((completed_at - created_at).total_seconds(), 3),
+                started_at=created_at,
+                completed_at=completed_at,
+            ),
+        ),
+    )
 
 
 def _wait_for_run(client: TestClient, run_id: str) -> dict:
