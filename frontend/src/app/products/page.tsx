@@ -31,11 +31,11 @@ export default function ProductsPage() {
   return (
     <PublicShell>
       <section className="border-b border-[color:var(--border)] bg-[var(--section-bg)]">
-        <div className="mx-auto max-w-[1680px] px-5 py-16 sm:px-8 lg:px-12 xl:px-16">
+        <div className="mx-auto max-w-[1760px] px-5 py-16 sm:px-8 lg:px-12 xl:px-16">
           <div className="grid gap-8 xl:grid-cols-[0.7fr_1fr] xl:items-end">
             <div>
               <p className="text-sm font-semibold uppercase text-emerald-300">Product catalog</p>
-              <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-tight text-[color:var(--text-primary)] lg:text-6xl">
+              <h1 className="mt-5 max-w-4xl text-4xl font-medium leading-tight text-[color:var(--text-primary)] lg:text-6xl">
                 Four data products, one controlled generation platform.
               </h1>
             </div>
@@ -68,7 +68,7 @@ export default function ProductsPage() {
             return (
               <article
                 key={item.title}
-                className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]"
+                className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]"
               >
                 <Icon className="h-5 w-5 text-emerald-300" />
                 <h2 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">

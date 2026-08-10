@@ -26,7 +26,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-secondary)] transition hover:bg-[var(--surface-strong)] hover:text-[color:var(--text-primary)]"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-[color:var(--border)] bg-[var(--surface)] text-[color:var(--text-secondary)] transition hover:bg-[var(--surface-strong)] hover:text-[color:var(--text-primary)]"
       type="button"
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}

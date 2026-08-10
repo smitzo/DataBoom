@@ -7,38 +7,38 @@ import { heroMetrics } from "@/data/workbench";
 export function Hero() {
   return (
     <section id="platform" className="relative overflow-hidden border-b border-[color:var(--border)]">
-      <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-gradient-to-l from-emerald-500/10 to-transparent lg:block" />
-      <div className="absolute left-0 right-0 top-28 hidden h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent lg:block" />
-      <div className="absolute bottom-10 left-0 right-0 hidden h-px bg-gradient-to-r from-emerald-300/0 via-emerald-300/30 to-sky-300/0 opacity-60 motion-safe:animate-pulse lg:block" />
-      <div className="mx-auto grid min-h-[760px] max-w-[1680px] gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:px-12 xl:px-16">
-        <div className="relative z-10 max-w-3xl">
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,7,20,0.9),rgba(5,7,20,0.68)_48%,rgba(8,19,31,0.74))]" />
+      <div className="absolute inset-y-0 right-0 hidden w-[56%] bg-[radial-gradient(circle_at_54%_36%,rgba(14,165,233,0.18),transparent_34%),radial-gradient(circle_at_82%_58%,rgba(45,212,191,0.08),transparent_32%)] lg:block" />
+      <div className="absolute left-0 right-0 top-28 hidden h-px bg-gradient-to-r from-transparent via-cyan-300/35 to-transparent lg:block" />
+      <div className="absolute bottom-10 left-0 right-0 hidden h-px bg-gradient-to-r from-emerald-300/0 via-cyan-300/25 to-sky-300/0 opacity-60 motion-safe:animate-pulse lg:block" />
+      <div className="relative mx-auto grid min-h-[780px] max-w-[1760px] gap-12 px-5 py-14 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start lg:px-12 lg:py-20 xl:px-16">
+        <div className="relative z-10 max-w-3xl lg:pt-6">
           <div className="flex flex-wrap items-center gap-3">
             <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.85)]" />
-            <span className="text-sm font-medium uppercase text-[color:var(--text-muted)]">
-              Controlled synthetic data platform
+            <span className="text-sm font-semibold uppercase text-[color:var(--text-muted)]">
+              Synthetic data operating layer
             </span>
             <span className="rounded-md border border-emerald-300/40 bg-emerald-300/10 px-3 py-1 text-xs font-semibold uppercase text-emerald-200">
-              Relational and document engines active
+              Table and document engines live
             </span>
           </div>
 
-          <h1 className="mt-9 text-5xl font-semibold leading-none text-[color:var(--text-primary)] sm:text-6xl lg:text-7xl">
-            Synthetic data infrastructure for{" "}
-            <span className="font-serif italic text-[color:var(--text-secondary)]">high-trust</span>{" "}
-            product teams.
+          <h1 className="mt-9 text-5xl font-semibold leading-[1.03] text-[color:var(--text-primary)] sm:text-6xl lg:text-[4.75rem]">
+            Generate production-shaped data without copying production.
           </h1>
 
           <div className="mt-8 max-w-2xl border-l border-[color:var(--border)] pl-5">
-            <p className="text-xl font-semibold leading-8 text-[color:var(--text-primary)]">
-              Generate realistic table and document datasets with repeatable seeds,
-              referential integrity, validation reports, and export-ready artifacts.
+            <p className="text-xl font-medium leading-8 text-[color:var(--text-secondary)]">
+              DataBoom turns schemas and product requirements into repeatable table and
+              document datasets with referential integrity, validation reports, and
+              export-ready artifacts.
             </p>
           </div>
 
           <p className="mt-6 max-w-2xl text-base leading-7 text-[color:var(--text-muted)]">
-            DataBoom is designed as an engine layer, not a prompt that prints rows.
-            Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom separate data surfaces
-            so generation, masking, validation, and deployment can scale cleanly.
+            The platform separates the generation engine from product surfaces:
+            Table-Boom for relational data, Docu-Boom for document data, Graph-Boom for
+            connected data, and Masker-Boom for privacy-preserving transformations.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
@@ -66,7 +66,9 @@ export function Hero() {
           </div>
         </div>
 
-        <ControlCenter showApiPanel={false} />
+        <div className="relative z-10 lg:pt-14 xl:pt-20">
+          <ControlCenter showApiPanel={false} />
+        </div>
       </div>
     </section>
   );

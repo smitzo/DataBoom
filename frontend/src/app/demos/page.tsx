@@ -44,7 +44,7 @@ export default function DemosPage() {
           {useCases.map((item) => (
             <article
               key={item.title}
-              className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5"
+              className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5"
             >
               <h2 className="text-lg font-semibold text-[color:var(--text-primary)]">
                 {item.title}

@@ -52,10 +52,10 @@ export default function ContactPage() {
   return (
     <PublicShell>
       <section className="border-b border-[color:var(--border)] bg-[var(--section-bg)]">
-        <div className="mx-auto grid max-w-[1680px] gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 xl:px-16">
+        <div className="mx-auto grid max-w-[1760px] gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:px-12 xl:px-16">
           <div>
             <p className="text-sm font-semibold uppercase text-emerald-300">Contact</p>
-            <h1 className="mt-5 max-w-3xl text-4xl font-semibold leading-tight text-[color:var(--text-primary)] lg:text-6xl">
+            <h1 className="mt-5 max-w-3xl text-4xl font-medium leading-tight text-[color:var(--text-primary)] lg:text-6xl">
               Bring the schema. We will shape the generation plan.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-[color:var(--text-muted)]">
@@ -78,7 +78,7 @@ export default function ContactPage() {
               return (
                 <article
                   key={item.title}
-                  className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]"
+                  className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]"
                 >
                   <Icon className="h-5 w-5 text-emerald-300" />
                   <h2 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">
@@ -101,7 +101,7 @@ export default function ContactPage() {
         subtitle="This scaffold keeps the future contact workflow product-focused instead of collecting vague marketing messages."
       >
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <form className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+          <form className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5">
             <div className="flex items-center gap-3">
               <span className="grid h-10 w-10 place-items-center rounded-md bg-emerald-300/10 text-emerald-300">
                 <MessageSquare className="h-5 w-5" />
@@ -147,7 +147,7 @@ export default function ContactPage() {
           </form>
 
           <div className="grid gap-4">
-            <article className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-5">
+            <article className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 p-5">
               <div className="flex items-center gap-3">
                 <CalendarCheck className="h-5 w-5 text-cyan-200" />
                 <p className="font-semibold text-[color:var(--text-primary)]">Evaluation checklist</p>
@@ -184,7 +184,7 @@ function ContactRoute({
   detail: string;
 }) {
   return (
-    <article className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+    <article className="rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
       <Icon className="h-4 w-4 text-emerald-300" />
       <p className="mt-4 font-semibold text-[color:var(--text-primary)]">{title}</p>
       <p className="mt-2 text-sm leading-6 text-[color:var(--text-muted)]">{detail}</p>

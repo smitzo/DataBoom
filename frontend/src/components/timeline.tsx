@@ -102,7 +102,7 @@ function TimelineCard({ item, active }: { item: TimelineItem; active: boolean })
       </div>
 
       <div
-        className={`rounded-lg border p-5 transition duration-500 ${
+        className={`rounded-xl border p-5 transition duration-500 ${
           active
             ? "border-cyan-300/35 bg-[var(--surface-strong)] shadow-2xl shadow-cyan-950/20"
             : "border-[color:var(--border)] bg-[var(--surface)]"
@@ -166,7 +166,7 @@ function StatusIcon({ status }: { status: TimelineStatus }) {
 
 function TimelineList({ section }: { section: TimelineSection }) {
   return (
-    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+    <div className="rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
       <p className="text-sm font-semibold text-[color:var(--text-primary)]">{section.title}</p>
       <div className="mt-4 space-y-3">
         {section.items.length > 0 ? (

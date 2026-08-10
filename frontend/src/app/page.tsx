@@ -17,8 +17,8 @@ export default function Home() {
       <Section
         id="platform"
         eyebrow="Core platform"
-        title="Synthetic data generation needs an engine, not a giant text response."
-        subtitle="DataBoom reads structure, plans dependencies, generates records deterministically, exports artifacts, and validates the result. LLMs can assist planning later; the engine owns high-volume execution."
+        title="High-volume synthetic data needs planning, integrity, and repeatable execution."
+        subtitle="DataBoom reads structure, plans dependencies, generates deterministically, exports artifacts, and validates the result. LLMs can assist planning; the engine owns high-volume execution."
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pipeline.map((step) => (
@@ -50,8 +50,8 @@ export default function Home() {
       <Section
         id="proof"
         eyebrow="Current proof"
-        title="The generation workflow is measurable end to end."
-        subtitle="The stack can authenticate, subscribe to active products, run the FastAPI backend, preview generated records, and download local artifacts."
+        title="Every generation run should be observable from plan to artifact."
+        subtitle="The full-stack flow can authenticate, subscribe to active products, run the FastAPI backend, preview generated records, and download local artifacts."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {validationMetrics.map((metric) => (
@@ -90,7 +90,7 @@ function ProofCard({
   detail: string;
 }) {
   return (
-    <article className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
+    <article className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5">
       <Icon className="h-5 w-5 text-emerald-300" />
       <h3 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">{title}</h3>
       <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">{detail}</p>

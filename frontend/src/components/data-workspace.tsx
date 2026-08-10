@@ -311,7 +311,7 @@ export function DataWorkspace({ session }: { session: Session }) {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-[calc(100vh-6rem)] place-items-center rounded-lg border border-white/10 bg-zinc-950">
+      <div className="grid min-h-[calc(100vh-6rem)] place-items-center rounded-xl border border-white/10 bg-zinc-950">
         <div className="flex items-center gap-3 text-sm font-semibold text-zinc-300">
           <Loader2 className="h-5 w-5 animate-spin text-cyan-200" />
           Loading DataBoom Workspace
@@ -321,8 +321,8 @@ export function DataWorkspace({ session }: { session: Session }) {
   }
 
   return (
-    <section className="min-h-[calc(100vh-6rem)] overflow-hidden rounded-lg border border-white/10 bg-zinc-950 shadow-2xl">
-      <div className="flex min-h-[calc(100vh-6rem)] flex-col xl:grid xl:grid-cols-[16rem_minmax(0,1fr)_25rem]">
+    <section className="min-h-[calc(100vh-6rem)] overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+      <div className="flex min-h-[calc(100vh-6rem)] flex-col xl:grid xl:grid-cols-[17rem_minmax(0,1fr)_26rem]">
         <WorkspaceSidebar
           activeKind={activeKind}
           products={products}
@@ -403,8 +403,8 @@ function WorkspaceSidebar({
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
 
   return (
-    <aside className="bg-zinc-950 text-zinc-100">
-      <div className="border-b border-white/10 px-4 py-4">
+    <aside className="bg-[#090b13] text-zinc-100">
+      <div className="border-b border-white/10 px-4 py-5">
         <BrandLogo
           href={null}
           size="sm"
@@ -420,7 +420,7 @@ function WorkspaceSidebar({
             {products.map((product) => (
               <button
                 key={product.id}
-                className={`flex h-10 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition ${
+                className={`flex h-11 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${
                   selectedProductId === product.id
                     ? "bg-zinc-800 text-white"
                     : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
@@ -448,7 +448,7 @@ function WorkspaceSidebar({
             {resourceNames.map((tableName) => (
               <button
                 key={tableName}
-                className={`flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition ${
+                className={`flex h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${
                   selectedResource === tableName
                     ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
                     : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"

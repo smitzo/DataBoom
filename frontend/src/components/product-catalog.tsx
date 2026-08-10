@@ -18,9 +18,9 @@ function ProductCatalogCard({ product }: { product: ProductCatalogItem }) {
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-lg border bg-[var(--surface)] p-6 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)] hover:shadow-2xl hover:shadow-[color:var(--shadow-soft)] ${product.accent}`}
+      className={`group relative overflow-hidden rounded-xl border bg-[var(--surface)] p-6 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)] hover:shadow-2xl hover:shadow-[color:var(--shadow-soft)] ${product.accent}`}
     >
-      <div className={`absolute inset-x-0 top-0 h-32 bg-gradient-to-r ${product.accent}`} />
+      <div className={`absolute inset-x-0 top-0 h-36 bg-gradient-to-r opacity-90 ${product.accent}`} />
       <div className="relative z-10">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
@@ -28,7 +28,7 @@ function ProductCatalogCard({ product }: { product: ProductCatalogItem }) {
               <Icon className="h-7 w-7" />
             </span>
             <div>
-              <p className="text-sm font-semibold uppercase text-current">{product.module}</p>
+              <p className="text-sm font-semibold text-current">{product.module}</p>
               <h2 className="mt-2 text-3xl font-semibold leading-tight text-[color:var(--text-primary)]">
                 {product.name}
               </h2>
@@ -37,7 +37,7 @@ function ProductCatalogCard({ product }: { product: ProductCatalogItem }) {
           <ProductStatus active={active} />
         </div>
 
-        <p className="mt-6 max-w-2xl text-lg font-semibold leading-7 text-[color:var(--text-primary)]">
+        <p className="mt-6 max-w-2xl text-lg font-medium leading-7 text-[color:var(--text-primary)]">
           {product.summary}
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-6 text-[color:var(--text-muted)]">
@@ -91,7 +91,7 @@ function CatalogPanel({
   compact?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
+    <div className="rounded-xl border border-[color:var(--border)] bg-[var(--surface-muted)] p-4">
       <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">{title}</p>
       <div className={compact ? "mt-4 flex flex-wrap gap-2" : "mt-4 space-y-3"}>
         {items.map((item) =>
