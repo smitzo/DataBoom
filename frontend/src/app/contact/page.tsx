@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Building2,
   CalendarCheck,
   Database,
@@ -18,8 +17,8 @@ import { PublicShell, Section } from "@/components/layout";
 const contactBlocks = [
   {
     icon: TerminalSquare,
-    title: "Evaluate locally",
-    detail: "Run the Docker API, start the Next.js frontend, and use demo/demo to test the current Table-Boom and Docu-Boom flow.",
+    title: "Evaluate the engine",
+    detail: "Start with the product surface, expected volume, export shape, and validation criteria before discussing implementation.",
   },
   {
     icon: MapPinned,
@@ -65,15 +64,8 @@ export default function ContactPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href="/login"
-                className="inline-flex h-12 items-center gap-2 rounded-md bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
-              >
-                Open demo login
-                <ArrowRight className="h-4 w-4" />
-              </a>
-              <a
                 href="/products"
-                className="inline-flex h-12 items-center gap-2 rounded-md border border-[color:var(--border)] px-6 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[var(--surface)]"
+                className="inline-flex h-12 items-center gap-2 rounded-md bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
               >
                 Review products
               </a>
@@ -116,7 +108,7 @@ export default function ContactPage() {
               </span>
               <div>
                 <p className="font-semibold text-[color:var(--text-primary)]">Request scaffold</p>
-                <p className="text-sm text-[color:var(--text-muted)]">Form wiring comes with the hosted contact backend.</p>
+                <p className="text-sm text-[color:var(--text-muted)]">Designed for a future hosted contact workflow.</p>
               </div>
             </div>
 
@@ -171,9 +163,9 @@ export default function ContactPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <ContactRoute icon={Database} title="Product fit" detail="Use `/products` to pick the data surface." />
-              <ContactRoute icon={FileText} title="Demo evidence" detail="Use `/demos` to review checked-in CSV examples." />
+              <ContactRoute icon={FileText} title="Use-case evidence" detail="Use `/demos` to review checked-in CSV examples." />
               <ContactRoute icon={Building2} title="Roadmap" detail="Use `/roadmap` to see what is active, next, and planned." />
-              <ContactRoute icon={Mail} title="Follow-up" detail="Replace this scaffold with CRM or email delivery in a later deployment phase." />
+              <ContactRoute icon={Mail} title="Follow-up" detail="Wire this scaffold to email, CRM, or an API route during deployment hardening." />
             </div>
           </div>
         </div>

@@ -1336,3 +1336,78 @@ DataBoom is a technical product, so the UI should feel alive but still operation
 - Replace the CSS-built brand mark with a dedicated vector logo when final brand design exists.
 - Wire the contact scaffold to a real email, CRM, or backend endpoint during deployment hardening.
 - Keep roadmap progress as a single track if future phase cards become more complex.
+
+## Decision: remove redundant public CTAs and modularize catalog/timeline UI
+
+### Question
+
+Why remove extra login, dashboard, and demo buttons from public pages?
+
+### Answer
+
+The public website already has a global navbar. When product pages, contact pages, and hero sections also repeat login/dashboard/demo buttons, the site starts to feel noisy and less intentional. A mature product page should explain the product clearly and let navigation handle movement between sections.
+
+The cleanup keeps one primary auth action in the public navbar:
+
+- logged out users see `Log in`,
+- logged in users see `My dashboard`.
+
+The hero now points to product understanding and roadmap context, not another login path. The products page no longer contains a demo-credentials panel. The contact page now focuses on scope definition instead of pushing demo login again.
+
+This improves the site because every route has a clearer job:
+
+- home explains the platform,
+- products explains the catalog,
+- demos shows use-case samples,
+- roadmap shows staged delivery,
+- contact captures implementation scope,
+- login handles credentials.
+
+### Question
+
+Why build a dedicated product catalog component?
+
+### Answer
+
+The old product page mixed product cards, product detail rows, and a duplicate login panel in one route file. That worked for a quick page, but it was not strong enough for a product catalog. The new `ProductCatalogGrid` and `ProductCatalogCard` components make catalog rendering reusable and easier to extend.
+
+The data now lives in `productCatalog`, where each product declares:
+
+- module,
+- status,
+- summary,
+- detail,
+- outputs,
+- capabilities,
+- use cases,
+- icon,
+- visual accent.
+
+That means Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom can be improved by editing product data instead of rewriting layout. It also makes the product taxonomy more serious: banking, healthcare, commerce, and SaaS are use cases, while product names map to data surfaces.
+
+### Question
+
+Why extract a generic timeline component?
+
+### Answer
+
+Roadmap logic should not be trapped inside a roadmap-specific component. A timeline is a reusable visual pattern: phases, milestones, work history, deployment plans, and future product releases can all share the same renderer.
+
+The new timeline accepts structured text data:
+
+- id,
+- eyebrow,
+- status,
+- title,
+- description,
+- sections.
+
+Each section has a title, items, and empty state. This means a future timeline can add sections like `Delivered`, `In progress`, `Risks`, `Next`, or `Owner notes` without editing timeline layout code. The roadmap page simply maps roadmap data into timeline items.
+
+This is better because the user can add future phases mostly by adding textual descriptions to `frontend/src/data/workbench.ts`. The visual behavior, scroll progress, active-state logic, icon rendering, and connected progress rail remain centralized in `Timeline`.
+
+### Follow-Up Notes
+
+- If roadmap data grows large, move product catalog and roadmap objects into separate data files.
+- Consider using the same timeline component for release notes or deployment history later.
+- Keep public pages focused on product knowledge and avoid repeating auth CTAs outside the navbar and login page.

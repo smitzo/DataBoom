@@ -1,6 +1,7 @@
+import { ArrowRight } from "lucide-react";
+
 import { MetricTile } from "@/components/cards";
 import { ControlCenter } from "@/components/control-center";
-import { HeroActions } from "@/components/public-session-actions";
 import { heroMetrics } from "@/data/workbench";
 
 export function Hero() {
@@ -14,35 +15,46 @@ export function Hero() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,0.85)]" />
             <span className="text-sm font-medium uppercase text-[color:var(--text-muted)]">
-              Open-source data generation and masking platform
+              Controlled synthetic data platform
             </span>
             <span className="rounded-md border border-emerald-300/40 bg-emerald-300/10 px-3 py-1 text-xs font-semibold uppercase text-emerald-200">
-              Phase 2 MVP ready
+              Relational and document engines active
             </span>
           </div>
 
           <h1 className="mt-9 text-5xl font-semibold leading-none text-[color:var(--text-primary)] sm:text-6xl lg:text-7xl">
-            One workspace to generate{" "}
-            <span className="font-serif italic text-[color:var(--text-secondary)]">domain-aware</span>{" "}
-            structured data.
+            Synthetic data infrastructure for{" "}
+            <span className="font-serif italic text-[color:var(--text-secondary)]">high-trust</span>{" "}
+            product teams.
           </h1>
 
           <div className="mt-8 max-w-2xl border-l border-[color:var(--border)] pl-5">
             <p className="text-xl font-semibold leading-8 text-[color:var(--text-primary)]">
-              Table-Boom turns schemas into validated table artifacts, Docu-Boom
-              creates nested NoSQL documents, and Masker-Boom is planned for redaction.
+              Generate realistic table and document datasets with repeatable seeds,
+              referential integrity, validation reports, and export-ready artifacts.
             </p>
           </div>
 
           <p className="mt-6 max-w-2xl text-base leading-7 text-[color:var(--text-muted)]">
-            The backend already handles schema parsing, dependency ordering,
-            deterministic generation, local exports, and validation reports. Use it
-            to create high-volume demo, test, and analytics datasets without asking
-            an LLM to stream every row.
+            DataBoom is designed as an engine layer, not a prompt that prints rows.
+            Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom separate data surfaces
+            so generation, masking, validation, and deployment can scale cleanly.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
-            <HeroActions />
+            <a
+              href="/products"
+              className="inline-flex h-12 items-center gap-2 rounded-md bg-emerald-300 px-6 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
+            >
+              Explore products
+              <ArrowRight className="h-4 w-4" />
+            </a>
+            <a
+              href="/roadmap"
+              className="inline-flex h-12 items-center gap-2 rounded-md border border-[color:var(--border)] px-6 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[var(--surface)]"
+            >
+              Review roadmap
+            </a>
           </div>
 
           <DataPulseRail />

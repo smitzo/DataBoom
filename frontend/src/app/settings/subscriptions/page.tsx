@@ -152,7 +152,7 @@ function SubscriptionSettingsContent({ session }: { session: Session }) {
             ))}
             {!isLoading && availableProducts.length === 0 ? (
               <p className="rounded-md border border-emerald-300/20 bg-emerald-300/10 p-4 text-sm text-emerald-100">
-                You are subscribed to every active demo product.
+                You are subscribed to every active product module.
               </p>
             ) : null}
           </div>

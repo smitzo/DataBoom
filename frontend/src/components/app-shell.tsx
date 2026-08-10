@@ -77,7 +77,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
               className="lg:hidden [--text-primary:#ffffff] [--text-faint:#71717a]"
             />
             <div className="hidden lg:block">
-              <p className="text-xs font-semibold uppercase text-zinc-600">Local full-stack MVP</p>
+              <p className="text-xs font-semibold uppercase text-zinc-600">Data operations workspace</p>
               <p className="text-sm text-zinc-400">
                 DataBoom product workspace.
               </p>

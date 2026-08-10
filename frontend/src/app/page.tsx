@@ -18,7 +18,7 @@ export default function Home() {
         id="platform"
         eyebrow="Core platform"
         title="Synthetic data generation needs an engine, not a giant text response."
-        subtitle="DataBoom reads structure, plans dependencies, generates records deterministically, exports artifacts, and validates the result. The LLM can help plan later; the engine does the high-volume work."
+        subtitle="DataBoom reads structure, plans dependencies, generates records deterministically, exports artifacts, and validates the result. LLMs can assist planning later; the engine owns high-volume execution."
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pipeline.map((step) => (
@@ -31,7 +31,7 @@ export default function Home() {
         id="products"
         eyebrow="Products"
         title="Four product surfaces, one shared generation workflow."
-        subtitle="Table-Boom and Docu-Boom are runnable today. Graph-Boom and Masker-Boom stay visible because the architecture already separates product kind from demo domain."
+        subtitle="Table-Boom and Docu-Boom are active. Graph-Boom and Masker-Boom define the next platform surfaces without mixing product architecture with use-case domains."
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {profiles.map((profile) => (
@@ -50,8 +50,8 @@ export default function Home() {
       <Section
         id="proof"
         eyebrow="Current proof"
-        title="The local MVP already runs end to end."
-        subtitle="The stack can log in, subscribe to active products, run the FastAPI backend, preview generated records, and download local artifacts."
+        title="The generation workflow is measurable end to end."
+        subtitle="The stack can authenticate, subscribe to active products, run the FastAPI backend, preview generated records, and download local artifacts."
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {validationMetrics.map((metric) => (

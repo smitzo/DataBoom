@@ -16,6 +16,8 @@ import type { LucideIcon } from "lucide-react";
 
 export type IconConfig = LucideIcon;
 
+export type RoadmapStatus = "achieved" | "next" | "planned";
+
 export type ProfileConfig = {
   name: string;
   role: string;
@@ -24,6 +26,19 @@ export type ProfileConfig = {
   icon: IconConfig;
   selected: boolean;
   tone: string;
+};
+
+export type ProductCatalogItem = {
+  name: string;
+  module: string;
+  status: RoadmapStatus;
+  summary: string;
+  detail: string;
+  outputs: string[];
+  capabilities: string[];
+  useCases: string[];
+  icon: IconConfig;
+  accent: string;
 };
 
 export type PipelineStepConfig = {
@@ -52,15 +67,17 @@ export type DemoDatasetConfig = {
   tone: string;
 };
 
-export type RoadmapStatus = "achieved" | "next" | "planned";
-
 export type RoadmapItem = {
+  id: string;
   phase: string;
   status: RoadmapStatus;
   title: string;
   description: string;
-  achieved: string[];
-  future: string[];
+  sections: {
+    title: string;
+    items: string[];
+    empty: string;
+  }[];
 };
 
 export const navItems = [
@@ -71,9 +88,9 @@ export const navItems = [
 ];
 
 export const heroMetrics = [
-  { label: "Benchmark", value: "100k rows", tone: "text-emerald-300" },
-  { label: "Memory", value: "50.7 MB", tone: "text-sky-300" },
-  { label: "Exports", value: "CSV JSON SQL", tone: "text-amber-200" },
+  { label: "Generation", value: "Schema-aware", tone: "text-emerald-300" },
+  { label: "Integrity", value: "Key-safe", tone: "text-sky-300" },
+  { label: "Delivery", value: "CSV JSON SQL", tone: "text-amber-200" },
 ];
 
 export const profiles: ProfileConfig[] = [
@@ -112,6 +129,81 @@ export const profiles: ProfileConfig[] = [
     icon: ShieldCheck,
     selected: false,
     tone: "border-amber-300/40 text-amber-200",
+  },
+];
+
+export const productCatalog: ProductCatalogItem[] = [
+  {
+    name: "Table-Boom",
+    module: "Relational data",
+    status: "achieved",
+    summary: "Relational datasets that preserve table structure, keys, references, and export contracts.",
+    detail:
+      "Built for engineering teams that need production-shaped records for testing, demos, local development, analytics prototypes, and CI fixtures without copying sensitive rows.",
+    outputs: ["CSV", "JSON", "SQL", "manifest", "validation report"],
+    capabilities: [
+      "PostgreSQL DDL parsing",
+      "Primary-key and foreign-key preservation",
+      "Deterministic generation seeds",
+      "Top-row previews and artifact downloads",
+    ],
+    useCases: ["fintech ledgers", "healthcare records", "commerce orders", "SaaS audit data"],
+    icon: Database,
+    accent: "from-emerald-300/25 via-cyan-300/10 to-transparent text-emerald-200 border-emerald-300/35",
+  },
+  {
+    name: "Docu-Boom",
+    module: "NoSQL document data",
+    status: "achieved",
+    summary: "Nested JSON and NDJSON collections for document databases and event-style applications.",
+    detail:
+      "Designed for product teams that need realistic object documents, arrays, stable object IDs, and document previews before moving into source-data profiling.",
+    outputs: ["JSON", "NDJSON", "manifest", "validation report"],
+    capabilities: [
+      "Nested object generation",
+      "Array fields and stable IDs",
+      "Document previews",
+      "Collection-level artifacts",
+    ],
+    useCases: ["customer profiles", "catalog documents", "order events", "activity logs"],
+    icon: FileJson,
+    accent: "from-cyan-300/25 via-sky-300/10 to-transparent text-cyan-200 border-cyan-300/35",
+  },
+  {
+    name: "Graph-Boom",
+    module: "Graph data",
+    status: "planned",
+    summary: "Node and edge generation for connected datasets, relationship graphs, and graph previews.",
+    detail:
+      "Planned for fraud networks, knowledge graphs, recommendation surfaces, and relationship-heavy datasets where edge validity matters as much as node realism.",
+    outputs: ["nodes", "edges", "JSON", "CSV"],
+    capabilities: [
+      "Node labels and properties",
+      "Edge cardinality rules",
+      "Graph validation",
+      "Graph preview workspace",
+    ],
+    useCases: ["fraud networks", "recommendations", "knowledge graphs", "ownership maps"],
+    icon: GitBranch,
+    accent: "from-indigo-300/25 via-sky-300/10 to-transparent text-indigo-200 border-indigo-300/35",
+  },
+  {
+    name: "Masker-Boom",
+    module: "Masking and redaction",
+    status: "planned",
+    summary: "Policy-driven masking for sensitive source data while preserving useful structure.",
+    detail:
+      "Planned as the privacy layer for teams that need redaction, tokenization, hashing, synthetic replacement, audit reports, and stable joins.",
+    outputs: ["masked CSV", "masked JSON", "policy report", "audit log"],
+    capabilities: [
+      "Sensitive-field classification",
+      "Redaction and tokenization policies",
+      "Stable synthetic replacement",
+      "Privacy validation reports",
+    ],
+    useCases: ["PII redaction", "tokenized joins", "medical datasets", "customer support data"],
+    icon: ShieldCheck,
+    accent: "from-amber-300/25 via-emerald-300/10 to-transparent text-amber-200 border-amber-300/35",
   },
 ];
 
@@ -154,84 +246,123 @@ export const demos: DemoDatasetConfig[] = [
 
 export const roadmap: RoadmapItem[] = [
   {
+    id: "phase-1",
     phase: "Phase 1",
     status: "achieved",
     title: "Table-Boom relational foundation",
     description:
       "Table-Boom can generate deterministic relational data from PostgreSQL schema files and write validated local artifacts.",
-    achieved: [
-      "PostgreSQL DDL ingestion and normalized schema models.",
-      "Relationship-aware generation with primary-key and foreign-key preservation.",
-      "CSV, JSON, and SQL artifact export to local disk.",
-      "Financial and healthcare demo profiles plus checked-in CSV datasets.",
-      "100k-record benchmark with validation report.",
-      "Static Next.js workbench with a reusable component structure.",
+    sections: [
+      {
+        title: "Delivered",
+        empty: "No delivered work recorded yet.",
+        items: [
+          "PostgreSQL DDL ingestion and normalized schema models.",
+          "Relationship-aware generation with primary-key and foreign-key preservation.",
+          "CSV, JSON, and SQL artifact export to local disk.",
+          "Financial and healthcare use-case profiles plus checked-in CSV datasets.",
+          "100k-record benchmark with validation report.",
+          "Static Next.js workbench with a reusable component structure.",
+        ],
+      },
+      {
+        title: "Maintenance",
+        empty: "No maintenance work listed.",
+        items: ["Keep Phase 1 benchmark and sample data updated when generation behavior changes."],
+      },
     ],
-    future: ["Keep Phase 1 benchmark and demo data updated when generation behavior changes."],
   },
   {
+    id: "phase-2",
     phase: "Phase 2",
     status: "achieved",
     title: "Table-Boom scale, API, profiling, and Docu-Boom",
     description:
       "This phase expands Table-Boom scale and access patterns, then adds Docu-Boom document generation for NoSQL use cases.",
-    achieved: [
-      "FastAPI app scaffold with health and readiness endpoints.",
-      "Synchronous API generation runs with SQL-backed metadata in Dockerized runs.",
-      "Dashboard flow for demo login, product subscriptions, product generation, table previews, and downloads.",
-      "DataBoom workspace with product navigation, spreadsheet previews, document previews, agent steps, and exports.",
-      "Demo login, product subscription, product-run generation, run detail, and table preview dashboard pages.",
-      "Docu-Boom JSON and NDJSON generation with document previews.",
-      "Artifact listing and download endpoints for completed local runs.",
-      "Optional API-key protection for run and artifact routes.",
-      "CLI plan preview and artifact re-validation commands.",
-      "Live PostgreSQL schema introspection foundation.",
-    ],
-    future: [
-      "Harden generation toward 500k records with chunk-aware validation.",
-      "Expand FastAPI run status, validation detail, and long-running job controls.",
-      "Add live PostgreSQL profiling and metadata introspection.",
-      "Add custom schema upload, custom domain mapping, and saved generation templates.",
+    sections: [
+      {
+        title: "Delivered",
+        empty: "No delivered work recorded yet.",
+        items: [
+          "FastAPI app scaffold with health and readiness endpoints.",
+          "Synchronous API generation runs with SQL-backed metadata in Dockerized runs.",
+          "Product subscriptions, product generation, table previews, run detail, and downloads.",
+          "DataBoom workspace with product navigation, spreadsheet previews, document previews, agent steps, and exports.",
+          "Docu-Boom JSON and NDJSON generation with document previews.",
+          "Artifact listing and download endpoints for completed local runs.",
+          "Optional API-key protection for run and artifact routes.",
+          "CLI plan preview and artifact re-validation commands.",
+          "Live PostgreSQL schema introspection foundation.",
+        ],
+      },
+      {
+        title: "Hardening next",
+        empty: "No hardening work listed.",
+        items: [
+          "Harden generation toward 500k records with chunk-aware validation.",
+          "Expand FastAPI run status, validation detail, and long-running job controls.",
+          "Add live PostgreSQL profiling and metadata introspection.",
+          "Add custom schema upload, custom domain mapping, and saved generation templates.",
+        ],
+      },
     ],
   },
   {
+    id: "phase-3",
     phase: "Phase 3",
     status: "planned",
     title: "LLM-assisted planning, Graph-Boom, and operator UX",
     description:
       "Planning becomes more intelligent while DataBoom gains Graph-Boom support for connected datasets.",
-    achieved: [],
-    future: [
-      "Add prompt packs, prompt cache keys, and validated planner output schemas.",
-      "Add dry-run plan review before generation.",
-      "Add Graph-Boom generation for nodes, edges, properties, and graph exports.",
-      "Build operator-facing run review, plan review, and graph preview screens.",
+    sections: [
+      {
+        title: "Planned capabilities",
+        empty: "No planned capabilities listed.",
+        items: [
+          "Add prompt packs, prompt cache keys, and validated planner output schemas.",
+          "Add dry-run plan review before generation.",
+          "Add Graph-Boom generation for nodes, edges, properties, and graph exports.",
+          "Build operator-facing run review, plan review, and graph preview screens.",
+        ],
+      },
     ],
   },
   {
+    id: "phase-4",
     phase: "Phase 4",
     status: "planned",
     title: "Masker-Boom privacy and security hardening",
     description:
       "Sensitive-domain workflows become safer through Masker-Boom policy controls, redaction, tokenization, and privacy validation.",
-    achieved: [],
-    future: [
-      "Add Masker-Boom policy files for synthetic replacement, hashing, tokenization, and redaction.",
-      "Prevent raw sampled values from appearing in logs or reports.",
-      "Add audit logs and privacy validation reports.",
+    sections: [
+      {
+        title: "Planned capabilities",
+        empty: "No planned capabilities listed.",
+        items: [
+          "Add Masker-Boom policy files for synthetic replacement, hashing, tokenization, and redaction.",
+          "Prevent raw sampled values from appearing in logs or reports.",
+          "Add audit logs and privacy validation reports.",
+        ],
+      },
     ],
   },
   {
+    id: "phase-5",
     phase: "Phase 5",
     status: "planned",
     title: "Production release and extensibility",
     description:
       "The product becomes deployment-ready with CI, observability, retention controls, and adapter boundaries.",
-    achieved: [],
-    future: [
-      "Add production deployment guides and CI build verification.",
-      "Add health/readiness endpoints, structured logs, and run IDs.",
-      "Add adapter boundaries for more databases, object storage, and future export targets.",
+    sections: [
+      {
+        title: "Planned capabilities",
+        empty: "No planned capabilities listed.",
+        items: [
+          "Add production deployment guides and CI build verification.",
+          "Add health/readiness endpoints, structured logs, and run IDs.",
+          "Add adapter boundaries for more databases, object storage, and future export targets.",
+        ],
+      },
     ],
   },
 ];

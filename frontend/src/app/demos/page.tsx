@@ -24,7 +24,7 @@ export default function DemosPage() {
         id="demo-data"
         eyebrow="Demos"
         title="Use cases are profiles, not separate products."
-        subtitle="The checked-in demos prove the engine can support sensitive-domain style data without requiring production records in Phase 1 or Phase 2."
+        subtitle="The checked-in samples show how sensitive-domain style records can be represented without turning banking, healthcare, or commerce into separate products."
       >
         <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
           {demos.map((demo) => (
