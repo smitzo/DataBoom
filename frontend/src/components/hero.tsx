@@ -23,22 +23,25 @@ export function Hero() {
             </span>
           </div>
 
-          <h1 className="mt-9 text-5xl font-semibold leading-[1.03] text-[color:var(--text-primary)] sm:text-6xl lg:text-[4.75rem]">
-            Generate production-shaped data without copying production.
+          <h1 className="mt-9 text-5xl font-medium leading-[1.03] text-[color:var(--text-primary)] sm:text-6xl lg:text-[4.85rem]">
+            One synthetic data platform for every{" "}
+            <span className="font-serif italic text-[color:var(--text-secondary)]">
+              non-production
+            </span>{" "}
+            dataset.
           </h1>
 
           <div className="mt-8 max-w-2xl border-l border-[color:var(--border)] pl-5">
             <p className="text-xl font-medium leading-8 text-[color:var(--text-secondary)]">
-              DataBoom turns schemas and product requirements into repeatable table and
-              document datasets with referential integrity, validation reports, and
-              export-ready artifacts.
+              Generate finance, healthcare, commerce, and SaaS-style data from schemas
+              without handing production rows to prompts, scripts, or stale seed dumps.
             </p>
           </div>
 
           <p className="mt-6 max-w-2xl text-base leading-7 text-[color:var(--text-muted)]">
-            The platform separates the generation engine from product surfaces:
-            Table-Boom for relational data, Docu-Boom for document data, Graph-Boom for
-            connected data, and Masker-Boom for privacy-preserving transformations.
+            DataBoom gives engineering teams a controlled engine for table, document,
+            graph, and masked data with deterministic runs, validation reports, and
+            export-ready artifacts.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
@@ -50,10 +53,10 @@ export function Hero() {
               <ArrowRight className="h-4 w-4" />
             </a>
             <a
-              href="/roadmap"
+              href="/#what-is-databoom"
               className="inline-flex h-12 items-center gap-2 rounded-md border border-[color:var(--border)] px-6 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[var(--surface)]"
             >
-              Review roadmap
+              See the platform
             </a>
           </div>
 

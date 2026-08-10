@@ -2,9 +2,9 @@
 
 :root {
   color-scheme: dark;
-  --page-bg: #050714;
-  --section-bg: #070a16;
-  --header-bg: rgba(5, 7, 20, 0.92);
+  --page-bg: #030405;
+  --section-bg: #0e0f16;
+  --header-bg: rgba(3, 4, 5, 0.92);
   --surface: rgba(255, 255, 255, 0.04);
   --surface-strong: rgba(255, 255, 255, 0.075);
   --surface-muted: rgba(255, 255, 255, 0.025);
