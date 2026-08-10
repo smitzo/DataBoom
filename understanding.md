@@ -1,152 +1,53 @@
 # DataBoom Understanding Log
 
-This file explains important project decisions: what changed, why it changed, and how the decision improves the project. Keep it beginner-friendly, but detailed enough that a new engineer can understand the professional reasoning behind significant architecture, product, performance, and reliability choices.
+This file is a backend and systems learning notebook for DataBoom. It explains why the engine, API, database, Docker setup, validation path, benchmarks, and reliability decisions exist.
 
-Not every commit needs an entry. Add an entry when the change is significant enough that a future contributor should understand the reasoning or tradeoff.
+Keep it beginner-friendly, but professional. The goal is to teach how an enterprise-grade synthetic-data platform is designed through real decisions in this repo.
 
-## How To Update This File
+Do not use this file for frontend styling notes, documentation process, copy changes, or routine commit summaries. Add entries only when the change teaches something meaningful about backend architecture, Python implementation, operating-system behavior, database design, Docker/runtime setup, engine performance, latency, reliability, or production tradeoffs.
 
-For significant changes, add a new entry using this format:
-
-```md
-## Decision: short title
+## Decision: build an engine instead of relying on Faker or ChatGPT alone
 
 ### Question
 
-- What question or tradeoff did this change answer?
+Why does DataBoom need a backend engine instead of just using Faker or asking ChatGPT to generate a large file?
 
 ### Answer
 
-- Short direct answer.
+Faker can create individual fake values, and an LLM can help explain or plan what data should look like. Neither one is enough to reliably generate large, validated datasets with table order, primary keys, foreign keys, output artifacts, progress tracking, and benchmarkable performance.
+
+DataBoom needs an execution engine. The engine reads structure, plans dependencies, generates rows in a repeatable way, streams files to disk, validates artifacts, and reports operational state.
 
 ### Why This Matters
 
-- Explain the product, architecture, performance, reliability, or maintainability impact.
+A user may ask for 100k, 500k, or 1M records. At that scale, the problem is no longer "make me a fake name." The real problem is:
+
+- keep relationships valid,
+- avoid keeping the entire dataset in memory,
+- write files incrementally,
+- validate the exact files the user downloads,
+- make the run reproducible with a seed,
+- measure latency and memory,
+- expose progress through the API.
+
+That is backend engineering work. It needs data structures, algorithms, I/O design, and runtime state management.
 
 ### Details
 
-- Explain the deeper reasoning in beginner-friendly but professional language.
+Faker is useful inside a generator, but it is a value library. It does not know that `orders.customer_id` must reference an existing `customers.id`, that parent tables must be generated first, or that a CSV file must be validated after export.
+
+ChatGPT is useful for planning and schema interpretation, but it should not directly emit one million records. Large text generation is slow, expensive, hard to validate while streaming, and not naturally aware of relational constraints. The safer architecture is:
+
+1. LLM helps plan intent in later phases.
+2. Backend engine turns the plan into deterministic execution.
+3. Validator checks output artifacts.
+4. API reports run state, progress, timings, and errors.
 
 ### Follow-Up Notes
 
-- Mention anything intentionally deferred or any future work this decision unlocks.
-```
-
-## Commit: docs: split product scope documents
-
-### What Changed
-
-- Replaced the original one-paragraph `instructions.md` with a project entry point.
-- Added `docs/functional-specification.md` for product behavior and workflows.
-- Added `docs/technical-design-and-roadmap.md` for architecture, stack, diagrams, phases, and commit sequencing.
-- Added `docs/prompt-caching-and-instructions.md` for OpenAI prompt caching and Codex instruction hygiene.
-- Added `AGENTS.md` so Codex has persistent repository guidance.
-
-### Why It Changed
-
-The project was too important to leave as a single rough paragraph. DataBoom needs to become a production-grade synthetic data engine, so the planning documents need separation of concerns. Product behavior, technical design, prompt strategy, and agent rules all change at different speeds and are read by different audiences.
-
-### Why This Approach
-
-Separating the documents prevents one giant file from becoming confusing. A product reviewer can read the functional spec. An engineer can read the technical roadmap. An agent can read `AGENTS.md`. Prompt-related decisions can live in their own file so LLM behavior is not mixed into backend implementation details.
-
-This is better than one long instruction file because it reduces accidental edits, makes reviews easier, and lets each file stay focused.
-
-### Performance, Reliability, or Maintainability Impact
-
-This change does not improve runtime performance because no application code exists yet. It improves maintainability by giving future commits a clear contract. It improves reliability indirectly because future implementation work must follow documented objectives instead of improvising.
-
-### Beginner Explanation
-
-Think of the project like a building. Before writing code, we created separate blueprints: what the building is for, how it should be constructed, how workers should coordinate, and what rules they must follow. This makes later construction faster and less chaotic.
-
-### Follow-Up Notes
-
-- Implementation has not started yet.
-- Phase 1 should begin with the backend engine.
-- Future significant decisions should update this file.
-
-## Commit: docs: add product reasoning and backend implementation discipline
-
-### What Changed
-
-- Added `docs/product-reasoning-faq.md` to answer strategic questions using 4W1H reasoning.
-- Added reasoning for why DataBoom is more than Faker.
-- Added reasoning for why ChatGPT should not directly generate one million records.
-- Added reasoning for how a streaming engine can eventually handle one million records.
-- Added a careful comparison against Tonic.ai without claiming false universal superiority.
-- Added sensitive-domain positioning for fintech, medical, insurance, and customer-sensitive workflows.
-- Added this `understanding.md` file as a permanent explanation log.
-- Updated `AGENTS.md` so significant future decisions update this file.
-
-### Why It Changed
-
-The project needs clear answers to hard questions before implementation begins. People will naturally ask why this engine should exist, why an LLM alone is not enough, why we cannot just use Faker, and why we would build an internal system when commercial tools exist. Capturing those answers early keeps the team aligned.
-
-The project also needs a durable explanation trail. Code tells us what changed, but not always why. `understanding.md` preserves the reasoning behind significant decisions so future contributors can learn quickly without turning the file into a noisy changelog.
-
-### Why This Approach
-
-The FAQ is in `docs/` because it is product and architecture reasoning, not agent instruction. `understanding.md` is at the repository root because it should be visible when decisions are important enough to explain.
-
-The comparison with Faker is framed carefully: Faker is useful, but incomplete. DataBoom should use Faker for fake values while adding schema parsing, relationship solving, streaming, validation, and run management around it.
-
-The comparison with Tonic.ai is also framed carefully. Tonic.ai is a mature commercial platform. DataBoom's argument is not "Tonic is bad"; it is "we need an owned, inspectable, local-first, PostgreSQL-focused engine that we can evolve commit by commit."
-
-The ChatGPT reasoning separates planning from execution. LLMs are strong at interpreting intent and producing plans. They are not the right execution layer for directly emitting huge relational datasets with guaranteed constraints.
-
-### Performance, Reliability, or Maintainability Impact
-
-The reasoning pushes the implementation toward a streaming pipeline. That matters for performance because 100k, 500k, and eventually 1M records cannot be treated as one giant in-memory object.
-
-The documentation also improves reliability. It says schema safety wins over prompt requests, validation is required, and privacy claims should not be made before privacy features exist.
-
-Maintainability improves because significant decisions now explain themselves. A beginner can read this file and understand why important choices were made instead of reverse-engineering intent from code.
-
-### Beginner Explanation
-
-Faker is like a box of fake names and addresses. ChatGPT is like a smart planner that can describe what data should look like. DataBoom needs to be the factory: it reads the database blueprint, decides which tables come first, creates rows in the right order, writes files without running out of memory, and checks that everything fits.
-
-For one million records, the factory cannot keep every item in one huge pile. It needs a conveyor belt. That is why the roadmap emphasizes chunking, streaming, manifests, and validation.
-
-### Follow-Up Notes
-
-- Phase 1 still starts with backend engine foundations.
-- Privacy is still deferred until Phase 4, but sensitive use cases remain part of the long-term product strategy.
-- A formal 1M-record benchmark should come after the 100k and 500k milestones are stable.
-
-## Decision: keep understanding.md for significant decisions
-
-### Question
-
-Should `understanding.md` explain every commit, or only decisions that are important enough to teach future contributors?
-
-### Answer
-
-Only significant decisions should be explained here. Routine edits, simple variables, basic API calls, and tiny mechanical fixes should stay in the git diff and commit message.
-
-### Why This Matters
-
-If every small change gets a long explanation, this file becomes noisy and people stop reading it. The goal is not to duplicate git history. The goal is to preserve reasoning that is hard to recover later: architecture choices, performance strategy, reliability tradeoffs, product scope decisions, and non-obvious implementation patterns.
-
-### Details
-
-Use `understanding.md` when a change answers a meaningful question, such as:
-
-- Why are we streaming output instead of building one giant list?
-- Why is schema safety more important than prompt freedom?
-- Why are we using local disk before object storage?
-- Why are we using Redis in Compose but not Celery yet?
-- Why did we choose one data structure or algorithm over another?
-
-Do not use it for changes like:
-
-- adding one obvious field,
-- renaming a local variable,
-- adding a straightforward endpoint after the pattern already exists,
-- fixing a typo,
-- moving an import,
-- adjusting formatting.
+- Faker-style realism can be added behind deterministic strategy interfaces.
+- LLM-assisted planning should produce structured plans, not raw output files.
+- The benchmark path should always measure real generated artifacts, not prompt output.
 
 ### Follow-Up Notes
 
@@ -553,40 +454,6 @@ This commit builds the empty workshop before building the machine. The package d
 - Docker and Compose should be committed separately as infrastructure.
 - Redis will be available in Compose for future run coordination, but Phase 1 code should not depend on it yet.
 
-## Decision: start the frontend as an operational workbench
-
-### Question
-
-Should the first frontend be a marketing-style landing page, or should it behave like the first visible shell of the data generation product?
-
-### Answer
-
-Start with an operational workbench. The first screen should show generation configuration, domain profiles, output formats, validation status, benchmark context, and demo datasets even before the backend API is wired in.
-
-### Why This Matters
-
-DataBoom is an engine product. Users need confidence that it can plan, generate, export, and validate datasets. A landing page might look polished, but it would not teach us much about the real product workflow. A workbench layout gives the backend phases a visible target and keeps frontend work aligned with generation capability.
-
-### Details
-
-The frontend is built with Next.js, TypeScript, Tailwind CSS, and lucide-react icons. Tailwind keeps styling consistent without handwritten raw CSS, while small reusable components keep the interface ready for API integration.
-
-The static Phase F1 shell intentionally mirrors the backend concepts already implemented:
-
-- domain profiles for general, financial, and healthcare generation,
-- output formats for CSV, JSON, and SQL,
-- the generation pipeline from schema parsing through validation,
-- benchmark and validation status,
-- demo datasets generated by the engine.
-
-This makes future phases straightforward. Phase F2 can replace static values with FastAPI responses. Phase F3 can turn the schema and domain areas into real editors. Phase F4 can add LLM-assisted planning without redesigning the screen from scratch.
-
-### Follow-Up Notes
-
-- Keep frontend phases documented in `docs/frontend-development.md`.
-- Avoid building disconnected decorative pages until the workbench flow is useful.
-- When API endpoints arrive, preserve the same component boundaries and wire data through typed interfaces.
-
 ## Decision: stage relational, document, and graph data support by phase
 
 ### Question
@@ -604,8 +471,6 @@ Each data family has different correctness rules. Relational data depends on tab
 ### Details
 
 Relational generation is first because it proves the hardest foundational engine behavior: parse a schema, compute dependency order, preserve references, stream artifacts, and validate the result. Once that is stable, Phase 2 can add NoSQL document generation on top of the same planning, artifact, and validation ideas, but with document-specific contracts. Phase 3 can then add graph data once the planner and operator review experience are strong enough to explain node and edge plans before execution.
-
-This also keeps the frontend roadmap honest. The visible roadmap should move major shipped capabilities into achieved steps, while future data-family work remains visible as upcoming milestones.
 
 ### Follow-Up Notes
 
@@ -637,8 +502,6 @@ The test suite uses FastAPI's `TestClient`, which currently requires the `httpx2
 
 - Next API work should add generation run request and status models.
 - Artifact download endpoints should reuse the existing manifest and validation report structure.
-- The frontend roadmap should list significant Phase 2 API milestones as achieved when they land.
-
 ## Decision: start API generation runs synchronously
 
 ### Question
@@ -651,7 +514,7 @@ No. The first `/runs` endpoint should execute a local relational generation run 
 
 ### Why This Matters
 
-The existing engine already generates and validates local artifacts. The next backend risk is the HTTP contract: request shape, status response, artifact paths, validation summary, error handling, and frontend integration. A synchronous endpoint proves that contract without adding queue complexity too early.
+The existing engine already generates and validates local artifacts. The next backend risk is the HTTP contract: request shape, status response, artifact paths, validation summary, error handling, and client integration. A synchronous endpoint proves that contract without adding queue complexity too early.
 
 ### Details
 
@@ -661,41 +524,15 @@ The in-memory run store is intentionally temporary. It makes `POST /runs`, `GET 
 
 ### Follow-Up Notes
 
-- Add artifact download endpoints before asking the frontend to download files.
+- Add artifact download endpoints before clients need to retrieve generated files.
 - Add persistent run state before long-running or multi-worker deployment.
 - Add background execution only when progress reporting, cancellation, retries, or large runs require it.
-
-## Decision: wire the frontend to the local API with a small bridge
-
-### Question
-
-How much frontend/API integration should happen before the full generation dashboard exists?
-
-### Answer
-
-Start with a small client-side API bridge that checks `/health`, lists `/runs`, and can create a tiny demo run through `POST /runs`.
-
-### Why This Matters
-
-This proves that the frontend and backend can communicate through the real HTTP contract while keeping the UI surface small. It also keeps the product roadmap honest: the API achievement is visible, and a user can trigger a real backend run from the workbench instead of only seeing static mock data.
-
-### Details
-
-The bridge defaults to `http://localhost:8000` and can be configured with `NEXT_PUBLIC_DATABOOM_API_URL`. It intentionally uses a tiny built-in schema so local demo runs finish quickly and do not require file upload UI yet.
-
-This is not the final generation workflow. Later Phase 2 screens should let users paste or upload DDL, choose row counts, select formats, review validation, and download artifacts. The bridge is a low-risk step that verifies connectivity and response contracts first.
-
-### Follow-Up Notes
-
-- Add artifact download endpoints before building download buttons.
-- Move the demo schema into backend fixtures or examples if it starts being reused in multiple places.
-- Add better error states once API authentication and persistent run storage arrive.
 
 ## Decision: expose run artifacts through path-safe API endpoints
 
 ### Question
 
-Why add artifact listing and download endpoints before building a richer run dashboard?
+Why add artifact listing and download endpoints before building richer run consumers?
 
 ### Answer
 
@@ -703,7 +540,7 @@ The API already creates local artifacts, but a client cannot use them unless it 
 
 ### Why This Matters
 
-This turns a generation run into a complete API workflow: create a run, read its status, list its outputs, and download the files. That is the minimum contract the frontend, CLI automation, and future integrations need before they can offer artifact download buttons or pipeline handoffs.
+This turns a generation run into a complete API workflow: create a run, read its status, list its outputs, and download the files. That is the minimum contract API clients, CLI automation, and future integrations need before they can offer artifact download buttons or pipeline handoffs.
 
 ### Security and Reliability Detail
 
@@ -741,7 +578,7 @@ This is not the final authorization model. Later phases can add users, projects,
 
 - Add scoped API tokens before multi-user deployment.
 - Add audit logging before artifact downloads are exposed in shared environments.
-- Make the frontend send an API key only after the product has a safe local settings pattern.
+- Add client API-key handling only after the product has a safe local settings pattern.
 
 ## Decision: split CLI planning and validation from generation
 
@@ -803,7 +640,7 @@ Why rename the repository's public surface from Boom Data to DataBoom?
 
 ### Answer
 
-DataBoom works better as the parent platform name because it can hold multiple products without making every feature sound like the same single engine. The code package, CLI command, environment prefix, Docker defaults, frontend metadata, and documentation now use `databoom`/`DATABOOM`/`DataBoom` consistently.
+DataBoom works better as the parent platform name because it can hold multiple products without making every feature sound like the same single engine. The code package, CLI command, environment prefix, and Docker defaults now use `databoom`/`DATABOOM`/`DataBoom` consistently.
 
 ### Why This Matters
 
@@ -837,9 +674,7 @@ This keeps the catalog memorable without blurring scope. Table-Boom can power fi
 
 ### Implementation Detail
 
-The docs now include a dedicated `docs/product-family.md` file as the canonical taxonomy. README, functional specs, technical roadmap, prompt caching notes, frontend plan, agent instructions, and frontend copy all point back to that product map. Demo folders use use-case names such as `demo/financial-relational` and `demo/healthcare-relational`.
-
-The code still keeps boring package and enum names such as `databoom`, `financial`, and `healthcare`. That is intentional. Whacky product names belong in user-facing docs and UI; stable internal names make APIs and tests easier to maintain.
+The code still keeps stable package and enum names such as `databoom`, `financial`, and `healthcare`. That is intentional. Whacky product names belong at product boundaries; stable internal names make APIs and tests easier to maintain.
 
 ### Follow-Up Notes
 
@@ -873,7 +708,6 @@ The `app` service remains under the `tools` profile so it can still be used for 
 
 - Add a production image stage before a public release.
 - Add API-key configuration to Compose examples once the auth story is ready for shared environments.
-- Add a frontend container only when the frontend needs Dockerized deployment, not just local development.
 
 ## Decision: copy package metadata into the Docker image before install
 
@@ -898,88 +732,42 @@ The Dockerfile now copies `README.md` together with `pyproject.toml` and `instru
 - If future package metadata references `LICENSE`, changelog files, or generated assets, copy those files before `pip install .` too.
 - Consider adding a CI job that runs `docker compose build api` so packaging regressions are caught before local deployment testing.
 
-## Decision: make the local full-stack path actually exercise backend output
+## Decision: model product workflows in backend catalog endpoints
 
 ### Question
 
-Why show generated tables and artifact downloads in the frontend instead of only showing API health and run counts?
+Why add backend product catalog, demo auth, subscriptions, product-run endpoints, and preview endpoints instead of only exposing one generic `/runs` endpoint?
 
 ### Answer
 
-A full-stack app should prove that the user action travels through the browser, reaches the backend, runs the engine, writes artifacts, validates them, and returns useful output. Health checks prove the server is alive, but they do not prove the product workflow works.
+The backend needs to model the product workflow explicitly. A generic run endpoint is useful for raw engine testing, but product modules need a stable lifecycle: discover product, subscribe, configure, generate, preview, download, and audit.
 
 ### Why This Matters
 
-DataBoom's core promise is not just "an API exists." The promise is that Table-Boom and Docu-Boom can produce usable synthetic datasets for their data surfaces. By showing generated table names, row counts, validation status, and artifact download links in the hero control center, the frontend now demonstrates the real product path with the current Phase 1/2 backend capabilities.
-
-This also keeps frontend work aligned with backend phases. The current UI still uses a small built-in schema so it remains fast and reliable, but the same shape can later support pasted DDL, row-count controls, domain selection, output-format switches, async run status, and detailed validation reports.
-
-### Implementation Detail
-
-The `ApiRunPanel` now calls `POST /runs`, then calls `GET /runs/{run_id}/artifacts` for the generated files. It renders the latest run's tables and backend-provided artifact download URLs. This keeps the frontend from guessing file names or duplicating artifact-layout rules that belong to the API.
-
-The backend settings layer now reads explicit `DATABOOM_*` variables through validation aliases, and CORS origins are configurable with `DATABOOM_CORS_ORIGINS`. That matters in local development because the frontend may run on `3000` or `3001`, and Dockerized backend ports may move when a laptop already has services on `8000`, `5432`, or `6379`.
-
-### Follow-Up Notes
-
-- Add frontend controls for pasted schema, row counts, domain profile, and output formats.
-- Add detailed validation report rendering instead of only pass/fail.
-- Move API runs to persisted storage before relying on run history across container restarts.
-- Add async/background run execution before increasing default browser-triggered runs toward 500k records.
-
-## Decision: promote the UI from demo bridge to product dashboard
-
-### Question
-
-Why add login, subscriptions, product-run endpoints, and run detail pages before building more generator internals?
-
-### Answer
-
-The project needs to feel like a product, not only an engine with a button. A user should be able to enter the app, choose a product module, subscribe to it, generate data, inspect output, and download artifacts. That path is now represented end to end with real frontend pages and real backend endpoints.
-
-### Why This Matters
-
-Full-stack product confidence comes from seeing state move through system boundaries. If subscription and product generation only lived as frontend mock state, the dashboard would look nice but would not prove the backend can support the workflow. By adding backend product catalog, demo auth, subscriptions, product-specific run creation, and table previews, the UI now exercises the same FastAPI service that generates and serves artifacts.
-
-This also sets up the commercial product model early. DataBoom can have many modules, but each one needs a consistent lifecycle: discover product, subscribe, configure, generate, preview, download, and audit. Even with demo credentials and in-memory subscriptions, the route shape is close to the production shape.
+Product state should not be fake client state. If subscriptions, catalog products, previews, and artifacts are real backend resources, the API contract can evolve toward production without rewriting every client later. It also forces the backend to answer important questions early: which products are runnable, which are planned, what outputs each product supports, and how preview reads are served safely.
 
 ### Implementation Detail
 
 The backend owns runnable product definitions in `src/databoom/api/products.py`. Each catalog entry includes schema DDL, default row counts, output formats, a domain profile, features, and plans. The product-run endpoint turns that catalog entry into a normal `GenerationRunRequest`, so it reuses the existing parser, planner, generator, exporter, and validator instead of creating a second generation path.
 
-The table preview endpoint reads the generated CSV artifact for a selected table and returns the first rows as structured JSON. This is better than making the frontend guess artifact file paths or parse downloaded files by itself. The frontend can render collapsible top-10 previews while the backend remains the source of truth for artifact layout.
-
-The frontend now has dedicated pages:
-
-- `/` for the public hero/product story,
-- `/login` for demo authentication with `demo` / `demo`,
-- `/dashboard` for subscriptions and recent runs,
-- `/products` for the product catalog,
-- `/products/[productId]` for subscribing and generating,
-- `/runs` for run history,
-- `/runs/[runId]` for table previews and downloads,
-- `/roadmap` for visible phase progress.
-
-The public route stays separate from the authenticated console. This mirrors mature product sites: the homepage explains value, product families, use cases, and trust signals, while the logged-in workspace owns operational workflows. In DataBoom terms, `/` explains Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom, then `/dashboard` becomes "My Dashboard" for subscribed product work.
-
-The app shell brand now links back to `/` because the DataBoom logo is a product-home affordance, not a dashboard-only navigation item. Subscription details moved from the dashboard into `/settings/subscriptions`; this keeps the dashboard focused on operational status and recent runs while settings owns account/module state. The public header checks the local demo session before showing login actions, so logged-in users see "My dashboard" instead of a confusing login CTA.
+The table preview endpoint reads the generated CSV artifact for a selected table and returns the first rows as structured JSON. This is better than making clients guess artifact file paths or parse downloaded files by themselves. The backend remains the source of truth for artifact layout.
 
 ### Follow-Up Notes
 
 - Replace demo auth with real auth before shared deployment.
 - Persist sessions, subscriptions, and run metadata in PostgreSQL instead of app memory.
-- Move long-running generation to a job queue before allowing large dashboard-triggered runs.
-- Add custom schema upload and saved generation templates once the dashboard flow is stable.
+- Move long-running generation to a job queue before allowing large user-triggered runs.
+- Add custom schema upload and saved generation templates once the product run flow is stable.
 
 ## Decision: persist API state behind a store boundary
 
 ### Question
 
-Why move demo sessions, product subscriptions, and generation-run metadata out of FastAPI app dictionaries before building more dashboard features?
+Why move demo sessions, product subscriptions, and generation-run metadata out of FastAPI app dictionaries?
 
 ### Answer
 
-The dashboard has crossed from a static demo into a real full-stack workflow. Once a user can log in, subscribe, generate data, preview tables, and download artifacts, that workflow should not disappear whenever the API process restarts. A small persistence layer gives the product a durable backbone while keeping the current routes and frontend contract stable.
+Once a user can log in, subscribe, generate data, preview tables, and download artifacts, that workflow should not disappear whenever the API process restarts. A small persistence layer gives the product a durable backbone while keeping the current route contract stable.
 
 ### Why This Matters
 
@@ -996,7 +784,7 @@ The backend now has a `StateStore` protocol. Routes call methods such as `save_s
 
 This design keeps SQLAlchemy out of route business logic. A route should care about product behavior: authenticate, subscribe, generate, preview, download. It should not know table names or write SQL statements inline. That separation makes the backend easier to change later when the metadata model becomes more normalized.
 
-For the MVP, run payloads are stored as JSON. That is a practical bridge: the API already has typed Pydantic response models, and storing their JSON form preserves the current contract with minimal code. Later, high-query fields such as run status, product ID, owner, artifact root, duration, row counts, and validation status can be promoted into first-class columns.
+For the current implementation, run payloads are stored as JSON. That is a practical bridge: the API already has typed Pydantic response models, and storing their JSON form preserves the current contract with minimal code. Later, high-query fields such as run status, product ID, owner, artifact root, duration, row counts, and validation status can be promoted into first-class columns.
 
 ### Performance, Reliability, or Maintainability Impact
 
@@ -1013,52 +801,10 @@ The `StateStore` is like a service desk window. The rest of the app asks the win
 ### Follow-Up Notes
 
 - Replace `metadata.create_all()` with Alembic migrations before production deployment.
-- Normalize important run fields into columns when filtering, search, ownership, or dashboards become more advanced.
+- Normalize important run fields into columns when filtering, search, ownership, or run-history queries become more advanced.
 - Add real user accounts and authorization before shared deployment.
-- Move long-running generation into background jobs before dashboard-triggered large runs become common.
+- Move long-running generation into background jobs before large user-triggered runs become common.
 - Add artifact retention and cleanup rules so persisted run metadata cannot point to deleted files without an explicit status.
-
-## Decision: make the authenticated dashboard a reusable data workspace
-
-### Question
-
-Why replace the card-style dashboard with a database-console layout inspired by tools like Tonic Fabricate?
-
-### Answer
-
-The authenticated app should feel like a place where users inspect generated data, not just a page that reports counts. The workspace uses a three-panel workflow: product and resource navigation on the left, data preview in the center, and an agent/run panel on the right.
-
-### Why This Matters
-
-Synthetic data products become easier to trust when users can immediately inspect the output. A run count is abstract. A table grid with columns, inferred types, row previews, validation status, generation steps, and export links is concrete. It proves that the backend generated real artifacts and that the frontend can browse them.
-
-This layout also maps better to how data users think. Relational users expect databases, tables, records, SQL/JSON/CSV exports, and summaries. Document users expect collections, nested JSON, and JSON/NDJSON exports. Keeping those concepts visible makes the product feel closer to a production data tool and less like a marketing dashboard.
-
-### Implementation Detail
-
-The `DataWorkspace` component keeps the flow wired to the existing FastAPI backend:
-
-- it loads products, subscriptions, and runs,
-- it lets the user subscribe to a product,
-- it generates a product run through `POST /products/{product_id}/runs`,
-- it loads table or document previews through the preview APIs,
-- it lists downloadable artifacts through the artifact API,
-- it shows agent steps based on the selected run and validation state.
-
-The UI does not claim to have a real LLM planner yet. The right panel uses agent-style language and a prompt box, but execution still goes through deterministic product defaults. That is intentional: the user experience can prepare for Phase 3 LLM-assisted planning without pretending that the backend planner exists today.
-
-### Performance, Reliability, or Maintainability Impact
-
-The workspace improves perceived performance because users can inspect top records instead of downloading full artifacts immediately. It also keeps large output constrained to scrollable preview areas, which avoids resizing the whole page when rows, columns, or documents are wide.
-
-Maintainability improves because the workspace is componentized instead of embedded directly inside the dashboard page. The route now only handles authentication and delegates the product-specific operational UI to `DataWorkspace`.
-
-### Follow-Up Notes
-
-- Add run progress events once backend jobs become asynchronous.
-- Add editable row-count and schema/spec controls inside the workspace when custom generation becomes the next focus.
-- Add real prompt-to-plan behavior only after the planner interface and prompt cache strategy are implemented.
-- Consider dedicated product routes only if the shared workspace becomes too constrained for graph or masking workflows.
 
 ## Decision: render products by data surface instead of domain product names
 
@@ -1074,64 +820,20 @@ Keep four catalog products based on data surface and workflow: Table-Boom for re
 
 Product boundaries should match the engine behavior. Relational tables, JSON documents, graph nodes/edges, and masking policies need different runtime models, previews, validations, and export shapes. Banking versus healthcare usually changes the schema, labels, value generators, or examples, but it does not require a totally separate engine.
 
-This keeps the project easier to scale. A new financial demo can reuse Table-Boom if it is relational. A healthcare document demo can reuse Docu-Boom if it is nested JSON. The frontend can show different surfaces by reading `product.kind` instead of hard-coding product IDs.
+This keeps the project easier to scale. A new financial demo can reuse Table-Boom if it is relational. A healthcare document demo can reuse Docu-Boom if it is nested JSON. API clients can choose behavior by reading `product.kind` instead of hard-coding product IDs.
 
 ### Details
 
 The backend catalog now exposes a stable `kind` for each product. The API can dispatch relational products to the existing table engine and document products to the Docu-Boom document generator. Planned graph and masking products stay visible in the catalog but return clear planned states until their runtime engines exist.
 
-The frontend uses one generic workspace shell:
-
-- relational products render resource navigation plus a spreadsheet-style table grid,
-- document products render collection navigation plus MongoDB-style JSON cards,
-- planned graph and masking products render planned-product states,
-- artifacts, generation steps, run summaries, and validation status are shared wherever possible.
-
-This is more maintainable than copying a dashboard for every product. If every use case had its own component and endpoint, the codebase would quickly contain duplicate subscription buttons, duplicate artifact lists, duplicate loading states, and duplicate run summaries. Shared workflow code makes future features easier to add and easier to test.
+This is more maintainable than creating a separate backend endpoint family for every domain. If every use case had its own endpoint and generator path, the codebase would quickly contain duplicate artifact logic, duplicate validation states, duplicate run summaries, and duplicated tests.
 
 ### Follow-Up Notes
 
-- Table-Boom and Docu-Boom are active for local MVP workflows.
+- Table-Boom and Docu-Boom are active for local workflows.
 - Graph-Boom should add node/edge models and previews in Phase 3.
 - Masker-Boom should add policy, redaction, tokenization, classification, and audit views in Phase 4.
 - Phase 2 still needs formal 500k benchmark evidence and deeper structural profiling before production-scale claims are made.
-
-## Decision: split docs and public site by concern
-
-### Question
-
-How should the project keep architecture docs and public website content understandable as the product grows?
-
-### Answer
-
-Split documentation into `docs/product`, `docs/engineering`, and `docs/operations`, then give architecture diagrams their own engineering document. Split the public website into real routes for home, products, demos, roadmap, and contact instead of keeping every marketing section in one scrolling page.
-
-### Why This Matters
-
-The docs folder was starting to mix product scope, technical architecture, frontend planning, prompt strategy, and usage commands at one level. That works for a tiny project, but it becomes noisy once the engine has multiple products and deployment concerns. A concern-based folder structure makes it obvious where a future contributor should place product strategy, architecture, or local run instructions.
-
-The public website had a similar issue. A long single page made the landing page carry product catalog, pipeline explanation, roadmap, validation, demos, and dashboard links all at once. Standard product sites usually separate these concerns. The homepage should explain the core value quickly. Product details, demos, roadmap, and contact/evaluation content deserve their own routes.
-
-### Details
-
-The new architecture document explains DataBoom through several diagrams:
-
-- system context,
-- product surface model,
-- engine pipeline,
-- API run sequence,
-- frontend route architecture,
-- Docker deployment topology.
-
-The key extensibility rule is that new products should branch by data surface through `product.kind`, not by demo domain or product name. The engine is extendable because each product kind can add its own spec/model, generator, validator, exports, and preview surface while sharing catalog resolution, seed management, artifacts, manifests, run metadata, and API download behavior.
-
-On the frontend, public pages now share a public shell with launch bar, header, theme toggle, sections, and footer sitemap. Public pages support light and dark themes with CSS tokens. Authenticated dashboard pages remain focused on operational work.
-
-### Follow-Up Notes
-
-- Keep new docs inside the correct folder instead of recreating a flat docs directory.
-- Add architecture diagrams when new product surfaces or deployment boundaries are introduced.
-- Do not let public marketing pages duplicate authenticated dashboard workflows.
 
 ## Decision: establish a 500k Phase 2 benchmark baseline
 
@@ -1195,7 +897,7 @@ This works because relational generation already orders tables by dependency. Pa
 - Future million-record validation may need disk-backed or probabilistic strategies for very large parent key sets.
 - Re-run `benchmarks/phase2_500k.py --overwrite` after export optimizations to compare total runtime.
 
-## Decision: make dashboard generation asynchronous and observable
+## Decision: make product generation asynchronous and observable
 
 ### Question
 
@@ -1203,7 +905,7 @@ Why should product generation run asynchronously, and why do we need operation t
 
 ### Answer
 
-Dashboard-triggered generation should return a run immediately, then continue in the background. The frontend can poll that run to show status, progress, expected time, preview rows, artifact availability, and operation timings.
+Product generation should return a run immediately, then continue in the background. Clients can poll that run to show status, progress, expected time, preview rows, artifact availability, and operation timings.
 
 ### Why This Matters
 
@@ -1215,7 +917,7 @@ Operation timings also keep performance work honest. If we only know "the run to
 
 The current implementation uses an in-process `AsyncRunManager`. It creates a run ID, saves a running placeholder, starts generation in a background thread, and lets `GET /runs/{run_id}` return updated progress while the backend is still writing artifacts.
 
-This is the right Phase 2 shape because it gives the product the correct API contract without prematurely adding Celery, Kafka, or a distributed worker platform. Those tools are useful when we need retries, distributed workers, durable queues, priority scheduling, or event streaming. For the local MVP, a small background manager is simpler and easier to reason about.
+This is the right Phase 2 shape because it gives the product the correct API contract without prematurely adding Celery, Kafka, or a distributed worker platform. Those tools are useful when we need retries, distributed workers, durable queues, priority scheduling, or event streaming. For the local product, a small background manager is simpler and easier to reason about.
 
 Progress is now based on row counters emitted by the generation pipeline. Table-Boom's artifact exporter reports generated rows by table. Docu-Boom reports generated documents by collection. The async manager turns those callbacks into generated-row counts, current resource, rows per second, remaining seconds, and progress percentage.
 
@@ -1234,7 +936,7 @@ The API now reports:
 - generated resource metadata,
 - validation summary when complete.
 
-The exporter flushes early preview rows to disk. That lets the frontend read the first 20 CSV rows while a large relational run is still active. Docu-Boom also streams JSON and NDJSON artifacts, and the preview endpoint can read partially flushed NDJSON lines before the final JSON array is complete.
+The exporter flushes early preview rows to disk. That lets preview endpoints read the first rows while a large relational run is still active. Docu-Boom also streams JSON and NDJSON artifacts, and the preview endpoint can read partially flushed NDJSON lines before the final JSON array is complete.
 
 ### Follow-Up Notes
 
@@ -1294,120 +996,3 @@ So the data is not production data, and it is not copied from a sensitive databa
 - Phase 3 can use an LLM to help plan generation intent, but the deterministic engine should still execute the plan.
 - Phase 4 Masker-Boom should add privacy policies for real sensitive source data.
 - More domain profiles can improve realism without changing the core engine contract.
-
-## Decision: centralize DataBoom branding and fix roadmap progress geometry
-
-### Question
-
-Why add a reusable logo component instead of editing each navbar, sidebar, login page, and dashboard logo separately?
-
-### Answer
-
-The logo is now a shared frontend component. That matters because product identity should not drift as the app grows. Public pages, login, dashboard shell, and the data workbench all need to feel like the same product. If each screen hand-builds its own logo, small differences in icon size, color, subtitle text, spacing, and animation quickly make the product feel less polished.
-
-The shared component gives DataBoom one reusable brand mark and wordmark. It also makes future changes cheaper. If we later add a real SVG asset, update the mark, or change the product subtitle, we can do it in one place instead of hunting through every route.
-
-### Question
-
-Why was the roadmap progress line changed from per-card segments to one continuous track?
-
-### Answer
-
-The old roadmap drew a separate progress segment inside each phase item. That looked correct only when the spacing and card heights happened to align. Once a card became taller, the line could stop before the next icon and create visible gaps. The user was right to call this out: timelines should feel physically connected.
-
-The new approach draws one continuous vertical track behind all roadmap icons. The icon tiles sit above that track and cover the line inside the square, so the line appears centered and connected without visually cutting through the icons. Scroll progress now fills that single track smoothly instead of lighting up disconnected chunks.
-
-This is better for three reasons:
-
-- it removes geometry bugs caused by variable card height,
-- it preserves the scroll-based progress behavior,
-- it makes the roadmap easier to maintain when phases gain or lose content.
-
-### Question
-
-Why add subtle animation instead of large decorative effects?
-
-### Answer
-
-DataBoom is a technical product, so the UI should feel alive but still operational. The new animation is intentionally restrained: the logo has a soft pulse, the announcement bar has slight movement, the hero has a data-rail pulse, and cards lift on hover. These details make the website feel more finished without turning the product into a flashy landing page that distracts from the actual engine.
-
-### Follow-Up Notes
-
-- Replace the CSS-built brand mark with a dedicated vector logo when final brand design exists.
-- Wire the contact scaffold to a real email, CRM, or backend endpoint during deployment hardening.
-- Keep roadmap progress as a single track if future phase cards become more complex.
-
-## Decision: remove redundant public CTAs and modularize catalog/timeline UI
-
-### Question
-
-Why remove extra login, dashboard, and demo buttons from public pages?
-
-### Answer
-
-The public website already has a global navbar. When product pages, contact pages, and hero sections also repeat login/dashboard/demo buttons, the site starts to feel noisy and less intentional. A mature product page should explain the product clearly and let navigation handle movement between sections.
-
-The cleanup keeps one primary auth action in the public navbar:
-
-- logged out users see `Log in`,
-- logged in users see `My dashboard`.
-
-The hero now points to product understanding and roadmap context, not another login path. The products page no longer contains a demo-credentials panel. The contact page now focuses on scope definition instead of pushing demo login again.
-
-This improves the site because every route has a clearer job:
-
-- home explains the platform,
-- products explains the catalog,
-- demos shows use-case samples,
-- roadmap shows staged delivery,
-- contact captures implementation scope,
-- login handles credentials.
-
-### Question
-
-Why build a dedicated product catalog component?
-
-### Answer
-
-The old product page mixed product cards, product detail rows, and a duplicate login panel in one route file. That worked for a quick page, but it was not strong enough for a product catalog. The new `ProductCatalogGrid` and `ProductCatalogCard` components make catalog rendering reusable and easier to extend.
-
-The data now lives in `productCatalog`, where each product declares:
-
-- module,
-- status,
-- summary,
-- detail,
-- outputs,
-- capabilities,
-- use cases,
-- icon,
-- visual accent.
-
-That means Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom can be improved by editing product data instead of rewriting layout. It also makes the product taxonomy more serious: banking, healthcare, commerce, and SaaS are use cases, while product names map to data surfaces.
-
-### Question
-
-Why extract a generic timeline component?
-
-### Answer
-
-Roadmap logic should not be trapped inside a roadmap-specific component. A timeline is a reusable visual pattern: phases, milestones, work history, deployment plans, and future product releases can all share the same renderer.
-
-The new timeline accepts structured text data:
-
-- id,
-- eyebrow,
-- status,
-- title,
-- description,
-- sections.
-
-Each section has a title, items, and empty state. This means a future timeline can add sections like `Delivered`, `In progress`, `Risks`, `Next`, or `Owner notes` without editing timeline layout code. The roadmap page simply maps roadmap data into timeline items.
-
-This is better because the user can add future phases mostly by adding textual descriptions to `frontend/src/data/workbench.ts`. The visual behavior, scroll progress, active-state logic, icon rendering, and connected progress rail remain centralized in `Timeline`.
-
-### Follow-Up Notes
-
-- If roadmap data grows large, move product catalog and roadmap objects into separate data files.
-- Consider using the same timeline component for release notes or deployment history later.
-- Keep public pages focused on product knowledge and avoid repeating auth CTAs outside the navbar and login page.
