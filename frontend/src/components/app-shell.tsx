@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { BrandLogo, BrandMark } from "@/components/brand";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { clearSession, type Session } from "@/lib/session";
 
 const navItems = [
@@ -145,6 +146,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
               className="lg:hidden [--text-primary:#ffffff] [--text-faint:#71717a]"
             />
             <div className="hidden lg:block">
+              <Breadcrumbs className="mb-1" />
               <p className="text-sm font-semibold text-zinc-200">Data operations workspace</p>
               <p className="text-xs text-zinc-500">Generate, validate, preview, export.</p>
             </div>

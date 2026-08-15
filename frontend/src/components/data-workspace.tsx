@@ -66,6 +66,88 @@ type FormatOption = {
   icon: LucideIcon;
 };
 
+type WorkspaceConnection = {
+  id: string;
+  name: string;
+  engine: string;
+  host: string;
+  description: string;
+  resources: Partial<Record<Product["kind"], string[]>>;
+};
+
+const workspaceConnections: WorkspaceConnection[] = [
+  {
+    id: "core-banking",
+    name: "Core Banking Sandbox",
+    engine: "PostgreSQL",
+    host: "banking-demo.internal",
+    description: "Accounts, customers, transactions, and payment rails.",
+    resources: {
+      relational: ["customers", "bank_accounts", "transactions"],
+    },
+  },
+  {
+    id: "commerce-store",
+    name: "Commerce Store",
+    engine: "PostgreSQL",
+    host: "commerce-demo.internal",
+    description: "Customer orders, products, order items, and payments.",
+    resources: {
+      relational: ["customers", "products", "orders", "order_items", "payments"],
+    },
+  },
+  {
+    id: "patient-care",
+    name: "Patient Care Warehouse",
+    engine: "PostgreSQL",
+    host: "health-demo.internal",
+    description: "Patient, encounter, claim, provider, and lab records.",
+    resources: {
+      relational: ["patients", "encounters", "claims", "providers", "lab_results"],
+    },
+  },
+  {
+    id: "customer-events",
+    name: "Customer Events Cluster",
+    engine: "MongoDB",
+    host: "events-demo.internal",
+    description: "Nested customer documents, order events, and behavioral streams.",
+    resources: {
+      document: ["customers", "orders", "events"],
+    },
+  },
+  {
+    id: "clinical-documents",
+    name: "Clinical Documents",
+    engine: "MongoDB",
+    host: "clinical-docs.internal",
+    description: "Patient profiles, notes, claims, and nested healthcare payloads.",
+    resources: {
+      document: ["patients", "clinical_notes", "claims"],
+    },
+  },
+  {
+    id: "graph-roadmap",
+    name: "Relationship Graph Lab",
+    engine: "Neo4j",
+    host: "graph-demo.internal",
+    description: "Nodes, edges, and relationship-heavy roadmap datasets.",
+    resources: {
+      graph: ["customers", "accounts", "devices", "transactions"],
+    },
+  },
+  {
+    id: "masking-lab",
+    name: "Masking Policy Lab",
+    engine: "Local files",
+    host: "masker-demo.internal",
+    description: "Sensitive data classification and redaction policy testing.",
+    resources: {
+      masking: ["pii_fields", "tokenized_customers", "audit_samples"],
+    },
+  },
+];
+
 export function DataWorkspace({ session }: { session: Session }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -74,6 +156,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [previews, setPreviews] = useState<PreviewMap>({});
   const [documentPreviews, setDocumentPreviews] = useState<DocumentPreviewMap>({});
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState<string | null>(null);
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("catalog");
@@ -213,8 +296,29 @@ export function DataWorkspace({ session }: { session: Session }) {
   );
   const subscribed = selectedProduct ? subscribedProductIds.has(selectedProduct.id) : false;
   const activeKind = selectedRun?.kind ?? selectedProduct?.kind ?? "relational";
-  const resourceNames = selectedRun ? runResources(selectedRun) : productResources(selectedProduct);
+  const connectionOptions = useMemo(
+    () => workspaceConnectionsForProduct(selectedProduct),
+    [selectedProduct],
+  );
+  const selectedConnection =
+    connectionOptions.find((connection) => connection.id === selectedConnectionId) ??
+    connectionOptions[0] ??
+    null;
+  const resourceNames = selectedConnection
+    ? connectionResources(selectedConnection, activeKind)
+    : productResources(selectedProduct);
   const visibleRows = selectedTablePreview?.rows.length ?? selectedDocumentPreview?.documents.length ?? 0;
+
+  useEffect(() => {
+    if (!selectedProduct || connectionOptions.length === 0) {
+      return;
+    }
+    if (!connectionOptions.some((connection) => connection.id === selectedConnectionId)) {
+      const nextConnection = connectionOptions[0];
+      setSelectedConnectionId(nextConnection.id);
+      setSelectedResource(connectionResources(nextConnection, selectedProduct.kind)[0] ?? null);
+    }
+  }, [connectionOptions, selectedConnectionId, selectedProduct]);
 
   useEffect(() => {
     const nextViewOptions = viewOptions(activeKind);
@@ -266,14 +370,20 @@ export function DataWorkspace({ session }: { session: Session }) {
       const firstRun = firstProduct
         ? newestRuns.find((run) => runMatchesProduct(run, firstProduct))
         : newestRuns[0];
+      const firstConnection = workspaceConnectionsForProduct(firstProduct)[0] ?? null;
 
       setProducts(nextProducts);
       setSubscriptions(nextSubscriptions);
       setRuns(nextRuns);
       setSelectedProductId(firstProductId);
+      setSelectedConnectionId(firstConnection?.id ?? "");
       setSelectedRunId(firstRun?.run_id ?? null);
       setSelectedResource(
-        firstRun ? runResources(firstRun)[0] ?? null : productResources(firstProduct)[0] ?? null,
+        firstConnection
+          ? connectionResources(firstConnection, firstProduct?.kind ?? "relational")[0] ?? null
+          : firstRun
+            ? runResources(firstRun)[0] ?? null
+            : productResources(firstProduct)[0] ?? null,
       );
       setStatus(firstRun ? runAgentStatus(firstRun) : "idle");
     } catch (caughtError) {
@@ -287,12 +397,26 @@ export function DataWorkspace({ session }: { session: Session }) {
   async function chooseProduct(product: Product) {
     setSelectedProductId(product.id);
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
+    const nextConnection = workspaceConnectionsForProduct(product)[0] ?? null;
     setSelectedRunId(matchingRun?.run_id ?? null);
+    setSelectedConnectionId(nextConnection?.id ?? "");
     setSelectedResource(
-      matchingRun ? runResources(matchingRun)[0] ?? null : productResources(product)[0] ?? null,
+      nextConnection
+        ? connectionResources(nextConnection, product.kind)[0] ?? null
+        : matchingRun
+          ? runResources(matchingRun)[0] ?? null
+          : productResources(product)[0] ?? null,
     );
     setStatus(matchingRun ? runAgentStatus(matchingRun) : "idle");
     setWorkspaceMode("product");
+  }
+
+  function chooseConnection(connectionId: string) {
+    const nextConnection = connectionOptions.find((connection) => connection.id === connectionId);
+    setSelectedConnectionId(connectionId);
+    setSelectedResource(
+      nextConnection ? connectionResources(nextConnection, activeKind)[0] ?? null : null,
+    );
   }
 
   async function subscribe() {
@@ -370,20 +494,23 @@ export function DataWorkspace({ session }: { session: Session }) {
         <WorkspaceSidebar
           activeKind={activeKind}
           collapsed={isWorkspaceRailCollapsed}
+          connectionOptions={connectionOptions}
           onToggleCollapse={() => setIsWorkspaceRailCollapsed((current) => !current)}
           product={selectedProduct}
-          subscribedProductIds={subscribedProductIds}
           resourceNames={resourceNames}
+          selectedConnection={selectedConnection}
+          selectedConnectionId={selectedConnectionId}
           selectedResource={selectedResource}
           onBackToProducts={() => setWorkspaceMode("catalog")}
+          onSelectConnection={chooseConnection}
           onSelectResource={setSelectedResource}
         />
 
         <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
           <WorkspaceOverview
+            connection={selectedConnection}
             product={selectedProduct}
             run={selectedRun}
-            subscribed={subscribed}
             visibleRows={visibleRows}
           />
           <WorkspaceToolbar
@@ -538,28 +665,33 @@ function ProductWorkspacePicker({
 function WorkspaceSidebar({
   activeKind,
   collapsed,
+  connectionOptions,
   onToggleCollapse,
   product,
-  subscribedProductIds,
   resourceNames,
+  selectedConnection,
+  selectedConnectionId,
   selectedResource,
   onBackToProducts,
+  onSelectConnection,
   onSelectResource,
 }: {
   activeKind: Product["kind"];
   collapsed: boolean;
+  connectionOptions: WorkspaceConnection[];
   onToggleCollapse: () => void;
   product: Product | null;
-  subscribedProductIds: Set<string>;
   resourceNames: string[];
+  selectedConnection: WorkspaceConnection | null;
+  selectedConnectionId: string;
   selectedResource: string | null;
   onBackToProducts: () => void;
+  onSelectConnection: (connectionId: string) => void;
   onSelectResource: (resourceName: string) => void;
 }) {
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
   const ProductIcon = product ? productIcon(product.kind) : Database;
   const resourceLabel = activeKind === "document" ? "Collections" : "Tables";
-  const subscribed = product ? subscribedProductIds.has(product.id) : false;
 
   if (collapsed) {
     return (
@@ -584,10 +716,13 @@ function WorkspaceSidebar({
 
         <div className="space-y-4 p-2">
           <div className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 p-2 text-cyan-100">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" title={product?.name ?? "Product"}>
               <ProductIcon className="h-4 w-4 shrink-0" />
               <span className="truncate text-xs font-semibold">{product?.name ?? "Product"}</span>
             </div>
+            <p className="mt-2 truncate text-[0.68rem] font-semibold uppercase text-cyan-200/70">
+              {selectedConnection?.name ?? "No database"}
+            </p>
           </div>
 
           <div className="workspace-scrollbar-dark max-h-[45vh] space-y-2 overflow-auto border-t border-white/10 pt-4">
@@ -634,40 +769,67 @@ function WorkspaceSidebar({
       </div>
 
       <div className="space-y-5 p-3">
-        <div className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 p-3">
-          <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
-              <ProductIcon className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{product?.name ?? "Product"}</p>
-              <p className="mt-1 truncate text-xs text-zinc-400">{product?.module ?? kindLabel(activeKind)}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span className="rounded-md bg-emerald-300/10 px-2 py-1 text-[0.68rem] font-semibold uppercase text-emerald-200">
-                  {product?.status ?? "active"}
+        <details className="group rounded-xl border border-white/10 bg-white/[0.025] p-3" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
+                <ProductIcon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-white">
+                  {product?.name ?? "Product"}
                 </span>
-                {subscribed ? (
-                  <span className="rounded-md bg-cyan-300/10 px-2 py-1 text-[0.68rem] font-semibold uppercase text-cyan-100">
-                    subscribed
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-          <button
-            className="mt-3 inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-xs font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100"
-            onClick={onBackToProducts}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Products
-          </button>
-        </div>
+                <span className="mt-1 block truncate text-xs text-zinc-500">
+                  {product?.module ?? kindLabel(activeKind)}
+                </span>
+              </span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 transition group-open:rotate-180" />
+          </summary>
 
-        <div>
-          <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-semibold uppercase text-zinc-600">{resourceLabel}</p>
-            <span className="text-xs text-zinc-600">{resourceNames.length}</span>
+          <div className="mt-4 space-y-3">
+            <label className="block">
+              <span className="text-[0.68rem] font-semibold uppercase text-zinc-600">
+                Connected database
+              </span>
+              <select
+                className="mt-2 h-10 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-sm font-semibold text-zinc-100 outline-none transition focus:border-cyan-300/40"
+                onChange={(event) => onSelectConnection(event.target.value)}
+                value={selectedConnectionId}
+              >
+                {connectionOptions.map((connection) => (
+                  <option key={connection.id} value={connection.id}>
+                    {connection.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+              <p className="truncate text-xs font-semibold text-zinc-300">
+                {selectedConnection?.engine ?? "Engine"} · {selectedConnection?.host ?? "not connected"}
+              </p>
+              <p className="mt-2 max-h-10 overflow-hidden text-xs leading-5 text-zinc-500">
+                {selectedConnection?.description ?? "Select a connected database to inspect resources."}
+              </p>
+            </div>
+            <button
+              className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-xs font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100"
+              onClick={onBackToProducts}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Products
+            </button>
           </div>
+        </details>
+
+        <details className="group" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-1">
+            <span className="text-xs font-semibold uppercase text-zinc-600">{resourceLabel}</span>
+            <span className="inline-flex items-center gap-2 text-xs text-zinc-600">
+              {resourceNames.length}
+              <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
+            </span>
+          </summary>
           <div className="workspace-scrollbar-dark mt-3 max-h-[35vh] space-y-1.5 overflow-auto pr-1">
             {resourceNames.map((tableName) => (
               <button
@@ -684,21 +846,21 @@ function WorkspaceSidebar({
               </button>
             ))}
           </div>
-        </div>
+        </details>
       </div>
     </aside>
   );
 }
 
 function WorkspaceOverview({
+  connection,
   product,
   run,
-  subscribed,
   visibleRows,
 }: {
+  connection: WorkspaceConnection | null;
   product: Product | null;
   run: GenerationRun | null;
-  subscribed: boolean;
   visibleRows: number;
 }) {
   const resourceCount = product ? productResources(product).length : 0;
@@ -712,35 +874,20 @@ function WorkspaceOverview({
     <section className="border-b border-zinc-200 bg-white">
       <div className="grid gap-4 px-5 py-4 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase ${
-                product?.status === "active"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-sky-200 bg-sky-50 text-sky-700"
-              }`}
-            >
-              <PackageCheck className="h-3.5 w-3.5" />
-              {product?.status ?? "No product"}
-            </span>
-            <span
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase ${
-                subscribed
-                  ? "border-cyan-200 bg-cyan-50 text-cyan-700"
-                  : "border-zinc-200 bg-zinc-50 text-zinc-500"
-              }`}
-            >
-              {subscribed ? "Subscribed" : "Not subscribed"}
-            </span>
-          </div>
-
-          <h1 className="mt-3 truncate text-2xl font-semibold text-zinc-950">
+          <h1 className="truncate text-2xl font-semibold text-zinc-950">
             {product?.name ?? "DataBoom workspace"}
           </h1>
-          <p className="mt-1 max-w-3xl truncate text-sm text-zinc-500">
-            {product?.description ??
-              "Choose a product module, subscribe, generate a run, and inspect output artifacts."}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500">
+            <span className="truncate">
+              {connection?.name ?? "No database selected"}
+            </span>
+            <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
+            <span className="truncate">
+              {connection?.engine ?? kindLabel(product?.kind ?? "relational")}
+            </span>
+            <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
+            <span className="truncate">{connection?.host ?? "local workspace"}</span>
+          </div>
 
           {run ? (
             <div className="mt-3">
@@ -1991,6 +2138,17 @@ function runResourcesWithCounts(run: GenerationRun) {
     }));
   }
   return run.tables.map((table) => ({ name: table.table_name, rowCount: table.row_count }));
+}
+
+function workspaceConnectionsForProduct(product: Product | null) {
+  if (!product) {
+    return [];
+  }
+  return workspaceConnections.filter((connection) => connectionResources(connection, product.kind).length);
+}
+
+function connectionResources(connection: WorkspaceConnection, kind: Product["kind"]) {
+  return connection.resources[kind] ?? [];
 }
 
 function viewOptions(kind: Product["kind"]): FormatOption[] {

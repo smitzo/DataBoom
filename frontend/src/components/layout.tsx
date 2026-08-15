@@ -2,6 +2,7 @@ import { KeyRound, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { BrandLogo } from "@/components/brand";
+import { PublicBreadcrumbBand } from "@/components/breadcrumbs";
 import { PublicHeaderActions } from "@/components/public-session-actions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navItems } from "@/data/workbench";
@@ -59,6 +60,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
     <main className="min-h-screen bg-[var(--page-bg)] text-[color:var(--text-primary)]">
       <Announcement />
       <Header />
+      <PublicBreadcrumbBand />
       {children}
       <PublicFooter />
     </main>
