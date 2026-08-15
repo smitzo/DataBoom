@@ -4,14 +4,17 @@ import {
   BarChart3,
   LayoutDashboard,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   ShieldCheck,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
-import { BrandLogo } from "@/components/brand";
+import { BrandLogo, BrandMark } from "@/components/brand";
 import { clearSession, type Session } from "@/lib/session";
 
 const navItems = [
@@ -33,6 +36,7 @@ const navItems = [
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isNavCollapsed, setIsNavCollapsed] = useState(true);
 
   const logout = () => {
     clearSession();
@@ -41,8 +45,32 @@ export function AppShell({ session, children }: { session: Session; children: Re
 
   return (
     <main className="min-h-screen bg-[#050714] text-zinc-100">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/10 bg-[#080b16]/95 px-4 py-5 shadow-[18px_0_60px_rgba(0,0,0,0.22)] lg:block">
-        <BrandLogo size="md" sublabel="Product console" />
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden border-r border-white/10 bg-[#080b16]/95 py-5 shadow-[18px_0_60px_rgba(0,0,0,0.22)] transition-[width,padding] duration-300 lg:block ${
+          isNavCollapsed ? "w-20 px-3" : "w-64 px-4"
+        }`}
+      >
+        <div
+          className={
+            isNavCollapsed
+              ? "grid justify-items-center gap-3"
+              : "flex items-center justify-between gap-3"
+          }
+        >
+          {isNavCollapsed ? <BrandMark size="sm" /> : <BrandLogo size="md" sublabel="Product console" />}
+          <button
+            aria-label={isNavCollapsed ? "Expand navigation" : "Collapse navigation"}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
+            onClick={() => setIsNavCollapsed((current) => !current)}
+            title={isNavCollapsed ? "Expand navigation" : "Collapse navigation"}
+          >
+            {isNavCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </button>
+        </div>
 
         <nav className="mt-8 space-y-1.5">
           {navItems.map((item) => {
@@ -52,37 +80,63 @@ export function AppShell({ session, children }: { session: Session; children: Re
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
+                title={item.label}
+                className={`flex rounded-xl border text-sm transition ${
+                  isNavCollapsed ? "h-11 items-center justify-center px-0 py-0" : "items-start gap-3 px-3 py-2.5"
+                } ${
                   active
                     ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
                     : "border-transparent text-zinc-500 hover:border-white/10 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
-                <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>
-                  <span className="block font-semibold">{item.label}</span>
-                  <span className="mt-1 block text-xs text-zinc-600">{item.description}</span>
-                </span>
+                <Icon className={`${isNavCollapsed ? "h-4 w-4" : "mt-0.5 h-4 w-4"} shrink-0`} />
+                {isNavCollapsed ? null : (
+                  <span>
+                    <span className="block font-semibold">{item.label}</span>
+                    <span className="mt-1 block text-xs text-zinc-600">{item.description}</span>
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-5 left-4 right-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs font-semibold uppercase text-zinc-500">Signed in</p>
-          <p className="mt-2 text-sm font-semibold text-white">{session.user.name}</p>
-          <p className="text-xs text-zinc-500">{session.user.email}</p>
+        <div
+          className={`absolute bottom-5 rounded-xl border border-white/10 bg-white/[0.03] ${
+            isNavCollapsed ? "left-3 right-3 p-2" : "left-4 right-4 p-4"
+          }`}
+        >
+          {isNavCollapsed ? (
+            <div className="grid place-items-center gap-2">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-cyan-300/10 text-xs font-semibold text-cyan-100">
+                {session.user.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)}
+              </span>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs font-semibold uppercase text-zinc-500">Signed in</p>
+              <p className="mt-2 text-sm font-semibold text-white">{session.user.name}</p>
+              <p className="text-xs text-zinc-500">{session.user.email}</p>
+            </>
+          )}
           <button
-            className="mt-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-white/10 text-sm font-semibold text-zinc-300 transition hover:border-red-300/40 hover:text-red-200"
+            className={`inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-white/10 text-sm font-semibold text-zinc-300 transition hover:border-red-300/40 hover:text-red-200 ${
+              isNavCollapsed ? "mt-2" : "mt-4"
+            }`}
             onClick={logout}
+            title="Logout"
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            {isNavCollapsed ? null : "Logout"}
           </button>
         </div>
       </aside>
 
-      <div className="lg:pl-64">
+      <div className={isNavCollapsed ? "lg:pl-20" : "lg:pl-64"}>
         <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050714]/85 backdrop-blur-xl">
           <div className="flex min-h-16 items-center justify-between gap-4 px-5 sm:px-8">
             <BrandLogo

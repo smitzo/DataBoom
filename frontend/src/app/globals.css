@@ -43,9 +43,78 @@ html {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: geometricPrecision;
+  scrollbar-color: rgba(34, 211, 238, 0.78) rgba(8, 15, 30, 0.78);
+  scrollbar-width: thin;
 }
 
 ::selection {
   background: rgba(45, 212, 191, 0.24);
   color: var(--text-primary);
+}
+
+::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(8, 15, 30, 0.78);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #34d399, #22d3ee);
+  border: 2px solid rgba(8, 15, 30, 0.78);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6ee7b7, #38bdf8);
+}
+
+.workspace-scrollbar {
+  scrollbar-color: rgba(8, 145, 178, 0.86) rgba(207, 250, 254, 0.84);
+  scrollbar-width: thin;
+}
+
+.workspace-scrollbar::-webkit-scrollbar {
+  height: 9px;
+  width: 9px;
+}
+
+.workspace-scrollbar::-webkit-scrollbar-track {
+  background: rgba(207, 250, 254, 0.84);
+}
+
+.workspace-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #10b981, #0891b2);
+  border: 2px solid rgba(207, 250, 254, 0.84);
+  border-radius: 999px;
+}
+
+.workspace-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #34d399, #06b6d4);
+}
+
+.workspace-scrollbar-dark {
+  scrollbar-color: rgba(34, 211, 238, 0.82) rgba(15, 23, 42, 0.8);
+  scrollbar-width: thin;
+}
+
+.workspace-scrollbar-dark::-webkit-scrollbar {
+  height: 9px;
+  width: 9px;
+}
+
+.workspace-scrollbar-dark::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.workspace-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #34d399, #22d3ee);
+  border: 2px solid rgba(15, 23, 42, 0.8);
+  border-radius: 999px;
+}
+
+.workspace-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6ee7b7, #38bdf8);
 }
