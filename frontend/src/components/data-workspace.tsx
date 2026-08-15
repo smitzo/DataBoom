@@ -15,6 +15,8 @@ import {
   Layers3,
   Loader2,
   PackageCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
   Play,
   RefreshCw,
   Rows3,
@@ -26,7 +28,6 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { BrandLogo } from "@/components/brand";
 import { formatBytes } from "@/components/product-console";
 import type {
   ArtifactList,
@@ -70,6 +71,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isWorkspaceRailCollapsed, setIsWorkspaceRailCollapsed] = useState(false);
 
   useEffect(() => {
     loadWorkspace();
@@ -209,6 +211,9 @@ export function DataWorkspace({ session }: { session: Session }) {
     () => buildInsight(selectedTablePreview, selectedDocumentPreview),
     [selectedDocumentPreview, selectedTablePreview],
   );
+  const workspaceGridClass = isWorkspaceRailCollapsed
+    ? "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[4.75rem_minmax(0,1fr)_21rem]"
+    : "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[15rem_minmax(0,1fr)_21rem]";
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -327,9 +332,11 @@ export function DataWorkspace({ session }: { session: Session }) {
 
   return (
     <section className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-      <div className="flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[15rem_minmax(0,1fr)_23rem]">
+      <div className={workspaceGridClass}>
         <WorkspaceSidebar
           activeKind={activeKind}
+          collapsed={isWorkspaceRailCollapsed}
+          onToggleCollapse={() => setIsWorkspaceRailCollapsed((current) => !current)}
           products={products}
           selectedProductId={selectedProductId}
           subscribedProductIds={subscribedProductIds}
@@ -362,7 +369,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             </div>
           ) : null}
 
-          <div className="h-[calc(100vh-18rem)] min-h-[34rem] overflow-auto bg-white">
+          <div className="workspace-scrollbar h-[calc(100vh-18rem)] min-h-[34rem] overflow-auto bg-zinc-50">
             <DataSurface
               activeKind={activeKind}
               documentPreview={selectedDocumentPreview}
@@ -395,6 +402,8 @@ export function DataWorkspace({ session }: { session: Session }) {
 
 function WorkspaceSidebar({
   activeKind,
+  collapsed,
+  onToggleCollapse,
   products,
   selectedProductId,
   subscribedProductIds,
@@ -404,6 +413,8 @@ function WorkspaceSidebar({
   onSelectResource,
 }: {
   activeKind: Product["kind"];
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   products: Product[];
   selectedProductId: string;
   subscribedProductIds: Set<string>;
@@ -414,6 +425,66 @@ function WorkspaceSidebar({
 }) {
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
 
+  if (collapsed) {
+    return (
+      <aside className="bg-[#080b14] text-zinc-100">
+        <div className="grid border-b border-white/10 px-2 py-3">
+          <button
+            aria-label="Expand workspace rail"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
+            onClick={onToggleCollapse}
+            title="Expand workspace rail"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-2">
+          <div className="space-y-2">
+            {products.map((product) => {
+              const ProductIcon = productIcon(product.kind);
+              const selected = selectedProductId === product.id;
+              return (
+                <button
+                  key={product.id}
+                  className={`relative grid h-11 w-11 place-items-center rounded-xl border transition ${
+                    selected
+                      ? "border-cyan-300/40 bg-cyan-300/15 text-cyan-100"
+                      : "border-white/10 bg-white/[0.025] text-zinc-500 hover:border-white/20 hover:text-white"
+                  }`}
+                  onClick={() => onSelectProduct(product)}
+                  title={product.name}
+                >
+                  <ProductIcon className="h-4 w-4" />
+                  {subscribedProductIds.has(product.id) ? (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-300" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="workspace-scrollbar-dark max-h-[45vh] space-y-2 overflow-auto border-t border-white/10 pt-4">
+            {resourceNames.map((resourceName) => (
+              <button
+                key={resourceName}
+                className={`grid h-10 w-11 place-items-center rounded-lg transition ${
+                  selectedResource === resourceName
+                    ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
+                    : "text-zinc-500 hover:bg-white/[0.05] hover:text-white"
+                }`}
+                onClick={() => onSelectResource(resourceName)}
+                title={shortTableName(resourceName)}
+              >
+                <ResourceIcon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="bg-[#080b14] text-zinc-100">
       <div className="border-b border-white/10 px-4 py-4">
@@ -422,7 +493,14 @@ function WorkspaceSidebar({
             <p className="text-xs font-semibold uppercase text-zinc-500">Workspace</p>
             <p className="mt-1 text-sm font-semibold text-white">{kindLabel(activeKind)}</p>
           </div>
-          <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.75)]" />
+          <button
+            aria-label="Collapse workspace rail"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
+            onClick={onToggleCollapse}
+            title="Collapse workspace rail"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -433,35 +511,55 @@ function WorkspaceSidebar({
             <span className="text-xs text-zinc-600">{products.length}</span>
           </div>
           <div className="mt-3 space-y-2">
-            {products.map((product) => (
-              <button
-                key={product.id}
-                className={`w-full rounded-lg border px-3 py-2.5 text-left transition ${
-                  selectedProductId === product.id
-                    ? "border-cyan-300/35 bg-cyan-300/10 text-white"
-                    : "border-white/10 bg-white/[0.025] text-zinc-400 hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
-                }`}
-                onClick={() => onSelectProduct(product)}
-              >
-                <span className="flex items-start gap-3">
-                  <HardDrive className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">{product.name}</span>
-                      {subscribedProductIds.has(product.id) ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+            {products.map((product) => {
+              const selected = selectedProductId === product.id;
+              const ProductIcon = productIcon(product.kind);
+              return (
+                <button
+                  key={product.id}
+                  className={`w-full rounded-lg border text-left transition ${
+                    selected
+                      ? "border-cyan-300/35 bg-cyan-300/10 px-3 py-3 text-white"
+                      : "border-white/10 bg-white/[0.02] px-3 py-2 text-zinc-400 hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                  onClick={() => onSelectProduct(product)}
+                >
+                  <span className="flex items-start gap-3">
+                    <span
+                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
+                        selected
+                          ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+                          : "border-white/10 bg-white/[0.03] text-zinc-500"
+                      }`}
+                    >
+                      <ProductIcon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{product.name}</span>
+                        {subscribedProductIds.has(product.id) ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                        ) : (
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              product.status === "active" ? "bg-emerald-300" : "bg-sky-300"
+                            }`}
+                          />
+                        )}
+                      </span>
+                      <span className="mt-1 block truncate text-xs text-zinc-500">
+                        {product.module}
+                      </span>
+                      {selected ? (
+                        <span className="mt-2 inline-flex rounded-md bg-emerald-300/10 px-2 py-1 text-[0.68rem] font-semibold uppercase text-emerald-200">
+                          {product.status}
+                        </span>
                       ) : null}
                     </span>
-                    <span className="mt-1 block truncate text-xs text-zinc-500">
-                      {product.module}
-                    </span>
-                    <span className="mt-1 block text-[0.68rem] font-semibold uppercase text-zinc-600">
-                      {product.status}
-                    </span>
                   </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -472,7 +570,7 @@ function WorkspaceSidebar({
             </p>
             <span className="text-xs text-zinc-600">{resourceNames.length}</span>
           </div>
-          <div className="mt-3 space-y-1.5">
+          <div className="workspace-scrollbar-dark mt-3 max-h-[35vh] space-y-1.5 overflow-auto pr-1">
             {resourceNames.map((tableName) => (
               <button
                 key={tableName}
@@ -772,6 +870,33 @@ function DataTable({
   preview: TablePreview | null;
   selectedResource: string | null;
 }) {
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const rows = preview?.rows ?? [];
+  const filteredRows = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return rows;
+    }
+    return rows.filter((row) =>
+      Object.values(row).some((value) => String(value).toLowerCase().includes(normalizedQuery)),
+    );
+  }, [query, rows]);
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const activePage = Math.min(page, pageCount);
+  const startIndex = (activePage - 1) * pageSize;
+  const visibleRows = filteredRows.slice(startIndex, startIndex + pageSize);
+
+  useEffect(() => {
+    setPage(1);
+    setQuery("");
+  }, [preview?.run_id, preview?.table_name]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
+
   if (!preview) {
     return (
       <div className="grid h-full place-items-center px-6 text-center">
@@ -791,44 +916,127 @@ function DataTable({
   }
 
   return (
-    <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-      <thead className="sticky top-0 z-10 bg-zinc-50">
-        <tr>
-          <th className="w-14 border-b border-r border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-400">
-            #
-          </th>
-          {preview.columns.map((column) => (
-            <th
-              key={column}
-              className="min-w-40 border-b border-r border-zinc-200 px-3 py-2 align-bottom"
-            >
-              <span className="block text-sm font-semibold text-zinc-950">{column}</span>
-              <span className="mt-1 block text-[0.68rem] font-semibold uppercase text-zinc-400">
-                {inferColumnType(column, preview.rows)}
-              </span>
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {preview.rows.map((row, rowIndex) => (
-          <tr key={rowIndex} className="hover:bg-cyan-50/70">
-            <td className="border-b border-r border-zinc-100 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-400">
-              {rowIndex + 1}
-            </td>
-            {preview.columns.map((column) => (
-              <td
-                key={column}
-                className="max-w-72 truncate border-b border-r border-zinc-100 px-3 py-2 text-zinc-700"
-                title={row[column] ?? ""}
-              >
-                {row[column] ?? ""}
-              </td>
+    <div className="flex h-full min-w-0 flex-col bg-zinc-50">
+      <div className="flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500">
+            {filteredRows.length} preview rows
+          </span>
+          <button className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-600 transition hover:border-cyan-400 hover:text-cyan-700">
+            Columns
+          </button>
+        </div>
+        <label className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-500 focus-within:border-cyan-500 lg:w-64">
+          <Search className="h-4 w-4 shrink-0" />
+          <input
+            className="min-w-0 flex-1 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search preview rows..."
+            value={query}
+          />
+        </label>
+      </div>
+
+      <div className="workspace-scrollbar min-h-0 flex-1 overflow-auto bg-white">
+        <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+          <thead className="sticky top-0 z-10 bg-zinc-50 shadow-[0_1px_0_rgba(228,228,231,1)]">
+            <tr>
+              <th className="w-14 border-b border-r border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-400">
+                #
+              </th>
+              {preview.columns.map((column) => (
+                <th
+                  key={column}
+                  className="min-w-40 border-b border-r border-zinc-200 px-3 py-2 align-bottom"
+                >
+                  <span className="block text-sm font-semibold text-zinc-950">{column}</span>
+                  <span className="mt-1 block text-[0.68rem] font-semibold uppercase text-zinc-400">
+                    {inferColumnType(column, preview.rows)}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((row, rowIndex) => {
+              const rowNumber = startIndex + rowIndex + 1;
+              const rowTone = rowNumber % 2 === 0 ? "bg-zinc-50" : "bg-white";
+              return (
+                <tr key={`${rowNumber}-${rowIndex}`} className={`${rowTone} hover:bg-cyan-50/80`}>
+                  <td className="border-b border-r border-zinc-100 px-3 py-2 text-xs font-semibold text-zinc-400">
+                    {rowNumber}
+                  </td>
+                  {preview.columns.map((column) => (
+                    <td
+                      key={column}
+                      className="max-w-72 truncate border-b border-r border-zinc-100 px-3 py-2 text-zinc-700"
+                      title={row[column] ?? ""}
+                    >
+                      {row[column] ?? ""}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-zinc-200 bg-white px-4 py-3 text-xs font-semibold text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <span>Rows per page</span>
+          <select
+            className="h-8 rounded-md border border-zinc-200 bg-zinc-50 px-2 text-xs font-semibold text-zinc-700 outline-none focus:border-cyan-500"
+            onChange={(event) => {
+              setPageSize(Number(event.target.value));
+              setPage(1);
+            }}
+            value={pageSize}
+          >
+            {[10, 20].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
             ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+          </select>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            className="h-8 rounded-md border border-zinc-200 px-2.5 text-zinc-600 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={activePage <= 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            Prev
+          </button>
+          {paginationItems(pageCount, activePage).map((item, index) =>
+            item === "gap" ? (
+              <span key={`gap-${index}`} className="px-1 text-zinc-400">
+                ...
+              </span>
+            ) : (
+              <button
+                key={item}
+                className={`grid h-8 min-w-8 place-items-center rounded-md border px-2 transition ${
+                  item === activePage
+                    ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                    : "border-zinc-200 text-zinc-600 hover:border-cyan-400 hover:text-cyan-700"
+                }`}
+                onClick={() => setPage(item)}
+              >
+                {item}
+              </button>
+            ),
+          )}
+          <button
+            className="h-8 rounded-md border border-zinc-200 px-2.5 text-zinc-600 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={activePage >= pageCount}
+            onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -867,7 +1075,7 @@ function DocumentList({
             <p className="text-xs font-semibold uppercase text-zinc-400">Document {index + 1}</p>
             <p className="text-xs font-semibold text-zinc-500">{preview.collection_name}</p>
           </div>
-          <pre className="max-h-96 overflow-auto p-4 text-xs leading-5 text-zinc-800">
+          <pre className="workspace-scrollbar max-h-96 overflow-auto p-4 text-xs leading-5 text-zinc-800">
             {JSON.stringify(document, null, 2)}
           </pre>
         </article>
@@ -1005,7 +1213,7 @@ function AgentPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="workspace-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
         <details className="rounded-xl border border-zinc-200 bg-white p-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-zinc-950">
             Generation steps
@@ -1567,6 +1775,38 @@ function productResources(product: Product | null) {
     return product.tables;
   }
   return product.use_cases;
+}
+
+function paginationItems(pageCount: number, activePage: number) {
+  if (pageCount <= 5) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  const pages = new Set([1, pageCount, activePage - 1, activePage, activePage + 1]);
+  return Array.from(pages)
+    .filter((page) => page >= 1 && page <= pageCount)
+    .sort((left, right) => left - right)
+    .reduce<(number | "gap")[]>((items, page) => {
+      const previous = items.at(-1);
+      if (typeof previous === "number" && page - previous > 1) {
+        items.push("gap");
+      }
+      items.push(page);
+      return items;
+    }, []);
+}
+
+function productIcon(kind: Product["kind"]) {
+  if (kind === "document") {
+    return FileJson;
+  }
+  if (kind === "graph") {
+    return Layers3;
+  }
+  if (kind === "masking") {
+    return PackageCheck;
+  }
+  return HardDrive;
 }
 
 function kindLabel(kind: Product["kind"]) {
