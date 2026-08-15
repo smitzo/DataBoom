@@ -4,6 +4,7 @@ import {
   BarChart3,
   LayoutDashboard,
   LogOut,
+  ShieldCheck,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -14,9 +15,19 @@ import { BrandLogo } from "@/components/brand";
 import { clearSession, type Session } from "@/lib/session";
 
 const navItems = [
-  { href: "/dashboard", label: "Workspace", icon: LayoutDashboard },
-  { href: "/runs", label: "Runs", icon: BarChart3 },
-  { href: "/settings/subscriptions", label: "Settings", icon: Settings },
+  {
+    href: "/dashboard",
+    label: "Workspace",
+    description: "Generate and preview data",
+    icon: LayoutDashboard,
+  },
+  { href: "/runs", label: "Runs", description: "History and artifacts", icon: BarChart3 },
+  {
+    href: "/settings/subscriptions",
+    label: "Subscriptions",
+    description: "Product access",
+    icon: Settings,
+  },
 ];
 
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
@@ -41,14 +52,17 @@ export function AppShell({ session, children }: { session: Session; children: Re
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition ${
+                className={`flex items-start gap-3 rounded-xl border px-3 py-3 text-sm transition ${
                   active
-                    ? "bg-cyan-300/10 text-cyan-100 ring-1 ring-cyan-300/25"
-                    : "text-zinc-500 hover:bg-white/[0.04] hover:text-white"
+                    ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+                    : "border-transparent text-zinc-500 hover:border-white/10 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  <span className="block font-semibold">{item.label}</span>
+                  <span className="mt-1 block text-xs text-zinc-600">{item.description}</span>
+                </span>
               </Link>
             );
           })}
@@ -79,10 +93,17 @@ export function AppShell({ session, children }: { session: Session; children: Re
             <div className="hidden lg:block">
               <p className="text-xs font-semibold uppercase text-zinc-500">Data operations workspace</p>
               <p className="text-sm text-zinc-400">
-                DataBoom product workspace.
+                Generate, validate, preview, and export synthetic datasets.
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <span className="hidden h-10 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-xs font-semibold uppercase text-emerald-100 md:inline-flex">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Demo workspace
+              </span>
+              <span className="hidden rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-zinc-200 xl:inline-flex">
+                {session.user.name}
+              </span>
               {navItems.map((item) => (
                 <Link
                   key={item.href}

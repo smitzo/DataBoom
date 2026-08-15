@@ -1,16 +1,21 @@
 "use client";
 
 import {
+  BarChart3,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  Clock3,
+  Database,
   Download,
   FileJson,
   FileSpreadsheet,
   FileText,
   HardDrive,
+  Layers3,
   Loader2,
   MemoryStick,
+  PackageCheck,
   Play,
   RefreshCw,
   Rows3,
@@ -19,6 +24,7 @@ import {
   Sparkles,
   Table2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { BrandLogo } from "@/components/brand";
@@ -321,8 +327,8 @@ export function DataWorkspace({ session }: { session: Session }) {
   }
 
   return (
-    <section className="min-h-[calc(100vh-6rem)] overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-      <div className="flex min-h-[calc(100vh-6rem)] flex-col xl:grid xl:grid-cols-[17rem_minmax(0,1fr)_26rem]">
+    <section className="min-h-[calc(100vh-6rem)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+      <div className="flex min-h-[calc(100vh-6rem)] flex-col xl:grid xl:grid-cols-[18rem_minmax(0,1fr)_27rem]">
         <WorkspaceSidebar
           activeKind={activeKind}
           products={products}
@@ -335,6 +341,13 @@ export function DataWorkspace({ session }: { session: Session }) {
         />
 
         <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
+          <WorkspaceOverview
+            artifacts={artifacts}
+            product={selectedProduct}
+            run={selectedRun}
+            subscribed={subscribed}
+            visibleRows={visibleRows}
+          />
           <WorkspaceToolbar
             run={selectedRun}
             activeKind={activeKind}
@@ -350,7 +363,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             </div>
           ) : null}
 
-          <div className="h-[calc(100vh-13rem)] min-h-[34rem] overflow-auto bg-white">
+          <div className="h-[calc(100vh-24rem)] min-h-[32rem] overflow-auto bg-white">
             <DataSurface
               activeKind={activeKind}
               documentPreview={selectedDocumentPreview}
@@ -403,7 +416,7 @@ function WorkspaceSidebar({
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
 
   return (
-    <aside className="bg-[#090b13] text-zinc-100">
+    <aside className="bg-[#080b14] text-zinc-100">
       <div className="border-b border-white/10 px-4 py-5">
         <BrandLogo
           href={null}
@@ -411,44 +424,74 @@ function WorkspaceSidebar({
           sublabel={kindLabel(activeKind)}
           className="[--text-primary:#ffffff] [--text-faint:#71717a]"
         />
+        <div className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase text-emerald-200">Local engine</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.75)]" />
+          </div>
+          <p className="mt-2 text-xs leading-5 text-zinc-400">
+            Products generate to local artifacts with preview and download support.
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-5 p-3">
+      <div className="space-y-6 p-4">
         <div>
-          <p className="px-2 text-xs font-semibold uppercase text-zinc-600">Datasets</p>
-          <div className="mt-2 space-y-1">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs font-semibold uppercase text-zinc-500">Products</p>
+            <span className="text-xs text-zinc-600">{products.length}</span>
+          </div>
+          <div className="mt-3 space-y-2">
             {products.map((product) => (
               <button
                 key={product.id}
-                className={`flex h-11 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${
+                className={`w-full rounded-xl border p-3 text-left transition ${
                   selectedProductId === product.id
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
+                    ? "border-cyan-300/35 bg-cyan-300/10 text-white"
+                    : "border-white/10 bg-white/[0.025] text-zinc-400 hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
                 }`}
                 onClick={() => onSelectProduct(product)}
               >
-                <HardDrive className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{product.name}</span>
-                {subscribedProductIds.has(product.id) ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
-                ) : null}
+                <span className="flex items-start gap-3">
+                  <HardDrive className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm font-semibold">{product.name}</span>
+                      {subscribedProductIds.has(product.id) ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
+                      ) : null}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-zinc-500">
+                      {product.module}
+                    </span>
+                    <span
+                      className={`mt-2 inline-flex rounded-md px-2 py-1 text-[0.68rem] font-semibold uppercase ${
+                        product.status === "active"
+                          ? "bg-emerald-300/10 text-emerald-200"
+                          : "bg-sky-300/10 text-sky-200"
+                      }`}
+                    >
+                      {product.status}
+                    </span>
+                  </span>
+                </span>
               </button>
             ))}
           </div>
         </div>
 
         <div>
-          <div className="flex items-center justify-between px-2">
+          <div className="flex items-center justify-between px-1">
             <p className="text-xs font-semibold uppercase text-zinc-600">
               {activeKind === "document" ? "Collections" : "Resources"}
             </p>
             <span className="text-xs text-zinc-600">{resourceNames.length}</span>
           </div>
-          <div className="mt-2 space-y-1">
+          <div className="mt-3 space-y-1.5">
             {resourceNames.map((tableName) => (
               <button
                 key={tableName}
-                className={`flex h-10 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm transition ${
+                className={`flex h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sm transition ${
                   selectedResource === tableName
                     ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
                     : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
@@ -463,6 +506,125 @@ function WorkspaceSidebar({
         </div>
       </div>
     </aside>
+  );
+}
+
+function WorkspaceOverview({
+  artifacts,
+  product,
+  run,
+  subscribed,
+  visibleRows,
+}: {
+  artifacts: ArtifactList | null;
+  product: Product | null;
+  run: GenerationRun | null;
+  subscribed: boolean;
+  visibleRows: number;
+}) {
+  const resourceCount = product ? productResources(product).length : 0;
+  const plannedRecords = product
+    ? Object.values(product.default_row_counts).reduce((total, count) => total + count, 0)
+    : 0;
+  const progress = run ? progressPercent(run) : 0;
+  const runState = runStateLabel(run);
+
+  return (
+    <section className="border-b border-zinc-200 bg-white">
+      <div className="grid gap-5 px-5 py-5 2xl:grid-cols-[1fr_0.95fr]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase ${
+                product?.status === "active"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-sky-200 bg-sky-50 text-sky-700"
+              }`}
+            >
+              <PackageCheck className="h-3.5 w-3.5" />
+              {product?.status ?? "No product"}
+            </span>
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase ${
+                subscribed
+                  ? "border-cyan-200 bg-cyan-50 text-cyan-700"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-500"
+              }`}
+            >
+              {subscribed ? "Subscribed" : "Not subscribed"}
+            </span>
+          </div>
+
+          <h1 className="mt-4 truncate text-3xl font-semibold text-zinc-950">
+            {product?.name ?? "DataBoom workspace"}
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-500">
+            {product?.description ??
+              "Choose a product module, subscribe, generate a run, and inspect output artifacts."}
+          </p>
+
+          {run ? (
+            <div className="mt-5">
+              <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-zinc-500">
+                <span className="truncate">
+                  Latest run · {run.run_id} · {runState}
+                </span>
+                <span>{progress}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-2">
+          <OverviewMetric
+            icon={Database}
+            label="Planned records"
+            value={formatNumber(plannedRecords)}
+          />
+          <OverviewMetric
+            icon={Layers3}
+            label={product?.kind === "document" ? "Collections" : "Resources"}
+            value={String(resourceCount)}
+          />
+          <OverviewMetric
+            icon={BarChart3}
+            label="Preview rows"
+            value={String(visibleRows)}
+          />
+          <OverviewMetric
+            icon={Download}
+            label="Artifacts"
+            value={String(artifacts?.files.length ?? 0)}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OverviewMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase text-zinc-500">{label}</p>
+        <Icon className="h-4 w-4 text-cyan-700" />
+      </div>
+      <p className="mt-3 text-2xl font-semibold text-zinc-950">{value}</p>
+    </div>
   );
 }
 
@@ -486,7 +648,7 @@ function WorkspaceToolbar({
     run?.collections.find((item) => item.collection_name === selectedResource);
 
   return (
-    <header className="flex min-h-16 flex-col gap-3 border-b border-zinc-200 bg-white px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
+    <header className="flex min-h-16 flex-col gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="truncate text-xl font-semibold text-zinc-950">
@@ -502,7 +664,7 @@ function WorkspaceToolbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <ToolbarPill active icon={Table2} label={activeKind === "document" ? "Document" : "Table"} />
+        <ToolbarPill active icon={Table2} label={activeKind === "document" ? "Document preview" : "Table preview"} />
         <ArtifactShortcut artifacts={artifacts} extension=".json" icon={FileJson} label="JSON" />
         <ArtifactShortcut artifacts={artifacts} extension=".ndjson" icon={FileText} label="NDJSON" />
         <ArtifactShortcut artifacts={artifacts} extension=".sql" icon={FileText} label="SQL" />
@@ -525,7 +687,7 @@ function ToolbarPill({
   label,
 }: {
   active?: boolean;
-  icon: typeof Table2;
+  icon: LucideIcon;
   label: string;
 }) {
   return (
@@ -550,7 +712,7 @@ function ArtifactShortcut({
 }: {
   artifacts: ArtifactList | null;
   extension: string;
-  icon: typeof FileJson;
+  icon: LucideIcon;
   label: string;
 }) {
   const artifact = artifacts?.files.find((file) => file.relative_path.endsWith(extension));
@@ -785,16 +947,19 @@ function AgentPanel({
 
   return (
     <aside className="flex min-h-full flex-col bg-zinc-50 text-zinc-950">
-      <div className="border-b border-zinc-200 bg-white px-5 py-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="border-b border-zinc-200 bg-white px-5 py-5">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-zinc-400">Agent workspace</p>
-            <h2 className="mt-1 truncate text-lg font-semibold text-zinc-950">
-              DataBoom Workspace
+            <p className="text-xs font-semibold uppercase text-zinc-400">Run builder</p>
+            <h2 className="mt-1 truncate text-xl font-semibold text-zinc-950">
+              {selectedProduct?.name ?? "Select a product"}
             </h2>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              Configure the current generation run and inspect execution progress.
+            </p>
           </div>
           <span
-            className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-semibold ${runStateClass}`}
+            className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${runStateClass}`}
           >
             {run?.status === "running" ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -807,20 +972,30 @@ function AgentPanel({
           </span>
         </div>
 
-        <div className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-2">
+        <GenerationPulse active={busy} />
+
+        <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase text-zinc-500">
+              Generation brief
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-700">
+              <Sparkles className="h-3.5 w-3.5" />
+              deterministic seed
+            </span>
+          </div>
           <textarea
-            className="h-20 w-full resize-none bg-transparent p-2 text-sm text-zinc-800 outline-none"
+            className="h-24 w-full resize-none rounded-lg border border-zinc-200 bg-white p-3 text-sm leading-6 text-zinc-800 outline-none transition focus:border-cyan-500"
             onChange={(event) => onPromptChange(event.target.value)}
             value={prompt}
           />
-          <div className="flex items-center justify-between gap-3 border-t border-zinc-200 pt-2">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-500">
-              <Sparkles className="h-3.5 w-3.5 text-cyan-600" />
-              {selectedProduct?.name ?? "No dataset"}
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="truncate text-xs font-semibold text-zinc-500">
+              {selectedProduct?.kind ?? "No product"} · {visibleRows} preview rows
             </span>
             {subscribed ? (
               <button
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-zinc-950 px-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
                 onClick={onGenerate}
               >
@@ -829,11 +1004,11 @@ function AgentPanel({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {status === "generating" ? "Generating" : "Run"}
+                {status === "generating" ? "Generating" : "Generate"}
               </button>
             ) : (
               <button
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-cyan-700 px-3 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-700 px-4 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
                 onClick={onSubscribe}
               >
@@ -857,7 +1032,7 @@ function AgentPanel({
           </div>
           <div className="space-y-2">
             {steps.map((step) => (
-              <div key={step.label} className="rounded-md border border-zinc-200 bg-white p-3">
+              <div key={step.label} className="rounded-xl border border-zinc-200 bg-white p-3">
                 <div className="flex items-start gap-3">
                   <span
                     className={`mt-0.5 grid h-5 w-5 place-items-center rounded-full ${
@@ -889,6 +1064,43 @@ function AgentPanel({
         <ArtifactListPanel artifacts={artifacts} />
       </div>
     </aside>
+  );
+}
+
+function GenerationPulse({ active }: { active: boolean }) {
+  const steps = ["Read", "Plan", "Write", "Validate"];
+
+  return (
+    <div className="mt-5 rounded-xl border border-cyan-200 bg-cyan-50 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-900">
+          {active ? (
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-700" />
+          ) : (
+            <Clock3 className="h-4 w-4 text-cyan-700" />
+          )}
+          {active ? "Generation in progress" : "Generator ready"}
+        </span>
+        <span className="text-xs font-semibold uppercase text-cyan-700">
+          async engine
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-2">
+        {steps.map((step, index) => (
+          <div key={step} className="rounded-lg bg-white p-2">
+            <div
+              className={`h-1.5 rounded-full ${
+                active ? "animate-pulse bg-cyan-500" : "bg-emerald-500"
+              }`}
+              style={{ animationDelay: `${index * 140}ms` }}
+            />
+            <p className="mt-2 truncate text-[0.68rem] font-semibold uppercase text-zinc-500">
+              {step}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1177,6 +1389,10 @@ function formatRate(rowsPerSecond: number | null | undefined) {
     return `${rowsPerSecond.toFixed(2)}/s`;
   }
   return `${Math.round(rowsPerSecond).toLocaleString()}/s`;
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString();
 }
 
 function formatOperationName(operation: string) {
