@@ -41,10 +41,10 @@ export function AppShell({ session, children }: { session: Session; children: Re
 
   return (
     <main className="min-h-screen bg-[#050714] text-zinc-100">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 border-r border-white/10 bg-[#080b16]/95 px-6 py-7 shadow-[18px_0_60px_rgba(0,0,0,0.22)] lg:block">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-white/10 bg-[#080b16]/95 px-4 py-5 shadow-[18px_0_60px_rgba(0,0,0,0.22)] lg:block">
         <BrandLogo size="md" sublabel="Product console" />
 
-        <nav className="mt-10 space-y-2">
+        <nav className="mt-8 space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -52,7 +52,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-start gap-3 rounded-xl border px-3 py-3 text-sm transition ${
+                className={`flex items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${
                   active
                     ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
                     : "border-transparent text-zinc-500 hover:border-white/10 hover:bg-white/[0.04] hover:text-white"
@@ -68,7 +68,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
           })}
         </nav>
 
-        <div className="absolute bottom-6 left-6 right-6 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="absolute bottom-5 left-4 right-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <p className="text-xs font-semibold uppercase text-zinc-500">Signed in</p>
           <p className="mt-2 text-sm font-semibold text-white">{session.user.name}</p>
           <p className="text-xs text-zinc-500">{session.user.email}</p>
@@ -82,19 +82,17 @@ export function AppShell({ session, children }: { session: Session; children: Re
         </div>
       </aside>
 
-      <div className="lg:pl-80">
+      <div className="lg:pl-64">
         <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050714]/85 backdrop-blur-xl">
-          <div className="flex min-h-20 items-center justify-between gap-4 px-5 sm:px-8">
+          <div className="flex min-h-16 items-center justify-between gap-4 px-5 sm:px-8">
             <BrandLogo
               size="sm"
               sublabel="Console"
               className="lg:hidden [--text-primary:#ffffff] [--text-faint:#71717a]"
             />
             <div className="hidden lg:block">
-              <p className="text-xs font-semibold uppercase text-zinc-500">Data operations workspace</p>
-              <p className="text-sm text-zinc-400">
-                Generate, validate, preview, and export synthetic datasets.
-              </p>
+              <p className="text-sm font-semibold text-zinc-200">Data operations workspace</p>
+              <p className="text-xs text-zinc-500">Generate, validate, preview, export.</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="hidden h-10 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-xs font-semibold uppercase text-emerald-100 md:inline-flex">
