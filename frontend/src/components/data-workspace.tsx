@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  ArrowLeft,
   BarChart3,
+  Check,
   CheckCircle2,
   ChevronDown,
   CircleAlert,
   Clock3,
   Database,
   Download,
+  Eye,
   FileJson,
   FileSpreadsheet,
   FileText,
@@ -18,7 +21,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Play,
-  RefreshCw,
   Rows3,
   Search,
   Send,
@@ -28,13 +30,11 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { formatBytes } from "@/components/product-console";
 import type {
   ArtifactList,
   DocumentPreview,
   GenerationRun,
   Product,
-  RunArtifact,
   Subscription,
   TablePreview,
 } from "@/lib/api";
@@ -55,6 +55,16 @@ import type { Session } from "@/lib/session";
 type PreviewMap = Record<string, TablePreview>;
 type DocumentPreviewMap = Record<string, DocumentPreview>;
 type AgentStatus = "idle" | "subscribing" | "generating" | "complete" | "error";
+type WorkspaceMode = "catalog" | "product";
+type ViewFormat = "table" | "csv" | "sql" | "json" | "ndjson" | "graph" | "masked";
+
+type FormatOption = {
+  id: ViewFormat;
+  label: string;
+  description: string;
+  extension?: string;
+  icon: LucideIcon;
+};
 
 export function DataWorkspace({ session }: { session: Session }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,11 +76,13 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState<string | null>(null);
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("catalog");
+  const [viewFormat, setViewFormat] = useState<ViewFormat>("table");
+  const [downloadFormats, setDownloadFormats] = useState<ViewFormat[]>(["csv"]);
   const [prompt, setPrompt] = useState("Generate realistic data for the selected product");
   const [status, setStatus] = useState<AgentStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isWorkspaceRailCollapsed, setIsWorkspaceRailCollapsed] = useState(false);
 
   useEffect(() => {
@@ -203,6 +215,22 @@ export function DataWorkspace({ session }: { session: Session }) {
   const activeKind = selectedRun?.kind ?? selectedProduct?.kind ?? "relational";
   const resourceNames = selectedRun ? runResources(selectedRun) : productResources(selectedProduct);
   const visibleRows = selectedTablePreview?.rows.length ?? selectedDocumentPreview?.documents.length ?? 0;
+
+  useEffect(() => {
+    const nextViewOptions = viewOptions(activeKind);
+    const nextDownloadOptions = downloadOptions(activeKind);
+    setViewFormat((current) =>
+      nextViewOptions.some((option) => option.id === current)
+        ? current
+        : nextViewOptions[0]?.id ?? "table",
+    );
+    setDownloadFormats((current) => {
+      const allowedIds = new Set(nextDownloadOptions.map((option) => option.id));
+      const filtered = current.filter((format) => allowedIds.has(format));
+      return filtered.length ? filtered : nextDownloadOptions.slice(0, 1).map((option) => option.id);
+    });
+  }, [activeKind, selectedProductId]);
+
   const agentSteps = useMemo(
     () => buildAgentSteps(status, selectedRun, selectedProduct),
     [selectedProduct, selectedRun, status],
@@ -212,7 +240,7 @@ export function DataWorkspace({ session }: { session: Session }) {
     [selectedDocumentPreview, selectedTablePreview],
   );
   const workspaceGridClass = isWorkspaceRailCollapsed
-    ? "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[4.75rem_minmax(0,1fr)_21rem]"
+    ? "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[9.5rem_minmax(0,1fr)_21rem]"
     : "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[15rem_minmax(0,1fr)_21rem]";
 
   async function loadWorkspace() {
@@ -256,12 +284,6 @@ export function DataWorkspace({ session }: { session: Session }) {
     }
   }
 
-  async function refreshWorkspace() {
-    setIsRefreshing(true);
-    await loadWorkspace();
-    setIsRefreshing(false);
-  }
-
   async function chooseProduct(product: Product) {
     setSelectedProductId(product.id);
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
@@ -270,6 +292,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       matchingRun ? runResources(matchingRun)[0] ?? null : productResources(product)[0] ?? null,
     );
     setStatus(matchingRun ? runAgentStatus(matchingRun) : "idle");
+    setWorkspaceMode("product");
   }
 
   async function subscribe() {
@@ -330,6 +353,17 @@ export function DataWorkspace({ session }: { session: Session }) {
     );
   }
 
+  if (workspaceMode === "catalog") {
+    return (
+      <ProductWorkspacePicker
+        products={products}
+        selectedProductId={selectedProductId}
+        subscribedProductIds={subscribedProductIds}
+        onSelectProduct={chooseProduct}
+      />
+    );
+  }
+
   return (
     <section className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
       <div className={workspaceGridClass}>
@@ -337,18 +371,16 @@ export function DataWorkspace({ session }: { session: Session }) {
           activeKind={activeKind}
           collapsed={isWorkspaceRailCollapsed}
           onToggleCollapse={() => setIsWorkspaceRailCollapsed((current) => !current)}
-          products={products}
-          selectedProductId={selectedProductId}
+          product={selectedProduct}
           subscribedProductIds={subscribedProductIds}
           resourceNames={resourceNames}
           selectedResource={selectedResource}
-          onSelectProduct={chooseProduct}
+          onBackToProducts={() => setWorkspaceMode("catalog")}
           onSelectResource={setSelectedResource}
         />
 
         <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
           <WorkspaceOverview
-            artifacts={artifacts}
             product={selectedProduct}
             run={selectedRun}
             subscribed={subscribed}
@@ -359,8 +391,11 @@ export function DataWorkspace({ session }: { session: Session }) {
             activeKind={activeKind}
             selectedResource={selectedResource}
             artifacts={artifacts}
-            isRefreshing={isRefreshing}
-            onRefresh={refreshWorkspace}
+            downloadFormats={downloadFormats}
+            onDownloadFormatsChange={setDownloadFormats}
+            onViewFormatChange={setViewFormat}
+            product={selectedProduct}
+            viewFormat={viewFormat}
           />
 
           {error ? (
@@ -377,12 +412,12 @@ export function DataWorkspace({ session }: { session: Session }) {
               product={selectedProduct}
               selectedResource={selectedResource}
               tablePreview={selectedTablePreview}
+              viewFormat={viewFormat}
             />
           </div>
         </main>
 
         <AgentPanel
-          artifacts={artifacts}
           insight={insight}
           onGenerate={generate}
           onPromptChange={setPrompt}
@@ -400,35 +435,136 @@ export function DataWorkspace({ session }: { session: Session }) {
   );
 }
 
+function ProductWorkspacePicker({
+  products,
+  selectedProductId,
+  subscribedProductIds,
+  onSelectProduct,
+}: {
+  products: Product[];
+  selectedProductId: string;
+  subscribedProductIds: Set<string>;
+  onSelectProduct: (product: Product) => void;
+}) {
+  return (
+    <section className="min-h-[calc(100vh-5.5rem)] rounded-2xl border border-white/10 bg-[#070b16] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+      <div className="grid min-h-[calc(100vh-8rem)] gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(34rem,1.35fr)] xl:items-stretch">
+        <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
+              Product workspaces
+            </p>
+            <h1 className="mt-4 max-w-2xl text-4xl font-semibold leading-tight text-white lg:text-5xl">
+              Pick the data surface before you run the engine.
+            </h1>
+            <p className="mt-5 max-w-xl text-sm leading-6 text-zinc-400">
+              Each workspace opens with only the controls, previews, and artifacts that match that
+              product. Relational data stays table-first. Document data stays JSON-first.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+            {[
+              ["Table-Boom", "Tables, keys, CSV and SQL"],
+              ["Docu-Boom", "Documents, JSON and NDJSON"],
+              ["Focused", "One product workspace at a time"],
+            ].map(([label, detail]) => (
+              <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-semibold text-white">{label}</p>
+                <p className="mt-2 text-xs leading-5 text-zinc-500">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {products.map((product) => {
+            const Icon = productIcon(product.kind);
+            const subscribed = subscribedProductIds.has(product.id);
+            const selected = selectedProductId === product.id;
+            const resourceCount = productResources(product).length;
+            return (
+              <button
+                key={product.id}
+                className={`group flex min-h-64 flex-col justify-between rounded-2xl border p-5 text-left transition ${
+                  selected
+                    ? "border-cyan-300/45 bg-cyan-300/10 shadow-[0_0_44px_rgba(34,211,238,0.12)]"
+                    : "border-white/10 bg-white/[0.035] hover:border-cyan-300/30 hover:bg-cyan-300/[0.055]"
+                }`}
+                onClick={() => onSelectProduct(product)}
+              >
+                <span>
+                  <span className="flex items-start justify-between gap-4">
+                    <span className="grid h-12 w-12 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-[0.68rem] font-semibold uppercase ${
+                        product.status === "active"
+                          ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-200"
+                          : "border-sky-300/25 bg-sky-300/10 text-sky-200"
+                      }`}
+                    >
+                      {product.status}
+                    </span>
+                  </span>
+                  <span className="mt-5 block text-2xl font-semibold text-white">
+                    {product.name}
+                  </span>
+                  <span className="mt-2 block text-sm text-zinc-500">{product.module}</span>
+                  <span className="mt-4 block text-sm leading-6 text-zinc-400">
+                    {product.description}
+                  </span>
+                </span>
+
+                <span className="mt-6 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+                  <span className="text-xs font-semibold uppercase text-zinc-500">
+                    {resourceCount} {product.kind === "document" ? "collections" : "resources"}
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">
+                    {subscribed ? "Open workspace" : "Preview workspace"}
+                    <PanelLeftOpen className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function WorkspaceSidebar({
   activeKind,
   collapsed,
   onToggleCollapse,
-  products,
-  selectedProductId,
+  product,
   subscribedProductIds,
   resourceNames,
   selectedResource,
-  onSelectProduct,
+  onBackToProducts,
   onSelectResource,
 }: {
   activeKind: Product["kind"];
   collapsed: boolean;
   onToggleCollapse: () => void;
-  products: Product[];
-  selectedProductId: string;
+  product: Product | null;
   subscribedProductIds: Set<string>;
   resourceNames: string[];
   selectedResource: string | null;
-  onSelectProduct: (product: Product) => void;
+  onBackToProducts: () => void;
   onSelectResource: (resourceName: string) => void;
 }) {
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
+  const ProductIcon = product ? productIcon(product.kind) : Database;
+  const resourceLabel = activeKind === "document" ? "Collections" : "Tables";
+  const subscribed = product ? subscribedProductIds.has(product.id) : false;
 
   if (collapsed) {
     return (
       <aside className="bg-[#080b14] text-zinc-100">
-        <div className="grid border-b border-white/10 px-2 py-3">
+        <div className="grid gap-2 border-b border-white/10 px-2 py-3">
           <button
             aria-label="Expand workspace rail"
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
@@ -437,38 +573,28 @@ function WorkspaceSidebar({
           >
             <PanelLeftOpen className="h-4 w-4" />
           </button>
+          <button
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-400 transition hover:border-white/20 hover:text-white"
+            onClick={onBackToProducts}
+            title="Back to products"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="space-y-4 p-2">
-          <div className="space-y-2">
-            {products.map((product) => {
-              const ProductIcon = productIcon(product.kind);
-              const selected = selectedProductId === product.id;
-              return (
-                <button
-                  key={product.id}
-                  className={`relative grid h-11 w-11 place-items-center rounded-xl border transition ${
-                    selected
-                      ? "border-cyan-300/40 bg-cyan-300/15 text-cyan-100"
-                      : "border-white/10 bg-white/[0.025] text-zinc-500 hover:border-white/20 hover:text-white"
-                  }`}
-                  onClick={() => onSelectProduct(product)}
-                  title={product.name}
-                >
-                  <ProductIcon className="h-4 w-4" />
-                  {subscribedProductIds.has(product.id) ? (
-                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-300" />
-                  ) : null}
-                </button>
-              );
-            })}
+          <div className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 p-2 text-cyan-100">
+            <div className="flex items-center gap-2">
+              <ProductIcon className="h-4 w-4 shrink-0" />
+              <span className="truncate text-xs font-semibold">{product?.name ?? "Product"}</span>
+            </div>
           </div>
 
           <div className="workspace-scrollbar-dark max-h-[45vh] space-y-2 overflow-auto border-t border-white/10 pt-4">
             {resourceNames.map((resourceName) => (
               <button
                 key={resourceName}
-                className={`grid h-10 w-11 place-items-center rounded-lg transition ${
+                className={`flex h-10 w-full items-center gap-2 rounded-lg px-2 text-left transition ${
                   selectedResource === resourceName
                     ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
                     : "text-zinc-500 hover:bg-white/[0.05] hover:text-white"
@@ -477,6 +603,9 @@ function WorkspaceSidebar({
                 title={shortTableName(resourceName)}
               >
                 <ResourceIcon className="h-4 w-4" />
+                <span className="max-w-20 truncate text-[0.68rem] font-semibold">
+                  {shortTableName(resourceName)}
+                </span>
               </button>
             ))}
           </div>
@@ -491,7 +620,7 @@ function WorkspaceSidebar({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase text-zinc-500">Workspace</p>
-            <p className="mt-1 text-sm font-semibold text-white">{kindLabel(activeKind)}</p>
+            <p className="mt-1 text-sm font-semibold text-white">{product?.name ?? kindLabel(activeKind)}</p>
           </div>
           <button
             aria-label="Collapse workspace rail"
@@ -505,69 +634,38 @@ function WorkspaceSidebar({
       </div>
 
       <div className="space-y-5 p-3">
-        <div>
-          <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Products</p>
-            <span className="text-xs text-zinc-600">{products.length}</span>
-          </div>
-          <div className="mt-3 space-y-2">
-            {products.map((product) => {
-              const selected = selectedProductId === product.id;
-              const ProductIcon = productIcon(product.kind);
-              return (
-                <button
-                  key={product.id}
-                  className={`w-full rounded-lg border text-left transition ${
-                    selected
-                      ? "border-cyan-300/35 bg-cyan-300/10 px-3 py-3 text-white"
-                      : "border-white/10 bg-white/[0.02] px-3 py-2 text-zinc-400 hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
-                  }`}
-                  onClick={() => onSelectProduct(product)}
-                >
-                  <span className="flex items-start gap-3">
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
-                        selected
-                          ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
-                          : "border-white/10 bg-white/[0.03] text-zinc-500"
-                      }`}
-                    >
-                      <ProductIcon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-semibold">{product.name}</span>
-                        {subscribedProductIds.has(product.id) ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
-                        ) : (
-                          <span
-                            className={`h-2 w-2 rounded-full ${
-                              product.status === "active" ? "bg-emerald-300" : "bg-sky-300"
-                            }`}
-                          />
-                        )}
-                      </span>
-                      <span className="mt-1 block truncate text-xs text-zinc-500">
-                        {product.module}
-                      </span>
-                      {selected ? (
-                        <span className="mt-2 inline-flex rounded-md bg-emerald-300/10 px-2 py-1 text-[0.68rem] font-semibold uppercase text-emerald-200">
-                          {product.status}
-                        </span>
-                      ) : null}
-                    </span>
+        <div className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 p-3">
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
+              <ProductIcon className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{product?.name ?? "Product"}</p>
+              <p className="mt-1 truncate text-xs text-zinc-400">{product?.module ?? kindLabel(activeKind)}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-md bg-emerald-300/10 px-2 py-1 text-[0.68rem] font-semibold uppercase text-emerald-200">
+                  {product?.status ?? "active"}
+                </span>
+                {subscribed ? (
+                  <span className="rounded-md bg-cyan-300/10 px-2 py-1 text-[0.68rem] font-semibold uppercase text-cyan-100">
+                    subscribed
                   </span>
-                </button>
-              );
-            })}
+                ) : null}
+              </div>
+            </div>
           </div>
+          <button
+            className="mt-3 inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-xs font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100"
+            onClick={onBackToProducts}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Products
+          </button>
         </div>
 
         <div>
           <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-semibold uppercase text-zinc-600">
-              {activeKind === "document" ? "Collections" : "Resources"}
-            </p>
+            <p className="text-xs font-semibold uppercase text-zinc-600">{resourceLabel}</p>
             <span className="text-xs text-zinc-600">{resourceNames.length}</span>
           </div>
           <div className="workspace-scrollbar-dark mt-3 max-h-[35vh] space-y-1.5 overflow-auto pr-1">
@@ -593,13 +691,11 @@ function WorkspaceSidebar({
 }
 
 function WorkspaceOverview({
-  artifacts,
   product,
   run,
   subscribed,
   visibleRows,
 }: {
-  artifacts: ArtifactList | null;
   product: Product | null;
   run: GenerationRun | null;
   subscribed: boolean;
@@ -681,9 +777,9 @@ function WorkspaceOverview({
             value={String(visibleRows)}
           />
           <OverviewMetric
-            icon={Download}
-            label="Artifacts"
-            value={String(artifacts?.files.length ?? 0)}
+            icon={Rows3}
+            label="Generated"
+            value={formatNumber(run?.generated_rows ?? 0)}
           />
         </div>
       </div>
@@ -716,19 +812,26 @@ function WorkspaceToolbar({
   activeKind,
   selectedResource,
   artifacts,
-  isRefreshing,
-  onRefresh,
+  downloadFormats,
+  onDownloadFormatsChange,
+  onViewFormatChange,
+  product,
+  viewFormat,
 }: {
   run: GenerationRun | null;
   activeKind: Product["kind"];
   selectedResource: string | null;
   artifacts: ArtifactList | null;
-  isRefreshing: boolean;
-  onRefresh: () => void;
+  downloadFormats: ViewFormat[];
+  onDownloadFormatsChange: (formats: ViewFormat[]) => void;
+  onViewFormatChange: (format: ViewFormat) => void;
+  product: Product | null;
+  viewFormat: ViewFormat;
 }) {
   const resource =
     run?.tables.find((item) => item.table_name === selectedResource) ??
     run?.collections.find((item) => item.collection_name === selectedResource);
+  const selectedView = viewOptions(activeKind).find((option) => option.id === viewFormat);
 
   return (
     <header className="flex min-h-14 flex-col gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-2.5 lg:flex-row lg:items-center lg:justify-between">
@@ -747,79 +850,169 @@ function WorkspaceToolbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <ToolbarPill active icon={Table2} label={activeKind === "document" ? "Documents" : "Table"} />
-        <ArtifactShortcut artifacts={artifacts} extension=".json" icon={FileJson} label="JSON" />
-        <ArtifactShortcut artifacts={artifacts} extension=".ndjson" icon={FileText} label="NDJSON" />
-        <ArtifactShortcut artifacts={artifacts} extension=".sql" icon={FileText} label="SQL" />
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 transition hover:border-cyan-500 hover:text-cyan-700"
-          onClick={onRefresh}
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <ViewFormatMenu
+          activeKind={activeKind}
+          selectedFormat={selectedView?.id ?? viewOptions(activeKind)[0]?.id ?? "table"}
+          onSelect={onViewFormatChange}
+        />
+        <DownloadFormatMenu
+          activeKind={activeKind}
+          artifacts={artifacts}
+          selectedFormats={downloadFormats}
+          onSelectedFormatsChange={onDownloadFormatsChange}
+          product={product}
+        />
       </div>
     </header>
   );
 }
 
-function ToolbarPill({
-  active = false,
-  icon: Icon,
-  label,
+function ViewFormatMenu({
+  activeKind,
+  selectedFormat,
+  onSelect,
 }: {
-  active?: boolean;
-  icon: LucideIcon;
-  label: string;
+  activeKind: Product["kind"];
+  selectedFormat: ViewFormat;
+  onSelect: (format: ViewFormat) => void;
 }) {
+  const options = viewOptions(activeKind);
+  const selected = options.find((option) => option.id === selectedFormat) ?? options[0];
+  const SelectedIcon = selected?.icon ?? Eye;
+
   return (
-    <span
-      className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-semibold ${
-        active
-          ? "border-teal-600 bg-teal-600 text-white"
-          : "border-zinc-200 bg-white text-zinc-700"
-      }`}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </span>
+    <details className="group relative">
+      <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border border-teal-600 bg-teal-600 px-3 text-sm font-semibold text-white transition hover:bg-teal-700">
+        <Eye className="h-4 w-4" />
+        <span className="hidden sm:inline">View</span>
+        <span className="inline-flex items-center gap-1 border-l border-white/20 pl-2">
+          <SelectedIcon className="h-3.5 w-3.5" />
+          {selected?.label ?? "Preview"}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+      </summary>
+      <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-zinc-200 bg-white p-2 shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+        {options.map((option) => {
+          const Icon = option.icon;
+          const active = option.id === selectedFormat;
+          return (
+            <button
+              key={option.id}
+              className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition ${
+                active ? "bg-cyan-50 text-cyan-800" : "text-zinc-700 hover:bg-zinc-50"
+              }`}
+              onClick={(event) => {
+                event.currentTarget.closest("details")?.removeAttribute("open");
+                onSelect(option.id);
+              }}
+            >
+              <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                <span className="block text-sm font-semibold">{option.label}</span>
+                <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                  {option.description}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </details>
   );
 }
 
-function ArtifactShortcut({
+function DownloadFormatMenu({
+  activeKind,
   artifacts,
-  extension,
-  icon: Icon,
-  label,
+  selectedFormats,
+  onSelectedFormatsChange,
+  product,
 }: {
+  activeKind: Product["kind"];
   artifacts: ArtifactList | null;
-  extension: string;
-  icon: LucideIcon;
-  label: string;
+  selectedFormats: ViewFormat[];
+  onSelectedFormatsChange: (formats: ViewFormat[]) => void;
+  product: Product | null;
 }) {
-  const artifact = artifacts?.files.find((file) => file.relative_path.endsWith(extension));
-  const [href, setHref] = useState("#");
+  const options = downloadOptions(activeKind);
+  const selectedCount = selectedFormats.length;
+  const hasSelectedArtifacts = selectedFormats.some((format) =>
+    Boolean(findArtifactByFormat(artifacts, format)),
+  );
 
-  useEffect(() => {
-    if (!artifact) {
-      setHref("#");
+  function toggle(format: ViewFormat) {
+    if (selectedFormats.includes(format)) {
+      const nextFormats = selectedFormats.filter((item) => item !== format);
+      onSelectedFormatsChange(nextFormats.length ? nextFormats : [format]);
       return;
     }
-    apiUrl(artifact.download_url).then(setHref).catch(() => setHref("#"));
-  }, [artifact]);
-
-  if (!artifact) {
-    return <ToolbarPill icon={Icon} label={label} />;
+    onSelectedFormatsChange([...selectedFormats, format]);
   }
 
   return (
-    <a
-      className="inline-flex h-9 items-center gap-2 rounded-md border border-zinc-200 px-3 text-sm font-semibold text-zinc-700 transition hover:border-cyan-500 hover:text-cyan-700"
-      href={href}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </a>
+    <details className="group relative">
+      <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:border-cyan-500 hover:text-cyan-700">
+        <Download className="h-4 w-4" />
+        Download
+        <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[0.68rem] text-cyan-700">
+          {selectedCount}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+      </summary>
+      <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+        <div className="mb-3">
+          <p className="text-sm font-semibold text-zinc-950">
+            {product?.name ?? "Product"} exports
+          </p>
+          <p className="mt-1 text-xs leading-5 text-zinc-500">
+            Select one or more formats, then download matching artifacts.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          {options.map((option) => {
+            const Icon = option.icon;
+            const checked = selectedFormats.includes(option.id);
+            const available = Boolean(findArtifactByFormat(artifacts, option.id));
+            return (
+              <button
+                key={option.id}
+                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition ${
+                  checked ? "bg-cyan-50 text-cyan-800" : "text-zinc-700 hover:bg-zinc-50"
+                }`}
+                onClick={() => toggle(option.id)}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={`grid h-5 w-5 place-items-center rounded border ${
+                      checked ? "border-cyan-500 bg-cyan-500 text-white" : "border-zinc-300"
+                    }`}
+                  >
+                    {checked ? <Check className="h-3.5 w-3.5" /> : null}
+                  </span>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block text-sm font-semibold">{option.label}</span>
+                    <span className="text-xs text-zinc-500">
+                      {available ? "Artifact ready" : "Generate run first"}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={!hasSelectedArtifacts}
+          onClick={() => downloadSelectedArtifacts(artifacts, selectedFormats)}
+        >
+          <Download className="h-4 w-4" />
+          Download selected
+        </button>
+      </div>
+    </details>
   );
 }
 
@@ -830,6 +1023,7 @@ function DataSurface({
   product,
   selectedResource,
   tablePreview,
+  viewFormat,
 }: {
   activeKind: Product["kind"];
   documentPreview: DocumentPreview | null;
@@ -837,8 +1031,22 @@ function DataSurface({
   product: Product | null;
   selectedResource: string | null;
   tablePreview: TablePreview | null;
+  viewFormat: ViewFormat;
 }) {
   if (activeKind === "document") {
+    if (viewFormat === "ndjson") {
+      return (
+        <TextPreview
+          emptyMessage="Generate a Docu-Boom run to preview NDJSON documents."
+          isGenerating={isGenerating}
+          language="ndjson"
+          selectedResource={selectedResource}
+          title="NDJSON preview"
+          value={documentPreview ? buildNdjsonPreview(documentPreview) : ""}
+        />
+      );
+    }
+
     return (
       <DocumentList
         isGenerating={isGenerating}
@@ -850,6 +1058,25 @@ function DataSurface({
 
   if (activeKind === "graph" || activeKind === "masking") {
     return <PlannedSurface product={product} />;
+  }
+
+  if (viewFormat === "csv" || viewFormat === "sql") {
+    return (
+      <TextPreview
+        emptyMessage="Generate a relational run to preview this export."
+        isGenerating={isGenerating}
+        language={viewFormat.toUpperCase()}
+        selectedResource={selectedResource}
+        title={`${viewFormat.toUpperCase()} preview`}
+        value={
+          tablePreview
+            ? viewFormat === "csv"
+              ? buildCsvPreview(tablePreview)
+              : buildSqlPreview(tablePreview)
+            : ""
+        }
+      />
+    );
   }
 
   return (
@@ -1040,6 +1267,55 @@ function DataTable({
   );
 }
 
+function TextPreview({
+  emptyMessage,
+  isGenerating,
+  language,
+  selectedResource,
+  title,
+  value,
+}: {
+  emptyMessage: string;
+  isGenerating: boolean;
+  language: string;
+  selectedResource: string | null;
+  title: string;
+  value: string;
+}) {
+  if (!value) {
+    return (
+      <div className="grid h-full place-items-center px-6 text-center">
+        <div>
+          <FileText className="mx-auto h-10 w-10 text-zinc-300" />
+          <p className="mt-4 text-lg font-semibold text-zinc-950">
+            {selectedResource ? shortTableName(selectedResource) : title}
+          </p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {isGenerating ? "Waiting for generated output." : emptyMessage}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-w-0 flex-col bg-zinc-950">
+      <div className="flex items-center justify-between border-b border-white/10 bg-[#07111f] px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold text-white">{title}</p>
+          <p className="mt-1 text-xs text-zinc-500">{selectedResource ?? "generated output"}</p>
+        </div>
+        <span className="rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-xs font-semibold uppercase text-cyan-100">
+          {language}
+        </span>
+      </div>
+      <pre className="workspace-scrollbar-dark min-h-0 flex-1 overflow-auto p-5 text-xs leading-6 text-cyan-50">
+        {value}
+      </pre>
+    </div>
+  );
+}
+
 function DocumentList({
   isGenerating,
   preview,
@@ -1102,7 +1378,6 @@ function PlannedSurface({ product }: { product: Product | null }) {
 }
 
 function AgentPanel({
-  artifacts,
   insight,
   onGenerate,
   onPromptChange,
@@ -1115,7 +1390,6 @@ function AgentPanel({
   subscribed,
   visibleRows,
 }: {
-  artifacts: ArtifactList | null;
   insight: Insight | null;
   onGenerate: () => void;
   onPromptChange: (value: string) => void;
@@ -1250,7 +1524,6 @@ function AgentPanel({
 
         <RunSummary run={run} visibleRows={visibleRows} />
         <InsightPanel insight={insight} />
-        <ArtifactListPanel artifacts={artifacts} />
       </div>
     </aside>
   );
@@ -1424,50 +1697,6 @@ function InsightPanel({ insight }: { insight: Insight | null }) {
         ))}
       </div>
     </section>
-  );
-}
-
-function ArtifactListPanel({ artifacts }: { artifacts: ArtifactList | null }) {
-  return (
-    <section className="rounded-md border border-zinc-200 bg-white p-4">
-      <div className="flex items-center gap-2">
-        <Download className="h-4 w-4 text-zinc-500" />
-        <h3 className="text-sm font-semibold text-zinc-950">Exports</h3>
-      </div>
-      <div className="mt-3 space-y-2">
-        {artifacts?.files.length ? (
-          artifacts.files.slice(0, 8).map((artifact) => (
-            <ArtifactLink key={artifact.relative_path} artifact={artifact} />
-          ))
-        ) : (
-          <p className="text-sm leading-6 text-zinc-500">No artifacts available.</p>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function ArtifactLink({ artifact }: { artifact: RunArtifact }) {
-  const [href, setHref] = useState("#");
-  const Icon = artifactIcon(artifact.relative_path);
-
-  useEffect(() => {
-    apiUrl(artifact.download_url).then(setHref).catch(() => setHref("#"));
-  }, [artifact.download_url]);
-
-  return (
-    <a
-      className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 px-3 py-2 text-sm transition hover:border-cyan-400 hover:bg-cyan-50"
-      href={href}
-    >
-      <span className="flex min-w-0 items-center gap-2">
-        <Icon className="h-4 w-4 shrink-0 text-zinc-500" />
-        <span className="truncate text-zinc-700">{artifact.relative_path}</span>
-      </span>
-      <span className="shrink-0 text-xs font-semibold text-zinc-400">
-        {formatBytes(artifact.size_bytes)}
-      </span>
-    </a>
   );
 }
 
@@ -1764,6 +1993,160 @@ function runResourcesWithCounts(run: GenerationRun) {
   return run.tables.map((table) => ({ name: table.table_name, rowCount: table.row_count }));
 }
 
+function viewOptions(kind: Product["kind"]): FormatOption[] {
+  if (kind === "document") {
+    return [
+      {
+        id: "json",
+        label: "JSON",
+        description: "Inspect formatted MongoDB-style documents.",
+        extension: ".json",
+        icon: FileJson,
+      },
+      {
+        id: "ndjson",
+        label: "NDJSON",
+        description: "Preview newline-delimited documents for loaders.",
+        extension: ".ndjson",
+        icon: FileText,
+      },
+    ];
+  }
+  if (kind === "graph") {
+    return [
+      {
+        id: "graph",
+        label: "Graph",
+        description: "Inspect nodes and relationships when Graph-Boom is active.",
+        icon: Layers3,
+      },
+    ];
+  }
+  if (kind === "masking") {
+    return [
+      {
+        id: "masked",
+        label: "Masked",
+        description: "Inspect masked records when Masker-Boom is active.",
+        icon: PackageCheck,
+      },
+    ];
+  }
+  return [
+    {
+      id: "table",
+      label: "Table",
+      description: "Inspect rows in a relational grid.",
+      icon: Table2,
+    },
+    {
+      id: "csv",
+      label: "CSV",
+      description: "Preview comma-separated rows for file pipelines.",
+      extension: ".csv",
+      icon: FileSpreadsheet,
+    },
+    {
+      id: "sql",
+      label: "SQL",
+      description: "Preview insert statements for database loading.",
+      extension: ".sql",
+      icon: FileText,
+    },
+  ];
+}
+
+function downloadOptions(kind: Product["kind"]) {
+  return viewOptions(kind).filter((option) => option.extension);
+}
+
+function findArtifactByFormat(artifacts: ArtifactList | null, format: ViewFormat) {
+  const extension = formatExtension(format);
+  if (!extension) {
+    return null;
+  }
+  return artifacts?.files.find((file) => file.relative_path.endsWith(extension)) ?? null;
+}
+
+async function downloadSelectedArtifacts(
+  artifacts: ArtifactList | null,
+  selectedFormats: ViewFormat[],
+) {
+  if (!artifacts) {
+    return;
+  }
+
+  const selectedArtifacts = selectedFormats
+    .map((format) => findArtifactByFormat(artifacts, format))
+    .filter((artifact): artifact is ArtifactList["files"][number] => Boolean(artifact));
+
+  for (const artifact of selectedArtifacts) {
+    const href = await apiUrl(artifact.download_url);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = artifact.name;
+    anchor.rel = "noreferrer";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+}
+
+function formatExtension(format: ViewFormat) {
+  if (format === "csv") {
+    return ".csv";
+  }
+  if (format === "sql") {
+    return ".sql";
+  }
+  if (format === "json") {
+    return ".json";
+  }
+  if (format === "ndjson") {
+    return ".ndjson";
+  }
+  return null;
+}
+
+function buildCsvPreview(preview: TablePreview) {
+  const rows = preview.rows.map((row) =>
+    preview.columns.map((column) => csvCell(row[column] ?? "")).join(","),
+  );
+  return [preview.columns.join(","), ...rows].join("\n");
+}
+
+function buildSqlPreview(preview: TablePreview) {
+  const tableName = shortTableName(preview.table_name);
+  const columns = preview.columns.map((column) => `"${column}"`).join(", ");
+  return preview.rows
+    .map((row) => {
+      const values = preview.columns.map((column) => sqlValue(row[column] ?? "")).join(", ");
+      return `INSERT INTO "${tableName}" (${columns}) VALUES (${values});`;
+    })
+    .join("\n");
+}
+
+function buildNdjsonPreview(preview: DocumentPreview) {
+  return preview.documents.map((document) => JSON.stringify(document)).join("\n");
+}
+
+function csvCell(value: string) {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replaceAll("\"", "\"\"")}"`;
+  }
+  return value;
+}
+
+function sqlValue(value: string) {
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return value;
+  }
+  if (value === "") {
+    return "NULL";
+  }
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 function productResources(product: Product | null) {
   if (!product) {
     return [];
@@ -1824,14 +2207,4 @@ function kindLabel(kind: Product["kind"]) {
 
 function shortTableName(tableName: string) {
   return tableName.includes(".") ? tableName.split(".").at(-1) ?? tableName : tableName;
-}
-
-function artifactIcon(path: string) {
-  if (path.endsWith(".csv")) {
-    return FileSpreadsheet;
-  }
-  if (path.endsWith(".json")) {
-    return FileJson;
-  }
-  return FileText;
 }
