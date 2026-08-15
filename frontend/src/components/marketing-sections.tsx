@@ -9,7 +9,6 @@ import {
   Layers3,
   Plus,
   ShieldCheck,
-  Sparkles,
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -48,8 +47,17 @@ const productGroups = [
   {
     name: "Table-Boom",
     eyebrow: "Relational engine",
+    status: "Live in workspace",
+    statusClass: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
     tone: "text-emerald-300 border-emerald-300/25 bg-emerald-300/10",
+    border: "border-emerald-300/25",
+    bar: "from-emerald-300 via-cyan-300 to-transparent",
+    glow: "bg-emerald-300/10",
     icon: Database,
+    description:
+      "Generate relational datasets with stable keys, foreign-key-safe children, validation manifests, and CSV/JSON/SQL exports.",
+    ctaLabel: "Open workspace",
+    ctaHref: "/dashboard",
     items: [
       "PostgreSQL schema ingestion",
       "Primary and foreign key preservation",
@@ -62,8 +70,17 @@ const productGroups = [
   {
     name: "Docu-Boom",
     eyebrow: "Document engine",
+    status: "Live in workspace",
+    statusClass: "border-cyan-300/30 bg-cyan-300/10 text-cyan-200",
     tone: "text-cyan-300 border-cyan-300/25 bg-cyan-300/10",
+    border: "border-cyan-300/25",
+    bar: "from-cyan-300 via-sky-300 to-transparent",
+    glow: "bg-cyan-300/10",
     icon: FileJson,
+    description:
+      "Create MongoDB-style JSON and NDJSON collections with nested fields, stable document identifiers, previews, and collection reports.",
+    ctaLabel: "Open workspace",
+    ctaHref: "/dashboard",
     items: [
       "Nested JSON documents",
       "NDJSON collection exports",
@@ -76,8 +93,17 @@ const productGroups = [
   {
     name: "Graph-Boom",
     eyebrow: "Graph roadmap",
+    status: "Roadmap",
+    statusClass: "border-sky-300/30 bg-sky-300/10 text-sky-200",
     tone: "text-sky-300 border-sky-300/25 bg-sky-300/10",
+    border: "border-sky-300/25",
+    bar: "from-sky-300 via-indigo-300 to-transparent",
+    glow: "bg-sky-300/10",
     icon: GitBranch,
+    description:
+      "Planned graph generation for nodes, edges, relationship density, cardinality rules, and connected-data previews.",
+    ctaLabel: "View roadmap",
+    ctaHref: "/roadmap",
     items: [
       "Node and edge generation",
       "Cardinality rules",
@@ -88,8 +114,17 @@ const productGroups = [
   {
     name: "Masker-Boom",
     eyebrow: "Masking roadmap",
+    status: "Roadmap",
+    statusClass: "border-amber-300/30 bg-amber-300/10 text-amber-200",
     tone: "text-amber-300 border-amber-300/25 bg-amber-300/10",
+    border: "border-amber-300/25",
+    bar: "from-amber-300 via-emerald-300 to-transparent",
+    glow: "bg-amber-300/10",
     icon: ShieldCheck,
+    description:
+      "Planned masking layer for redaction, tokenization, synthetic replacement, and privacy reports over sensitive source data.",
+    ctaLabel: "View roadmap",
+    ctaHref: "/roadmap",
     items: [
       "Redaction policies",
       "Stable tokenization",
@@ -242,7 +277,7 @@ function ProductSystem() {
             Product surfaces
           </p>
           <h2 className="mt-5 text-4xl font-medium leading-tight text-[color:var(--text-primary)] lg:text-6xl">
-            Meet Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom.
+            Four product surfaces, clearly separated.
           </h2>
           <p className="mt-6 text-lg leading-8 text-[color:var(--text-muted)]">
             Data shape drives the workflow. Use cases like banking, healthcare, commerce,
@@ -250,9 +285,9 @@ function ProductSystem() {
           </p>
         </div>
 
-        <div className="mt-16 space-y-16">
+        <div className="mt-16 grid gap-6 lg:grid-cols-2">
           {productGroups.map((group) => (
-            <ProductGroup key={group.name} group={group} />
+            <ProductModuleCard key={group.name} group={group} />
           ))}
         </div>
 
@@ -352,57 +387,86 @@ function SignalCard({
   );
 }
 
-function ProductGroup({
+function ProductModuleCard({
   group,
 }: {
   group: {
     name: string;
     eyebrow: string;
+    status: string;
+    statusClass: string;
     tone: string;
+    border: string;
+    bar: string;
+    glow: string;
     icon: LucideIcon;
+    description: string;
+    ctaLabel: string;
+    ctaHref: string;
     items: string[];
   };
 }) {
   const Icon = group.icon;
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className={`grid h-11 w-11 place-items-center rounded-full border ${group.tone}`}>
-            <Icon className="h-5 w-5" />
-          </span>
-          <div>
-            <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
-              {group.name}
-            </h3>
-            <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">
-              {group.eyebrow}
-            </p>
+    <article
+      className={`relative overflow-hidden rounded-2xl border bg-[var(--surface)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.18)] ${group.border}`}
+    >
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${group.bar}`} />
+      <div
+        className={`pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full blur-3xl ${group.glow}`}
+        aria-hidden="true"
+      />
+
+      <div className="relative">
+        <div className="flex items-start justify-between gap-5">
+          <div className="flex items-center gap-4">
+            <span className={`grid h-14 w-14 place-items-center rounded-2xl border ${group.tone}`}>
+              <Icon className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">
+                {group.eyebrow}
+              </p>
+              <h3 className="mt-1 text-2xl font-semibold text-[color:var(--text-primary)]">
+                {group.name}
+              </h3>
+            </div>
           </div>
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase ${group.statusClass}`}
+          >
+            {group.status}
+          </span>
         </div>
+
+        <p className="mt-6 max-w-xl text-sm leading-7 text-[color:var(--text-muted)]">
+          {group.description}
+        </p>
+
+        <div className="mt-6 grid gap-2 sm:grid-cols-2">
+          {group.items.map((item) => (
+            <div
+              key={item}
+              className="flex items-center gap-3 rounded-lg border border-[color:var(--border)] bg-black/20 px-3 py-3"
+            >
+              <Check className="h-4 w-4 shrink-0 text-cyan-300" />
+              <span className="text-sm font-medium text-[color:var(--text-secondary)]">
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+
         <a
-          href="/dashboard"
-          className="hidden text-xs font-semibold uppercase text-[color:var(--text-faint)] transition hover:text-[color:var(--text-primary)] sm:inline-flex"
+          href={group.ctaHref}
+          className="mt-7 inline-flex h-11 items-center gap-2 rounded-full border border-[color:var(--border)] px-5 text-sm font-semibold text-[color:var(--text-primary)] transition hover:bg-[var(--surface-strong)]"
         >
-          Open workspace
+          {group.ctaLabel}
+          <ArrowRight className="h-4 w-4" />
         </a>
       </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {group.items.map((item) => (
-          <article
-            key={item}
-            className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5"
-          >
-            <Sparkles className="h-5 w-5 text-cyan-300" />
-            <h4 className="mt-5 text-base font-semibold text-[color:var(--text-primary)]">
-              {item}
-            </h4>
-          </article>
-        ))}
-      </div>
-    </div>
+    </article>
   );
 }
 
