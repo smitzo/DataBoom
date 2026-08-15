@@ -118,6 +118,7 @@ export function PublicFooter() {
               { label: "Products", href: "/products" },
               { label: "Demos", href: "/demos" },
               { label: "Roadmap", href: "/roadmap" },
+              { label: "About", href: "/about" },
               { label: "Contact", href: "/contact" },
               { label: "My dashboard", href: "/dashboard" },
             ].map((item) => (

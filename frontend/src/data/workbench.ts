@@ -81,9 +81,11 @@ export type RoadmapItem = {
 };
 
 export const navItems = [
+  { label: "Platform", href: "/#platform" },
   { label: "Products", href: "/products" },
   { label: "Demos", href: "/demos" },
   { label: "Roadmap", href: "/roadmap" },
+  { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ];
 

@@ -4,7 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DataBoom",
-  description: "Relationship-aware synthetic data generation workbench.",
+  description:
+    "Synthetic data platform for relational, document, graph, and masking workflows.",
 };
 
 export default function RootLayout({
