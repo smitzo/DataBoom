@@ -20,8 +20,15 @@ from databoom.api.models import (
     TableArtifactResponse,
 )
 from databoom.api.products import ProductCatalogEntry
-from databoom.api.runs import execute_product_generation_run
+from databoom.api.runs import (
+    _document_collections_for_source,
+    _schema_ddl_for_source,
+    _source_default_counts,
+    _source_for_payload,
+    execute_product_generation_run,
+)
 from databoom.api.state import StateStore
+from databoom.api.workspaces import WorkspaceSource
 from databoom.core.artifacts import ensure_artifact_root
 from databoom.core.config import Settings
 from databoom.generation import create_generation_plan
@@ -315,7 +322,8 @@ def _running_product_response(
     artifact_dir: Path,
     retry_of_run_id: str | None = None,
 ) -> GenerationRunResponse:
-    row_counts = payload.row_counts or product.default_counts
+    source = _source_for_payload(product, payload)
+    row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
     output_formats = tuple(payload.output_formats or product.output_formats)
     total_rows = sum(row_counts.values())
     match product.kind:
@@ -329,6 +337,7 @@ def _running_product_response(
                 row_counts,
                 artifact_dir,
                 output_formats,
+                source=source,
             )
             table_count = len(collections)
             tables = ()
@@ -369,9 +378,11 @@ def _planned_table_artifacts(
     artifact_dir: Path,
     output_formats: tuple[str, ...],
 ) -> tuple[TableArtifactResponse, ...]:
-    if product.schema_ddl is None:
+    source = _source_for_payload(product, payload)
+    schema_ddl = _schema_ddl_for_source(source) if source else product.schema_ddl
+    if schema_ddl is None:
         raise ValueError("relational product is missing schema DDL")
-    database = parse_postgres_ddl(product.schema_ddl)
+    database = parse_postgres_ddl(schema_ddl)
     plan = create_generation_plan(
         database,
         row_counts=payload.row_counts or product.default_counts,
@@ -402,7 +413,12 @@ def _planned_collection_artifacts(
     row_counts: dict[str, int],
     artifact_dir: Path,
     output_formats: tuple[str, ...],
+    *,
+    source: WorkspaceSource | None = None,
 ) -> tuple[CollectionArtifactResponse, ...]:
+    collections = (
+        _document_collections_for_source(source) if source else product.document_collections
+    )
     return tuple(
         CollectionArtifactResponse(
             collection_name=collection.name,
@@ -414,7 +430,7 @@ def _planned_collection_artifacts(
             if "ndjson" in output_formats
             else None,
         )
-        for collection in product.document_collections
+        for collection in collections
     )
 
 
@@ -429,7 +445,9 @@ def _failed_response(
     retry_of_run_id: str | None = None,
 ) -> GenerationRunResponse:
     completed_at = datetime.now(UTC)
-    total_rows = sum((payload.row_counts or product.default_counts).values())
+    source = _source_for_payload(product, payload)
+    row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
+    total_rows = sum(row_counts.values())
     return GenerationRunResponse(
         run_id=run_id,
         retry_of_run_id=retry_of_run_id,
@@ -441,7 +459,7 @@ def _failed_response(
         domain=product.domain,
         output_formats=tuple(payload.output_formats or product.output_formats),
         total_rows=total_rows,
-        table_count=len(product.tables or product.collections),
+        table_count=len(source.resources) if source else len(product.tables or product.collections),
         generated_rows=0,
         progress_percent=100.0,
         current_operation="failed",

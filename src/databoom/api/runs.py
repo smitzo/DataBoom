@@ -26,9 +26,10 @@ from databoom.api.models import (
     ValidationSummaryResponse,
 )
 from databoom.api.products import ProductCatalogEntry
+from databoom.api.workspaces import WorkspaceSource, get_workspace_source
 from databoom.core.artifacts import ensure_artifact_root
 from databoom.core.config import Settings
-from databoom.document import DocumentGenerator
+from databoom.document import DocumentCollectionSpec, DocumentFieldSpec, DocumentGenerator
 from databoom.export import ArtifactExporter, ExportManifest
 from databoom.generation import GenerationPlan, create_generation_plan
 from databoom.generation.plan import OutputFormat
@@ -110,14 +111,18 @@ def execute_product_generation_run(
 ) -> GenerationRunResponse:
     """Execute a catalog-backed generation run for the product kind."""
 
+    source = _source_for_payload(product, payload)
     match product.kind:
         case DataProductKind.RELATIONAL:
-            if product.schema_ddl is None:
+            schema_ddl = _schema_ddl_for_source(source) if source else product.schema_ddl
+            if schema_ddl is None:
                 raise ValueError("relational product is missing schema DDL")
             return execute_generation_run(
                 GenerationRunRequest(
-                    schema_ddl=product.schema_ddl,
-                    row_counts=payload.row_counts or product.default_counts,
+                    schema_ddl=schema_ddl,
+                    row_counts=payload.row_counts
+                    or _source_default_counts(source)
+                    or product.default_counts,
                     seed=payload.seed,
                     domain=product.domain,
                     output_formats=_relational_output_formats(
@@ -135,6 +140,7 @@ def execute_product_generation_run(
                 product,
                 payload,
                 settings,
+                source=source,
                 run_id=run_id,
                 created_at=created_at,
                 artifact_dir=artifact_dir,
@@ -149,6 +155,7 @@ def execute_document_generation_run(
     payload: ProductRunRequest,
     settings: Settings,
     *,
+    source: WorkspaceSource | None = None,
     run_id: str | None = None,
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
@@ -160,9 +167,13 @@ def execute_document_generation_run(
     run_id = run_id or uuid4().hex
     artifact_dir = artifact_dir or ensure_artifact_root(settings) / "runs" / run_id
     generation_started = _started_at()
+    collections = (
+        _document_collections_for_source(source) if source else product.document_collections
+    )
+    row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
     result = DocumentGenerator(
-        collections=product.document_collections,
-        row_counts=payload.row_counts or product.default_counts,
+        collections=collections,
+        row_counts=row_counts,
         seed=payload.seed,
         output_dir=artifact_dir,
         progress_callback=progress_callback,
@@ -234,6 +245,123 @@ def list_generation_run_artifacts(run: GenerationRunResponse) -> RunArtifactList
         artifact_dir=artifact_dir,
         files=tuple(files),
     )
+
+
+def _source_for_payload(
+    product: ProductCatalogEntry,
+    payload: ProductRunRequest,
+) -> WorkspaceSource | None:
+    if payload.source_id is None:
+        return None
+    try:
+        source = get_workspace_source(payload.source_id)
+    except KeyError as error:
+        raise ValueError("workspace source not found") from error
+    if source.product_id != product.id or source.kind != product.kind:
+        raise ValueError("workspace source is not compatible with this product")
+    return source
+
+
+def _source_default_counts(source: WorkspaceSource | None) -> dict[str, int]:
+    if source is None:
+        return {}
+    return {resource.name: resource.estimated_rows for resource in source.resources}
+
+
+def _schema_ddl_for_source(source: WorkspaceSource | None) -> str | None:
+    if source is None:
+        return None
+    statements = []
+    for resource in source.resources:
+        columns = resource.columns or ("id", "name", "status")
+        column_definitions = [_column_definition(column) for column in columns]
+        if "id" not in columns:
+            column_definitions.insert(0, "id bigint PRIMARY KEY")
+        columns_sql = ",\n    ".join(column_definitions)
+        statements.append(
+            "CREATE TABLE "
+            f"{_sql_identifier(resource.name)} (\n"
+            f"    {columns_sql}\n"
+            ");"
+        )
+    return "\n\n".join(statements)
+
+
+def _document_collections_for_source(
+    source: WorkspaceSource | None,
+) -> tuple[DocumentCollectionSpec, ...]:
+    if source is None:
+        return ()
+    return tuple(
+        DocumentCollectionSpec(
+            name=resource.name,
+            default_count=resource.estimated_rows,
+            fields=tuple(
+                _document_field(column)
+                for column in resource.columns or ("_id", "status")
+            ),
+        )
+        for resource in source.resources
+    )
+
+
+def _column_definition(column: str) -> str:
+    quoted = _sql_identifier(column)
+    if column == "id":
+        return f"{quoted} bigint PRIMARY KEY"
+    if column == "_id":
+        return f"{quoted} text PRIMARY KEY"
+    if column.endswith("_id"):
+        return f"{quoted} bigint NOT NULL"
+    if column in {"amount", "balance", "total", "price", "payment_amount", "value"}:
+        return f"{quoted} numeric NOT NULL"
+    if column in {"age", "quantity"}:
+        return f"{quoted} integer NOT NULL"
+    if column.endswith("_at") or column in {"posted_at", "created_at"}:
+        return f"{quoted} timestamp"
+    if column in {"dob"}:
+        return f"{quoted} date"
+    return f"{quoted} text"
+
+
+def _document_field(column: str) -> DocumentFieldSpec:
+    if column == "_id":
+        return DocumentFieldSpec(column, "object_id")
+    if column.endswith("_id"):
+        return DocumentFieldSpec(column, "reference")
+    if column == "email":
+        return DocumentFieldSpec(column, "email")
+    if column in {"amount", "balance", "total", "price", "value"}:
+        return DocumentFieldSpec(column, "money")
+    if column in {"age", "quantity"}:
+        return DocumentFieldSpec(column, "integer")
+    if column.endswith("_at"):
+        return DocumentFieldSpec(column, "timestamp")
+    if column in {"profile", "metadata", "coverage"}:
+        return DocumentFieldSpec(
+            column,
+            "object",
+            fields=(
+                DocumentFieldSpec("label", "text"),
+                DocumentFieldSpec("status", "status"),
+            ),
+        )
+    if column in {"items"}:
+        return DocumentFieldSpec(
+            column,
+            "array",
+            item_fields=(
+                DocumentFieldSpec("name", "product_name"),
+                DocumentFieldSpec("quantity", "quantity"),
+            ),
+        )
+    if column == "status":
+        return DocumentFieldSpec(column, "status")
+    return DocumentFieldSpec(column, "text")
+
+
+def _sql_identifier(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
 
 
 def resolve_generation_run_artifact(run: GenerationRunResponse, artifact_path: str) -> Path:

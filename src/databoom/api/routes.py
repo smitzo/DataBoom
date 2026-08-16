@@ -30,6 +30,8 @@ from databoom.api.models import (
     SubscriptionStatus,
     TableArtifactResponse,
     TablePreviewResponse,
+    WorkspaceResourceResponse,
+    WorkspaceSourceResponse,
 )
 from databoom.api.products import ProductCatalogEntry, get_product, list_products
 from databoom.api.runs import (
@@ -40,6 +42,11 @@ from databoom.api.runs import (
 )
 from databoom.api.security import require_api_key
 from databoom.api.state import StateStore
+from databoom.api.workspaces import (
+    WorkspaceSource,
+    get_workspace_source,
+    list_workspace_sources,
+)
 from databoom.core.config import Settings
 
 router = APIRouter()
@@ -136,6 +143,50 @@ def product_detail(product_id: str) -> ProductResponse:
 
 
 @router.get(
+    "/workspace-sources",
+    response_model=tuple[WorkspaceSourceResponse, ...],
+    tags=["workspaces"],
+)
+def workspace_sources() -> tuple[WorkspaceSourceResponse, ...]:
+    """Return all configured dashboard workspace sources."""
+
+    return tuple(_workspace_source_response(source) for source in list_workspace_sources())
+
+
+@router.get(
+    "/workspace-sources/{source_id}",
+    response_model=WorkspaceSourceResponse,
+    tags=["workspaces"],
+)
+def workspace_source_detail(source_id: str) -> WorkspaceSourceResponse:
+    """Return one configured dashboard workspace source."""
+
+    try:
+        source = get_workspace_source(source_id)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="workspace source not found",
+        ) from error
+    return _workspace_source_response(source)
+
+
+@router.get(
+    "/products/{product_id}/workspace-sources",
+    response_model=tuple[WorkspaceSourceResponse, ...],
+    tags=["workspaces"],
+)
+def product_workspace_sources(product_id: str) -> tuple[WorkspaceSourceResponse, ...]:
+    """Return workspace sources compatible with one product."""
+
+    _get_product_or_404(product_id)
+    return tuple(
+        _workspace_source_response(source)
+        for source in list_workspace_sources(product_id=product_id)
+    )
+
+
+@router.get(
     "/subscriptions",
     response_model=tuple[SubscriptionResponse, ...],
     tags=["subscriptions"],
@@ -212,6 +263,7 @@ def create_product_run(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
         )
+    _validate_source_for_product(payload.source_id, product)
 
     try:
         run = execute_product_generation_run(product, payload, request.app.state.settings)
@@ -242,6 +294,7 @@ def create_async_product_run(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
         )
+    _validate_source_for_product(payload.source_id, product)
 
     try:
         return request.app.state.async_run_manager.submit_product_run(
@@ -482,6 +535,26 @@ def _get_product_or_404(product_id: str) -> ProductCatalogEntry:
         ) from error
 
 
+def _validate_source_for_product(
+    source_id: str | None,
+    product: ProductCatalogEntry,
+) -> None:
+    if source_id is None:
+        return
+    try:
+        source = get_workspace_source(source_id)
+    except KeyError as error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="workspace source not found",
+        ) from error
+    if source.product_id != product.id or source.kind != product.kind:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="workspace source is not compatible with this product",
+        )
+
+
 def _state_store(request: Request) -> StateStore:
     return request.app.state.state_store
 
@@ -510,6 +583,28 @@ def _product_response(product: ProductCatalogEntry) -> ProductResponse:
                 description=plan.description,
             )
             for plan in product.plans
+        ),
+    )
+
+
+def _workspace_source_response(source: WorkspaceSource) -> WorkspaceSourceResponse:
+    return WorkspaceSourceResponse(
+        id=source.id,
+        product_id=source.product_id,
+        kind=source.kind,
+        name=source.name,
+        engine=source.engine,
+        host=source.host,
+        description=source.description,
+        status=source.status,
+        resources=tuple(
+            WorkspaceResourceResponse(
+                name=resource.name,
+                resource_type=resource.resource_type,
+                estimated_rows=resource.estimated_rows,
+                columns=resource.columns,
+            )
+            for resource in source.resources
         ),
     )
 

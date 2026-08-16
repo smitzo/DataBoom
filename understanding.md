@@ -1066,3 +1066,73 @@ That is acceptable for Phase 2 because it keeps the API contract correct without
 - Add durable queues when jobs need to survive API process restarts while running.
 - Add per-stage cancellation checks if validation and future profiling stages become long-running.
 - Add cleanup policy for canceled partial artifacts so local disk does not grow forever.
+
+## Decision: move workspace sources into the backend contract
+
+### Question
+
+Why should database/workspace choices live in the backend instead of staying as a frontend dropdown?
+
+### Answer
+
+The backend must own workspace sources because a source is not only a UI label. It defines the data surface the engine should understand:
+
+- which product can use it,
+- whether it is relational, document, graph, or masking data,
+- which database or source engine it represents,
+- which tables, collections, nodes, or policy resources exist,
+- how many rows/documents are expected,
+- which columns or fields shape generation.
+
+If this information stays hardcoded in the frontend, the UI can show a database called "Core Banking Sandbox", but the backend still has no idea what that means. The result is a fake dropdown: users select one thing while the generator runs another thing.
+
+### What Changed
+
+The API now exposes workspace sources as a backend-owned contract:
+
+- `GET /workspace-sources`
+- `GET /workspace-sources/{source_id}`
+- `GET /products/{product_id}/workspace-sources`
+
+Each source returns product compatibility, source kind, engine, host, status, and resources. A resource is a table, collection, node set, edge set, or masking sample with an estimated row count and field/column metadata.
+
+Product runs now accept `source_id`. The backend validates that the source belongs to the selected product and kind. For example, a Docu-Boom MongoDB source cannot be used with a Table-Boom relational run.
+
+### Why This Is Better
+
+This makes the dashboard and engine agree on one source of truth. The frontend asks the backend which databases exist. The user selects one. The backend receives that `source_id` when generation starts.
+
+For Table-Boom, the engine can synthesize a small PostgreSQL DDL from source resources and generate source-specific tables. For Docu-Boom, it can synthesize document collection specs from source resources and generate source-specific collections.
+
+That means the selected source affects actual artifacts, not only the visible menu.
+
+### Beginner-Friendly Example
+
+Before this change:
+
+1. Frontend shows "Core Banking Sandbox".
+2. User selects it.
+3. Backend still generates the default commerce tables.
+4. UI and backend are out of sync.
+
+After this change:
+
+1. Backend exposes "Core Banking Sandbox" with `customers`, `bank_accounts`, and `transactions`.
+2. Frontend renders those resources.
+3. User starts a run with `source_id = core-banking`.
+4. Backend validates source/product compatibility.
+5. Backend generates `customers`, `bank_accounts`, and `transactions` artifacts.
+
+### Performance and Scaling Notes
+
+This change is not primarily a latency optimization. It is a correctness and extensibility improvement. The important performance benefit comes later: once source metadata is backend-owned, we can cache introspection results from real databases instead of rediscovering schemas on every page load or generation request.
+
+Future production path:
+
+1. Store workspace sources in Postgres instead of the demo catalog.
+2. Store encrypted connection references or secret IDs, not raw secrets.
+3. Add source introspection jobs for PostgreSQL, MongoDB, and later graph stores.
+4. Cache discovered schema metadata with version hashes.
+5. Reuse cached source metadata to build generation plans quickly.
+
+This keeps the architecture clean: the frontend renders workspace state, while the backend owns data-source truth and generation planning.

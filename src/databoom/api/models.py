@@ -64,6 +64,13 @@ class SubscriptionStatus(StrEnum):
     ACTIVE = "active"
 
 
+class WorkspaceSourceStatus(StrEnum):
+    """Connection lifecycle for a demo workspace source."""
+
+    CONNECTED = "connected"
+    PLANNED = "planned"
+
+
 class LoginRequest(BaseModel):
     """Demo login request."""
 
@@ -146,6 +153,33 @@ class SubscriptionResponse(BaseModel):
     created_at: datetime
 
 
+class WorkspaceResourceResponse(BaseModel):
+    """One source resource exposed in the dashboard rail."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    resource_type: str
+    estimated_rows: int
+    columns: tuple[str, ...] = ()
+
+
+class WorkspaceSourceResponse(BaseModel):
+    """Database or source connection available to a DataBoom product."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    product_id: str
+    kind: DataProductKind
+    name: str
+    engine: str
+    host: str
+    description: str
+    status: WorkspaceSourceStatus
+    resources: tuple[WorkspaceResourceResponse, ...]
+
+
 class ProductRunRequest(BaseModel):
     """Generation request based on a subscribed product catalog entry."""
 
@@ -154,6 +188,7 @@ class ProductRunRequest(BaseModel):
     row_counts: dict[str, int] = Field(default_factory=dict)
     seed: str = "dashboard-demo"
     output_formats: tuple[str, ...] | None = None
+    source_id: str | None = None
 
     @field_validator("row_counts")
     @classmethod
