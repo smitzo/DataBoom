@@ -181,6 +181,25 @@ export async function getProductWorkspaceSources(productId: string) {
   return apiRequest<WorkspaceSource[]>(`/products/${productId}/workspace-sources`);
 }
 
+export async function refreshWorkspaceSource(
+  token: string,
+  sourceId: string,
+  payload: {
+    database_url: string;
+    schema_names: string[];
+    default_estimated_rows?: number;
+  },
+) {
+  return apiRequest<WorkspaceSource>(
+    `/workspace-sources/${sourceId}/refresh`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
 export async function getSubscriptions(token: string) {
   return apiRequest<Subscription[]>("/subscriptions", {}, token);
 }

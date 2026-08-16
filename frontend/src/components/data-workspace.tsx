@@ -50,6 +50,7 @@ import {
   getSubscriptions,
   getTablePreview,
   getWorkspaceSources,
+  refreshWorkspaceSource,
   subscribeToProduct,
 } from "@/lib/api";
 import type { Session } from "@/lib/session";
@@ -87,6 +88,10 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [status, setStatus] = useState<AgentStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [sourceWarning, setSourceWarning] = useState<string | null>(null);
+  const [sourceRefreshMessage, setSourceRefreshMessage] = useState<string | null>(null);
+  const [sourceDatabaseUrl, setSourceDatabaseUrl] = useState("");
+  const [sourceSchemaNames, setSourceSchemaNames] = useState("public");
+  const [isRefreshingSource, setIsRefreshingSource] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorkspaceRailCollapsed, setIsWorkspaceRailCollapsed] = useState(false);
 
@@ -329,6 +334,7 @@ export function DataWorkspace({ session }: { session: Session }) {
 
   async function chooseProduct(product: Product) {
     setSelectedProductId(product.id);
+    setSourceRefreshMessage(null);
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
     const nextConnection = workspaceConnectionsForProduct(product, workspaceSources)[0] ?? null;
     setSelectedRunId(matchingRun?.run_id ?? null);
@@ -347,9 +353,52 @@ export function DataWorkspace({ session }: { session: Session }) {
   function chooseConnection(connectionId: string) {
     const nextConnection = connectionOptions.find((connection) => connection.id === connectionId);
     setSelectedConnectionId(connectionId);
+    setSourceRefreshMessage(null);
     setSelectedResource(
       nextConnection ? connectionResources(nextConnection, activeKind)[0] ?? null : null,
     );
+  }
+
+  async function refreshSelectedSource() {
+    if (!selectedConnection) {
+      return;
+    }
+    if (activeKind !== "relational") {
+      setSourceRefreshMessage("Schema refresh is currently available for PostgreSQL sources.");
+      return;
+    }
+    if (!sourceDatabaseUrl.trim()) {
+      setSourceRefreshMessage("Enter a PostgreSQL connection URL before refreshing.");
+      return;
+    }
+
+    setIsRefreshingSource(true);
+    setSourceRefreshMessage(null);
+    setError(null);
+    try {
+      const schemaNames = sourceSchemaNames
+        .split(",")
+        .map((schemaName) => schemaName.trim())
+        .filter(Boolean);
+      const refreshed = await refreshWorkspaceSource(session.token, selectedConnection.id, {
+        database_url: sourceDatabaseUrl.trim(),
+        schema_names: schemaNames.length ? schemaNames : ["public"],
+      });
+      setWorkspaceSources((current) => [
+        ...current.filter((source) => source.id !== refreshed.id),
+        refreshed,
+      ]);
+      setSelectedConnectionId(refreshed.id);
+      setSelectedResource(connectionResources(refreshed, refreshed.kind)[0] ?? null);
+      setSourceWarning(null);
+      setSourceRefreshMessage(`Loaded ${refreshed.resources.length} tables from ${refreshed.name}.`);
+    } catch (caughtError) {
+      setSourceRefreshMessage(
+        caughtError instanceof Error ? caughtError.message : "Unable to refresh source",
+      );
+    } finally {
+      setIsRefreshingSource(false);
+    }
   }
 
   async function subscribe() {
@@ -448,9 +497,16 @@ export function DataWorkspace({ session }: { session: Session }) {
           selectedConnection={selectedConnection}
           selectedConnectionId={selectedConnectionId}
           selectedResource={selectedResource}
+          sourceDatabaseUrl={sourceDatabaseUrl}
+          sourceRefreshMessage={sourceRefreshMessage}
+          sourceSchemaNames={sourceSchemaNames}
           onBackToProducts={() => setWorkspaceMode("catalog")}
+          onRefreshSource={refreshSelectedSource}
           onSelectConnection={chooseConnection}
           onSelectResource={setSelectedResource}
+          onSourceDatabaseUrlChange={setSourceDatabaseUrl}
+          onSourceSchemaNamesChange={setSourceSchemaNames}
+          isRefreshingSource={isRefreshingSource}
         />
 
         <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
@@ -630,28 +686,42 @@ function WorkspaceSidebar({
   activeKind,
   collapsed,
   connectionOptions,
+  isRefreshingSource,
   onToggleCollapse,
   product,
   resourceNames,
   selectedConnection,
   selectedConnectionId,
   selectedResource,
+  sourceDatabaseUrl,
+  sourceRefreshMessage,
+  sourceSchemaNames,
   onBackToProducts,
+  onRefreshSource,
   onSelectConnection,
   onSelectResource,
+  onSourceDatabaseUrlChange,
+  onSourceSchemaNamesChange,
 }: {
   activeKind: Product["kind"];
   collapsed: boolean;
   connectionOptions: WorkspaceSource[];
+  isRefreshingSource: boolean;
   onToggleCollapse: () => void;
   product: Product | null;
   resourceNames: string[];
   selectedConnection: WorkspaceSource | null;
   selectedConnectionId: string;
   selectedResource: string | null;
+  sourceDatabaseUrl: string;
+  sourceRefreshMessage: string | null;
+  sourceSchemaNames: string;
   onBackToProducts: () => void;
+  onRefreshSource: () => void;
   onSelectConnection: (connectionId: string) => void;
   onSelectResource: (resourceName: string) => void;
+  onSourceDatabaseUrlChange: (value: string) => void;
+  onSourceSchemaNamesChange: (value: string) => void;
 }) {
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
   const ProductIcon = product ? productIcon(product.kind) : Database;
@@ -776,6 +846,53 @@ function WorkspaceSidebar({
                 {selectedConnection?.description ?? "Select a connected database to inspect resources."}
               </p>
             </div>
+            {activeKind === "relational" ? (
+              <details className="group rounded-lg border border-white/10 bg-black/20 p-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase text-zinc-400">
+                  Refresh schema
+                  <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <label className="block">
+                    <span className="text-[0.68rem] font-semibold uppercase text-zinc-600">
+                      PostgreSQL URL
+                    </span>
+                    <input
+                      className="mt-2 h-9 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-xs text-zinc-100 outline-none transition placeholder:text-zinc-700 focus:border-cyan-300/40"
+                      onChange={(event) => onSourceDatabaseUrlChange(event.target.value)}
+                      placeholder="postgresql+psycopg://user:pass@host:5432/db"
+                      type="password"
+                      value={sourceDatabaseUrl}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-[0.68rem] font-semibold uppercase text-zinc-600">
+                      Schemas
+                    </span>
+                    <input
+                      className="mt-2 h-9 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-xs text-zinc-100 outline-none transition focus:border-cyan-300/40"
+                      onChange={(event) => onSourceSchemaNamesChange(event.target.value)}
+                      value={sourceSchemaNames}
+                    />
+                  </label>
+                  <button
+                    className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-cyan-300 text-xs font-semibold text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-55"
+                    disabled={isRefreshingSource}
+                    onClick={onRefreshSource}
+                  >
+                    {isRefreshingSource ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Database className="h-3.5 w-3.5" />
+                    )}
+                    Refresh tables
+                  </button>
+                  {sourceRefreshMessage ? (
+                    <p className="text-xs leading-5 text-zinc-500">{sourceRefreshMessage}</p>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
             <button
               className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-xs font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100"
               onClick={onBackToProducts}
