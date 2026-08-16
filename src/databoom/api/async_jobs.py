@@ -65,6 +65,7 @@ class ProductRunContext:
 
     product: ProductCatalogEntry
     payload: ProductRunRequest
+    source: WorkspaceSource | None = None
     retry_of_run_id: str | None = None
 
 
@@ -94,6 +95,7 @@ class AsyncRunManager:
         payload: ProductRunRequest,
         settings: Settings,
         state_store: StateStore,
+        source: WorkspaceSource | None = None,
         retry_of_run_id: str | None = None,
     ) -> GenerationRunResponse:
         """Create a running placeholder and execute the product run in the background."""
@@ -105,6 +107,7 @@ class AsyncRunManager:
         placeholder = _running_product_response(
             product=product,
             payload=payload,
+            source=source,
             run_id=run_id,
             created_at=created_at,
             artifact_dir=artifact_dir,
@@ -112,7 +115,12 @@ class AsyncRunManager:
         )
         self._register_run(
             placeholder,
-            ProductRunContext(product=product, payload=payload, retry_of_run_id=retry_of_run_id),
+            ProductRunContext(
+                product=product,
+                payload=payload,
+                source=source,
+                retry_of_run_id=retry_of_run_id,
+            ),
             cancel_event,
         )
         state_store.save_run(placeholder)
@@ -122,6 +130,7 @@ class AsyncRunManager:
             payload,
             settings,
             state_store,
+            source,
             run_id,
             created_at,
             artifact_dir,
@@ -197,6 +206,7 @@ class AsyncRunManager:
             payload=context.payload,
             settings=settings,
             state_store=state_store,
+            source=context.source,
             retry_of_run_id=run_id,
         )
 
@@ -211,6 +221,7 @@ class AsyncRunManager:
         payload: ProductRunRequest,
         settings: Settings,
         state_store: StateStore,
+        source: WorkspaceSource | None,
         run_id: str,
         created_at: datetime,
         artifact_dir: Path,
@@ -219,19 +230,24 @@ class AsyncRunManager:
     ) -> None:
         try:
             _raise_if_canceled(cancel_event)
-            run = execute_product_generation_run(
-                product,
-                payload,
-                settings,
-                run_id=run_id,
-                created_at=created_at,
-                artifact_dir=artifact_dir,
-                progress_callback=lambda generated_rows, current_resource: self._update_progress(
+            execute_kwargs = {
+                "run_id": run_id,
+                "created_at": created_at,
+                "artifact_dir": artifact_dir,
+                "progress_callback": lambda generated_rows, current_resource: self._update_progress(
                     run_id,
                     generated_rows,
                     current_resource,
                     cancel_event,
                 ),
+            }
+            if source is not None:
+                execute_kwargs["source"] = source
+            run = execute_product_generation_run(
+                product,
+                payload,
+                settings,
+                **execute_kwargs,
             )
             if retry_of_run_id is not None:
                 run = run.model_copy(update={"retry_of_run_id": retry_of_run_id})
@@ -245,6 +261,7 @@ class AsyncRunManager:
                 current_run = _running_product_response(
                     product=product,
                     payload=payload,
+                    source=source,
                     run_id=run_id,
                     created_at=created_at,
                     artifact_dir=artifact_dir,
@@ -261,6 +278,7 @@ class AsyncRunManager:
                     or _running_product_response(
                         product=product,
                         payload=payload,
+                        source=source,
                         run_id=run_id,
                         created_at=created_at,
                         artifact_dir=artifact_dir,
@@ -272,6 +290,7 @@ class AsyncRunManager:
                 run = _failed_response(
                     product=product,
                     payload=payload,
+                    source=source,
                     run_id=run_id,
                     created_at=created_at,
                     artifact_dir=artifact_dir,
@@ -317,18 +336,25 @@ def _running_product_response(
     *,
     product: ProductCatalogEntry,
     payload: ProductRunRequest,
+    source: WorkspaceSource | None = None,
     run_id: str,
     created_at: datetime,
     artifact_dir: Path,
     retry_of_run_id: str | None = None,
 ) -> GenerationRunResponse:
-    source = _source_for_payload(product, payload)
+    source = _source_for_payload(product, payload, source)
     row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
     output_formats = tuple(payload.output_formats or product.output_formats)
     total_rows = sum(row_counts.values())
     match product.kind:
         case DataProductKind.RELATIONAL:
-            tables = _planned_table_artifacts(product, payload, artifact_dir, output_formats)
+            tables = _planned_table_artifacts(
+                product,
+                payload,
+                artifact_dir,
+                output_formats,
+                source=source,
+            )
             table_count = len(tables)
             collections = ()
         case DataProductKind.DOCUMENT:
@@ -377,15 +403,16 @@ def _planned_table_artifacts(
     payload: ProductRunRequest,
     artifact_dir: Path,
     output_formats: tuple[str, ...],
+    source: WorkspaceSource | None = None,
 ) -> tuple[TableArtifactResponse, ...]:
-    source = _source_for_payload(product, payload)
+    source = _source_for_payload(product, payload, source)
     schema_ddl = _schema_ddl_for_source(source) if source else product.schema_ddl
     if schema_ddl is None:
         raise ValueError("relational product is missing schema DDL")
     database = parse_postgres_ddl(schema_ddl)
     plan = create_generation_plan(
         database,
-        row_counts=payload.row_counts or product.default_counts,
+        row_counts=payload.row_counts or _source_default_counts(source) or product.default_counts,
         seed=payload.seed,
         domain=product.domain,
         output_formats=tuple(OutputFormat(output_format) for output_format in output_formats),
@@ -438,6 +465,7 @@ def _failed_response(
     *,
     product: ProductCatalogEntry,
     payload: ProductRunRequest,
+    source: WorkspaceSource | None = None,
     run_id: str,
     created_at: datetime,
     artifact_dir: Path,
@@ -445,7 +473,7 @@ def _failed_response(
     retry_of_run_id: str | None = None,
 ) -> GenerationRunResponse:
     completed_at = datetime.now(UTC)
-    source = _source_for_payload(product, payload)
+    source = _source_for_payload(product, payload, source)
     row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
     total_rows = sum(row_counts.values())
     return GenerationRunResponse(

@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.exc import SQLAlchemyError
 
 from databoom import __version__
 from databoom.api.async_jobs import RunControlError, RunNotFoundError
@@ -31,6 +32,8 @@ from databoom.api.models import (
     TableArtifactResponse,
     TablePreviewResponse,
     WorkspaceResourceResponse,
+    WorkspaceSourceRefreshRequest,
+    WorkspaceSourceRequest,
     WorkspaceSourceResponse,
 )
 from databoom.api.products import ProductCatalogEntry, get_product, list_products
@@ -44,10 +47,11 @@ from databoom.api.security import require_api_key
 from databoom.api.state import StateStore
 from databoom.api.workspaces import (
     WorkspaceSource,
-    get_workspace_source,
-    list_workspace_sources,
+    workspace_source_from_request,
+    workspace_source_from_schema,
 )
 from databoom.core.config import Settings
+from databoom.ingest.postgres import load_postgres_schema
 
 router = APIRouter()
 protected_route = Depends(require_api_key)
@@ -147,10 +151,37 @@ def product_detail(product_id: str) -> ProductResponse:
     response_model=tuple[WorkspaceSourceResponse, ...],
     tags=["workspaces"],
 )
-def workspace_sources() -> tuple[WorkspaceSourceResponse, ...]:
+def workspace_sources(request: Request) -> tuple[WorkspaceSourceResponse, ...]:
     """Return all configured dashboard workspace sources."""
 
-    return tuple(_workspace_source_response(source) for source in list_workspace_sources())
+    return tuple(
+        _workspace_source_response(source)
+        for source in _state_store(request).list_workspace_sources()
+    )
+
+
+@router.post(
+    "/workspace-sources",
+    response_model=WorkspaceSourceResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["workspaces"],
+)
+def save_workspace_source(
+    request: Request,
+    payload: WorkspaceSourceRequest,
+    user: DemoUserResponse = demo_user_dependency,
+) -> WorkspaceSourceResponse:
+    """Create or replace a dashboard workspace source."""
+
+    product = _get_product_or_404(payload.product_id)
+    if product.kind != payload.kind:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="workspace source kind must match product kind",
+        )
+    source = workspace_source_from_request(payload)
+    _state_store(request).save_workspace_source(source)
+    return _workspace_source_response(source)
 
 
 @router.get(
@@ -158,17 +189,60 @@ def workspace_sources() -> tuple[WorkspaceSourceResponse, ...]:
     response_model=WorkspaceSourceResponse,
     tags=["workspaces"],
 )
-def workspace_source_detail(source_id: str) -> WorkspaceSourceResponse:
+def workspace_source_detail(request: Request, source_id: str) -> WorkspaceSourceResponse:
     """Return one configured dashboard workspace source."""
 
-    try:
-        source = get_workspace_source(source_id)
-    except KeyError as error:
+    source = _state_store(request).get_workspace_source(source_id)
+    if source is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="workspace source not found",
-        ) from error
+        )
     return _workspace_source_response(source)
+
+
+@router.post(
+    "/workspace-sources/{source_id}/refresh",
+    response_model=WorkspaceSourceResponse,
+    tags=["workspaces"],
+)
+def refresh_workspace_source(
+    request: Request,
+    source_id: str,
+    payload: WorkspaceSourceRefreshRequest,
+    user: DemoUserResponse = demo_user_dependency,
+) -> WorkspaceSourceResponse:
+    """Refresh one relational workspace source from live PostgreSQL metadata."""
+
+    source = _state_store(request).get_workspace_source(source_id)
+    if source is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="workspace source not found",
+        )
+    if source.kind != "relational" or source.engine.lower() != "postgresql":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="only PostgreSQL relational sources can be refreshed",
+        )
+
+    try:
+        database = load_postgres_schema(
+            payload.database_url,
+            schema_names=payload.schema_names,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    except SQLAlchemyError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+    refreshed = workspace_source_from_schema(
+        source,
+        database,
+        default_estimated_rows=payload.default_estimated_rows,
+    )
+    _state_store(request).save_workspace_source(refreshed)
+    return _workspace_source_response(refreshed)
 
 
 @router.get(
@@ -176,13 +250,16 @@ def workspace_source_detail(source_id: str) -> WorkspaceSourceResponse:
     response_model=tuple[WorkspaceSourceResponse, ...],
     tags=["workspaces"],
 )
-def product_workspace_sources(product_id: str) -> tuple[WorkspaceSourceResponse, ...]:
+def product_workspace_sources(
+    request: Request,
+    product_id: str,
+) -> tuple[WorkspaceSourceResponse, ...]:
     """Return workspace sources compatible with one product."""
 
     _get_product_or_404(product_id)
     return tuple(
         _workspace_source_response(source)
-        for source in list_workspace_sources(product_id=product_id)
+        for source in _state_store(request).list_workspace_sources(product_id=product_id)
     )
 
 
@@ -263,10 +340,15 @@ def create_product_run(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
         )
-    _validate_source_for_product(payload.source_id, product)
+    source = _validate_source_for_product(request, payload.source_id, product)
 
     try:
-        run = execute_product_generation_run(product, payload, request.app.state.settings)
+        run = execute_product_generation_run(
+            product,
+            payload,
+            request.app.state.settings,
+            source=source,
+        )
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
@@ -294,7 +376,7 @@ def create_async_product_run(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
         )
-    _validate_source_for_product(payload.source_id, product)
+    source = _validate_source_for_product(request, payload.source_id, product)
 
     try:
         return request.app.state.async_run_manager.submit_product_run(
@@ -302,6 +384,7 @@ def create_async_product_run(
             payload=payload,
             settings=request.app.state.settings,
             state_store=_state_store(request),
+            source=source,
         )
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
@@ -536,23 +619,24 @@ def _get_product_or_404(product_id: str) -> ProductCatalogEntry:
 
 
 def _validate_source_for_product(
+    request: Request,
     source_id: str | None,
     product: ProductCatalogEntry,
-) -> None:
+) -> WorkspaceSource | None:
     if source_id is None:
-        return
-    try:
-        source = get_workspace_source(source_id)
-    except KeyError as error:
+        return None
+    source = _state_store(request).get_workspace_source(source_id)
+    if source is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="workspace source not found",
-        ) from error
+        )
     if source.product_id != product.id or source.kind != product.kind:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="workspace source is not compatible with this product",
         )
+    return source
 
 
 def _state_store(request: Request) -> StateStore:

@@ -104,6 +104,7 @@ def execute_product_generation_run(
     payload: ProductRunRequest,
     settings: Settings,
     *,
+    source: WorkspaceSource | None = None,
     run_id: str | None = None,
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
@@ -111,7 +112,7 @@ def execute_product_generation_run(
 ) -> GenerationRunResponse:
     """Execute a catalog-backed generation run for the product kind."""
 
-    source = _source_for_payload(product, payload)
+    source = _source_for_payload(product, payload, source)
     match product.kind:
         case DataProductKind.RELATIONAL:
             schema_ddl = _schema_ddl_for_source(source) if source else product.schema_ddl
@@ -250,7 +251,14 @@ def list_generation_run_artifacts(run: GenerationRunResponse) -> RunArtifactList
 def _source_for_payload(
     product: ProductCatalogEntry,
     payload: ProductRunRequest,
+    source: WorkspaceSource | None = None,
 ) -> WorkspaceSource | None:
+    if source is not None:
+        if payload.source_id is not None and payload.source_id != source.id:
+            raise ValueError("workspace source does not match request")
+        if source.product_id != product.id or source.kind != product.kind:
+            raise ValueError("workspace source is not compatible with this product")
+        return source
     if payload.source_id is None:
         return None
     try:

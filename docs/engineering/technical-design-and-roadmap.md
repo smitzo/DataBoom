@@ -303,13 +303,14 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
-Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. A 500k benchmark baseline now exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs can execute asynchronously with row-level progress, ETA, throughput, and operation timings. Export speed, deeper structural profiling, and production-grade distributed worker orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
+Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are now backend-owned, persisted in API state, and refreshable from live PostgreSQL introspection for relational sources. A 500k benchmark baseline exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs can execute asynchronously with row-level progress, ETA, throughput, and operation timings. Export speed, deeper structural profiling, source-secret management, and production-grade distributed worker orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
 
 Technical objectives:
 
 - Improve generation toward 500k records.
 - Add chunked writers and artifact manifests.
 - Add live PostgreSQL metadata introspection.
+- Persist workspace sources and refresh relational table metadata from PostgreSQL introspection.
 - Add structural profiling for row counts, null rates, cardinality, ranges, and categorical hints.
 - Add FastAPI run endpoints.
 - Add asynchronous product-run lifecycle with polling-friendly status responses.
@@ -335,6 +336,7 @@ Implemented MVP capabilities:
 - Docu-Boom NoSQL document generation with nested objects, arrays, references, JSON, and NDJSON artifacts.
 - Document preview endpoint for top documents per collection.
 - SQL-backed demo auth, subscriptions, and run metadata in Dockerized API runs.
+- Backend-owned workspace source store seeded with demo sources and refreshable from PostgreSQL metadata.
 - Generic frontend workspace that renders relational tables or MongoDB-style documents based on product kind.
 - Async product-run endpoint with in-process background execution, generated row counters, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.
 - Frontend polling that shows live run status, row progress, throughput, and attempts top-20 table/document previews during generation.

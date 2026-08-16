@@ -24,6 +24,12 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from databoom.api.models import DemoUserResponse, GenerationRunResponse, SubscriptionResponse
+from databoom.api.workspaces import (
+    WorkspaceSource,
+    default_workspace_sources,
+    workspace_source_from_payload,
+    workspace_source_to_payload,
+)
 from databoom.core.config import Settings
 
 LOGGER = logging.getLogger(__name__)
@@ -57,6 +63,15 @@ runs_table = Table(
     Column("created_at", DateTime(timezone=True), nullable=False, index=True),
 )
 
+workspace_sources_table = Table(
+    "databoom_workspace_sources",
+    metadata,
+    Column("source_id", String(120), primary_key=True),
+    Column("product_id", String(120), nullable=False, index=True),
+    Column("payload", JSON, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
 
 class StateStore(Protocol):
     """Persistence boundary for API state."""
@@ -85,6 +100,15 @@ class StateStore(Protocol):
     def get_run(self, run_id: str) -> GenerationRunResponse | None:
         """Return one generation run by ID."""
 
+    def save_workspace_source(self, source: WorkspaceSource) -> None:
+        """Persist or replace a workspace source."""
+
+    def list_workspace_sources(self, product_id: str | None = None) -> tuple[WorkspaceSource, ...]:
+        """List available workspace sources."""
+
+    def get_workspace_source(self, source_id: str) -> WorkspaceSource | None:
+        """Return one workspace source by ID."""
+
 
 class MemoryStateStore:
     """In-process state store for tests and fallback local development."""
@@ -93,6 +117,9 @@ class MemoryStateStore:
         self._sessions: dict[str, DemoUserResponse] = {}
         self._subscriptions: dict[str, dict[str, SubscriptionResponse]] = {}
         self._runs: dict[str, GenerationRunResponse] = {}
+        self._workspace_sources: dict[str, WorkspaceSource] = {
+            source.id: source for source in default_workspace_sources()
+        }
 
     def save_session(self, token: str, user: DemoUserResponse) -> None:
         self._sessions[token] = user
@@ -120,6 +147,18 @@ class MemoryStateStore:
     def get_run(self, run_id: str) -> GenerationRunResponse | None:
         return self._runs.get(run_id)
 
+    def save_workspace_source(self, source: WorkspaceSource) -> None:
+        self._workspace_sources[source.id] = source
+
+    def list_workspace_sources(self, product_id: str | None = None) -> tuple[WorkspaceSource, ...]:
+        sources = tuple(self._workspace_sources.values())
+        if product_id is None:
+            return sources
+        return tuple(source for source in sources if source.product_id == product_id)
+
+    def get_workspace_source(self, source_id: str) -> WorkspaceSource | None:
+        return self._workspace_sources.get(source_id)
+
 
 class SQLAlchemyStateStore:
     """SQL-backed state store used by the Dockerized API."""
@@ -127,6 +166,7 @@ class SQLAlchemyStateStore:
     def __init__(self, database_url: str) -> None:
         self.engine: Engine = create_engine(database_url, pool_pre_ping=True, future=True)
         metadata.create_all(self.engine)
+        self._seed_workspace_sources()
 
     def save_session(self, token: str, user: DemoUserResponse) -> None:
         payload = user.model_dump(mode="json")
@@ -210,6 +250,60 @@ class SQLAlchemyStateStore:
                 select(runs_table.c.payload).where(runs_table.c.run_id == run_id)
             ).scalar_one_or_none()
         return GenerationRunResponse.model_validate(payload) if payload else None
+
+    def save_workspace_source(self, source: WorkspaceSource) -> None:
+        payload = workspace_source_to_payload(source)
+        with self.engine.begin() as connection:
+            connection.execute(
+                delete(workspace_sources_table).where(
+                    workspace_sources_table.c.source_id == source.id
+                )
+            )
+            connection.execute(
+                insert(workspace_sources_table).values(
+                    source_id=source.id,
+                    product_id=source.product_id,
+                    payload=payload,
+                    updated_at=datetime.now(UTC),
+                )
+            )
+
+    def list_workspace_sources(self, product_id: str | None = None) -> tuple[WorkspaceSource, ...]:
+        query = select(workspace_sources_table.c.payload).order_by(
+            workspace_sources_table.c.product_id,
+            workspace_sources_table.c.source_id,
+        )
+        if product_id is not None:
+            query = query.where(workspace_sources_table.c.product_id == product_id)
+        with self.engine.begin() as connection:
+            rows = connection.execute(query)
+            return tuple(workspace_source_from_payload(row[0]) for row in rows)
+
+    def get_workspace_source(self, source_id: str) -> WorkspaceSource | None:
+        with self.engine.begin() as connection:
+            payload = connection.execute(
+                select(workspace_sources_table.c.payload).where(
+                    workspace_sources_table.c.source_id == source_id
+                )
+            ).scalar_one_or_none()
+        return workspace_source_from_payload(payload) if payload else None
+
+    def _seed_workspace_sources(self) -> None:
+        with self.engine.begin() as connection:
+            existing_source_id = connection.execute(
+                select(workspace_sources_table.c.source_id).limit(1)
+            ).scalar_one_or_none()
+            if existing_source_id is not None:
+                return
+            for source in default_workspace_sources():
+                connection.execute(
+                    insert(workspace_sources_table).values(
+                        source_id=source.id,
+                        product_id=source.product_id,
+                        payload=workspace_source_to_payload(source),
+                        updated_at=datetime.now(UTC),
+                    )
+                )
 
 
 def create_state_store(settings: Settings) -> StateStore:

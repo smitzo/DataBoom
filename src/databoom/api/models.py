@@ -180,6 +180,59 @@ class WorkspaceSourceResponse(BaseModel):
     resources: tuple[WorkspaceResourceResponse, ...]
 
 
+class WorkspaceResourceRequest(BaseModel):
+    """Resource metadata accepted when creating or updating a workspace source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    resource_type: str = Field(min_length=1)
+    estimated_rows: int = Field(default=100, ge=0)
+    columns: tuple[str, ...] = ()
+
+    @field_validator("columns")
+    @classmethod
+    def reject_empty_columns(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not column.strip() for column in value):
+            raise ValueError("columns cannot be empty")
+        return value
+
+
+class WorkspaceSourceRequest(BaseModel):
+    """Create or replace one dashboard workspace source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    product_id: str = Field(min_length=1)
+    kind: DataProductKind
+    name: str = Field(min_length=1)
+    engine: str = Field(min_length=1)
+    host: str = Field(min_length=1)
+    description: str = ""
+    status: WorkspaceSourceStatus = WorkspaceSourceStatus.CONNECTED
+    resources: tuple[WorkspaceResourceRequest, ...] = ()
+
+
+class WorkspaceSourceRefreshRequest(BaseModel):
+    """Refresh a relational workspace source from a live PostgreSQL database."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    database_url: str = Field(min_length=1)
+    schema_names: tuple[str, ...] = ("public",)
+    default_estimated_rows: int = Field(default=100, ge=0)
+
+    @field_validator("schema_names")
+    @classmethod
+    def require_schema_names(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if not value:
+            raise ValueError("at least one schema is required")
+        if any(not schema_name.strip() for schema_name in value):
+            raise ValueError("schema names cannot be empty")
+        return value
+
+
 class ProductRunRequest(BaseModel):
     """Generation request based on a subscribed product catalog entry."""
 

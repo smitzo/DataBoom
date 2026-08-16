@@ -3,8 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from databoom.api.models import DataProductKind, WorkspaceSourceStatus
+from databoom.api.models import (
+    DataProductKind,
+    WorkspaceResourceRequest,
+    WorkspaceSourceRequest,
+    WorkspaceSourceStatus,
+)
+from databoom.schema import DatabaseSchema
 
 
 @dataclass(frozen=True)
@@ -170,3 +177,112 @@ def get_workspace_source(source_id: str) -> WorkspaceSource:
         if source.id == source_id:
             return source
     raise KeyError(source_id)
+
+
+def default_workspace_sources() -> tuple[WorkspaceSource, ...]:
+    """Return the built-in workspace sources used to seed stores."""
+
+    return WORKSPACE_SOURCES
+
+
+def workspace_source_from_request(payload: WorkspaceSourceRequest) -> WorkspaceSource:
+    """Convert an API request into the internal workspace source contract."""
+
+    return WorkspaceSource(
+        id=payload.id,
+        product_id=payload.product_id,
+        kind=payload.kind,
+        name=payload.name,
+        engine=payload.engine,
+        host=payload.host,
+        description=payload.description,
+        status=payload.status,
+        resources=tuple(_resource_from_request(resource) for resource in payload.resources),
+    )
+
+
+def workspace_source_from_schema(
+    source: WorkspaceSource,
+    database: DatabaseSchema,
+    *,
+    default_estimated_rows: int = 100,
+) -> WorkspaceSource:
+    """Return a copy of a source whose resources match an inspected database schema."""
+
+    previous_counts = {resource.name: resource.estimated_rows for resource in source.resources}
+    return WorkspaceSource(
+        id=source.id,
+        product_id=source.product_id,
+        kind=source.kind,
+        name=source.name,
+        engine=source.engine,
+        host=source.host,
+        description=source.description,
+        status=WorkspaceSourceStatus.CONNECTED,
+        resources=tuple(
+            WorkspaceResource(
+                name=table.name,
+                resource_type="table",
+                estimated_rows=previous_counts.get(table.name, default_estimated_rows),
+                columns=table.column_names,
+            )
+            for table in database.tables
+        ),
+    )
+
+
+def workspace_source_to_payload(source: WorkspaceSource) -> dict[str, Any]:
+    """Serialize a workspace source for durable JSON storage."""
+
+    return {
+        "id": source.id,
+        "product_id": source.product_id,
+        "kind": source.kind.value,
+        "name": source.name,
+        "engine": source.engine,
+        "host": source.host,
+        "description": source.description,
+        "status": source.status.value,
+        "resources": [
+            {
+                "name": resource.name,
+                "resource_type": resource.resource_type,
+                "estimated_rows": resource.estimated_rows,
+                "columns": list(resource.columns),
+            }
+            for resource in source.resources
+        ],
+    }
+
+
+def workspace_source_from_payload(payload: dict[str, Any]) -> WorkspaceSource:
+    """Hydrate a workspace source from durable JSON storage."""
+
+    return WorkspaceSource(
+        id=str(payload["id"]),
+        product_id=str(payload["product_id"]),
+        kind=DataProductKind(str(payload["kind"])),
+        name=str(payload["name"]),
+        engine=str(payload["engine"]),
+        host=str(payload["host"]),
+        description=str(payload.get("description", "")),
+        status=WorkspaceSourceStatus(str(payload.get("status", WorkspaceSourceStatus.CONNECTED))),
+        resources=tuple(
+            WorkspaceResource(
+                name=str(resource["name"]),
+                resource_type=str(resource["resource_type"]),
+                estimated_rows=int(resource.get("estimated_rows", 100)),
+                columns=tuple(str(column) for column in resource.get("columns", ())),
+            )
+            for resource in payload.get("resources", ())
+        ),
+    )
+
+
+def _resource_from_request(payload: WorkspaceResourceRequest) -> WorkspaceResource:
+    return WorkspaceResource(
+        name=payload.name,
+        resource_type=payload.resource_type,
+        estimated_rows=payload.estimated_rows,
+        columns=payload.columns,
+    )

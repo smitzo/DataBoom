@@ -1136,3 +1136,61 @@ Future production path:
 5. Reuse cached source metadata to build generation plans quickly.
 
 This keeps the architecture clean: the frontend renders workspace state, while the backend owns data-source truth and generation planning.
+
+## Decision: persist workspace sources and refresh them from PostgreSQL introspection
+
+### Question
+
+Why was the next backend step to persist workspace sources instead of only adding another hardcoded demo database?
+
+### Answer
+
+A hardcoded source list is useful for proving the UI shape, but it cannot support real users. Different teams will have different databases, different table names, different schemas, and different row expectations. If DataBoom wants to behave like a product workspace, source metadata has to be state, not code.
+
+The backend now treats workspace sources as stored API state:
+
+- test/local memory state starts with the built-in demo sources,
+- SQL-backed Docker state seeds the same demo sources into `databoom_workspace_sources`,
+- new sources can be created through `POST /workspace-sources`,
+- source metadata can be refreshed and saved after live PostgreSQL introspection,
+- product runs receive a resolved `WorkspaceSource` object instead of looking only at the old static catalog.
+
+This is important because the dashboard can now show the same source resources that the generator will use. If a refreshed source contains `invoices` and `invoice_lines`, a Table-Boom run with that `source_id` generates those tables instead of falling back to the old default commerce tables.
+
+### Question
+
+Why does refresh store table metadata instead of introspecting the database every time the page loads or a run starts?
+
+### Answer
+
+Database introspection is an external operation. It may need a network connection, credentials, connection pooling, permissions, timeout handling, and later secret management. Running it on every dashboard page load would make the UI slower and less reliable. Running it on every generation request would also make generation latency depend on the source database even when the schema has not changed.
+
+The better production pattern is:
+
+1. Refresh or connect a source explicitly.
+2. Convert live database metadata into DataBoom's normalized resource contract.
+3. Persist that resource contract.
+4. Let the dashboard and generator reuse the saved metadata.
+
+This separates "discover the source shape" from "generate data from the known shape." That separation is the beginning of schema caching.
+
+### Question
+
+What changed in the async engine path?
+
+### Answer
+
+Async runs now carry the resolved workspace source inside the run context. That matters for two reasons.
+
+First, the running placeholder can show the correct planned tables or collections before generation finishes. Without this, a user could select a refreshed source but see old default tables during the run.
+
+Second, retries must use the same source metadata as the original run. If the retry only kept the product and payload, it could accidentally resolve a different source later if the source catalog changed. Carrying the resolved source keeps the retry behavior stable for the current local-process implementation.
+
+### Performance and Scaling Notes
+
+This change is mostly correctness and architecture, not raw speed. It does, however, remove a future latency trap:
+
+- Without persisted source metadata, every dashboard load or run might need live database introspection.
+- With persisted source metadata, the UI and generator can reuse cached table/column data immediately.
+
+The next optimization step is to attach a schema version hash or refresh timestamp to each source. Then DataBoom can skip unnecessary introspection, show when metadata is stale, and refresh only when the operator asks or when a background job detects schema drift.
