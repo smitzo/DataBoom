@@ -86,6 +86,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [prompt, setPrompt] = useState("Generate realistic data for the selected product");
   const [status, setStatus] = useState<AgentStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [sourceWarning, setSourceWarning] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorkspaceRailCollapsed, setIsWorkspaceRailCollapsed] = useState(false);
 
@@ -271,13 +272,22 @@ export function DataWorkspace({ session }: { session: Session }) {
   async function loadWorkspace() {
     setIsLoading(true);
     setError(null);
+    setSourceWarning(null);
     try {
-      const [nextProducts, nextSubscriptions, nextRuns, nextSources] = await Promise.all([
+      const [nextProducts, nextSubscriptions, nextRuns] = await Promise.all([
         getProducts(),
         getSubscriptions(session.token),
         getRuns(),
-        getWorkspaceSources(),
       ]);
+      let nextSources: WorkspaceSource[];
+      try {
+        nextSources = await getWorkspaceSources();
+      } catch {
+        nextSources = fallbackWorkspaceSources(nextProducts);
+        setSourceWarning(
+          "Using local demo workspaces. Restart the backend to load workspace sources from the API.",
+        );
+      }
       const newestRuns = nextRuns.slice().reverse();
       const activeProductIds = new Set(nextProducts.map((product) => product.id));
       const firstSubscribedProductId = nextSubscriptions.find((subscription) =>
@@ -374,6 +384,10 @@ export function DataWorkspace({ session }: { session: Session }) {
     setStatus("generating");
     setError(null);
     try {
+      const sourceId =
+        selectedConnection && !selectedConnection.id.endsWith("-local-demo")
+          ? selectedConnection.id
+          : undefined;
       const run = await createAsyncProductRun(session.token, selectedProduct.id, {
         row_counts: selectedConnection
           ? Object.fromEntries(
@@ -385,7 +399,7 @@ export function DataWorkspace({ session }: { session: Session }) {
           : selectedProduct.default_row_counts,
         seed: `${selectedProduct.id}-workspace`,
         output_formats: downloadOptions(activeKind).map((option) => option.id),
-        source_id: selectedConnection?.id,
+        source_id: sourceId,
       });
       setRuns((current) => upsertRun(current, run));
       setSelectedRunId(run.run_id);
@@ -411,7 +425,9 @@ export function DataWorkspace({ session }: { session: Session }) {
   if (workspaceMode === "catalog") {
     return (
       <ProductWorkspacePicker
+        error={error}
         products={products}
+        sourceWarning={sourceWarning}
         selectedProductId={selectedProductId}
         subscribedProductIds={subscribedProductIds}
         onSelectProduct={chooseProduct}
@@ -494,12 +510,16 @@ export function DataWorkspace({ session }: { session: Session }) {
 }
 
 function ProductWorkspacePicker({
+  error,
   products,
+  sourceWarning,
   selectedProductId,
   subscribedProductIds,
   onSelectProduct,
 }: {
+  error: string | null;
   products: Product[];
+  sourceWarning: string | null;
   selectedProductId: string;
   subscribedProductIds: Set<string>;
   onSelectProduct: (product: Product) => void;
@@ -536,6 +556,19 @@ function ProductWorkspacePicker({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          {sourceWarning ? (
+            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/10 p-5 text-sm leading-6 text-amber-100 sm:col-span-2">
+              {sourceWarning}
+            </div>
+          ) : null}
+          {products.length === 0 ? (
+            <div className="rounded-2xl border border-red-300/25 bg-red-300/10 p-6 sm:col-span-2">
+              <p className="text-lg font-semibold text-red-100">Product catalog did not load.</p>
+              <p className="mt-3 text-sm leading-6 text-red-100/75">
+                {error ?? "Start or restart the backend API, then refresh this dashboard."}
+              </p>
+            </div>
+          ) : null}
           {products.map((product) => {
             const Icon = productIcon(product.kind);
             const subscribed = subscribedProductIds.has(product.id);
@@ -2088,6 +2121,59 @@ function connectionResources(connection: WorkspaceSource, kind: Product["kind"])
     return [];
   }
   return connection.resources.map((resource) => resource.name);
+}
+
+function fallbackWorkspaceSources(products: Product[]) {
+  return products.flatMap((product) => {
+    const resources = productResources(product);
+    if (!resources.length) {
+      return [];
+    }
+    return [
+      {
+        id: `${product.id}-local-demo`,
+        product_id: product.id,
+        kind: product.kind,
+        name: `${product.name} local demo`,
+        engine: fallbackEngine(product.kind),
+        host: "local demo source",
+        description: "Fallback source built from the product catalog while the workspace API is unavailable.",
+        status: product.status === "active" ? "connected" : "planned",
+        resources: resources.map((resourceName) => ({
+          name: resourceName,
+          resource_type: resourceType(product.kind),
+          estimated_rows: product.default_row_counts[resourceName] ?? 20,
+          columns: [],
+        })),
+      } satisfies WorkspaceSource,
+    ];
+  });
+}
+
+function fallbackEngine(kind: Product["kind"]) {
+  if (kind === "document") {
+    return "MongoDB";
+  }
+  if (kind === "graph") {
+    return "Neo4j";
+  }
+  if (kind === "masking") {
+    return "Local files";
+  }
+  return "PostgreSQL";
+}
+
+function resourceType(kind: Product["kind"]) {
+  if (kind === "document") {
+    return "collection";
+  }
+  if (kind === "graph") {
+    return "graph resource";
+  }
+  if (kind === "masking") {
+    return "policy resource";
+  }
+  return "table";
 }
 
 function viewOptions(kind: Product["kind"]): FormatOption[] {
