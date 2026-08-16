@@ -43,6 +43,25 @@ export type Product = {
   plans: ProductPlan[];
 };
 
+export type WorkspaceResource = {
+  name: string;
+  resource_type: string;
+  estimated_rows: number;
+  columns: string[];
+};
+
+export type WorkspaceSource = {
+  id: string;
+  product_id: string;
+  kind: Product["kind"];
+  name: string;
+  engine: string;
+  host: string;
+  description: string;
+  status: "connected" | "planned";
+  resources: WorkspaceResource[];
+};
+
 export type Subscription = {
   subscription_id: string;
   product_id: string;
@@ -154,6 +173,14 @@ export async function getProduct(productId: string) {
   return apiRequest<Product>(`/products/${productId}`);
 }
 
+export async function getWorkspaceSources() {
+  return apiRequest<WorkspaceSource[]>("/workspace-sources");
+}
+
+export async function getProductWorkspaceSources(productId: string) {
+  return apiRequest<WorkspaceSource[]>(`/products/${productId}/workspace-sources`);
+}
+
 export async function getSubscriptions(token: string) {
   return apiRequest<Subscription[]>("/subscriptions", {}, token);
 }
@@ -172,7 +199,12 @@ export async function subscribeToProduct(token: string, productId: string, planI
 export async function createProductRun(
   token: string,
   productId: string,
-  payload: { row_counts: Record<string, number>; seed: string; output_formats: string[] },
+  payload: {
+    row_counts: Record<string, number>;
+    seed: string;
+    output_formats: string[];
+    source_id?: string;
+  },
 ) {
   return apiRequest<GenerationRun>(
     `/products/${productId}/runs`,
@@ -187,7 +219,12 @@ export async function createProductRun(
 export async function createAsyncProductRun(
   token: string,
   productId: string,
-  payload: { row_counts: Record<string, number>; seed: string; output_formats: string[] },
+  payload: {
+    row_counts: Record<string, number>;
+    seed: string;
+    output_formats: string[];
+    source_id?: string;
+  },
 ) {
   return apiRequest<GenerationRun>(
     `/products/${productId}/runs/async`,

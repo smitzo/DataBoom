@@ -37,6 +37,7 @@ import type {
   Product,
   Subscription,
   TablePreview,
+  WorkspaceSource,
 } from "@/lib/api";
 import {
   apiUrl,
@@ -48,6 +49,7 @@ import {
   getRuns,
   getSubscriptions,
   getTablePreview,
+  getWorkspaceSources,
   subscribeToProduct,
 } from "@/lib/api";
 import type { Session } from "@/lib/session";
@@ -66,90 +68,9 @@ type FormatOption = {
   icon: LucideIcon;
 };
 
-type WorkspaceConnection = {
-  id: string;
-  name: string;
-  engine: string;
-  host: string;
-  description: string;
-  resources: Partial<Record<Product["kind"], string[]>>;
-};
-
-const workspaceConnections: WorkspaceConnection[] = [
-  {
-    id: "core-banking",
-    name: "Core Banking Sandbox",
-    engine: "PostgreSQL",
-    host: "banking-demo.internal",
-    description: "Accounts, customers, transactions, and payment rails.",
-    resources: {
-      relational: ["customers", "bank_accounts", "transactions"],
-    },
-  },
-  {
-    id: "commerce-store",
-    name: "Commerce Store",
-    engine: "PostgreSQL",
-    host: "commerce-demo.internal",
-    description: "Customer orders, products, order items, and payments.",
-    resources: {
-      relational: ["customers", "products", "orders", "order_items", "payments"],
-    },
-  },
-  {
-    id: "patient-care",
-    name: "Patient Care Warehouse",
-    engine: "PostgreSQL",
-    host: "health-demo.internal",
-    description: "Patient, encounter, claim, provider, and lab records.",
-    resources: {
-      relational: ["patients", "encounters", "claims", "providers", "lab_results"],
-    },
-  },
-  {
-    id: "customer-events",
-    name: "Customer Events Cluster",
-    engine: "MongoDB",
-    host: "events-demo.internal",
-    description: "Nested customer documents, order events, and behavioral streams.",
-    resources: {
-      document: ["customers", "orders", "events"],
-    },
-  },
-  {
-    id: "clinical-documents",
-    name: "Clinical Documents",
-    engine: "MongoDB",
-    host: "clinical-docs.internal",
-    description: "Patient profiles, notes, claims, and nested healthcare payloads.",
-    resources: {
-      document: ["patients", "clinical_notes", "claims"],
-    },
-  },
-  {
-    id: "graph-roadmap",
-    name: "Relationship Graph Lab",
-    engine: "Neo4j",
-    host: "graph-demo.internal",
-    description: "Nodes, edges, and relationship-heavy roadmap datasets.",
-    resources: {
-      graph: ["customers", "accounts", "devices", "transactions"],
-    },
-  },
-  {
-    id: "masking-lab",
-    name: "Masking Policy Lab",
-    engine: "Local files",
-    host: "masker-demo.internal",
-    description: "Sensitive data classification and redaction policy testing.",
-    resources: {
-      masking: ["pii_fields", "tokenized_customers", "audit_samples"],
-    },
-  },
-];
-
 export function DataWorkspace({ session }: { session: Session }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [workspaceSources, setWorkspaceSources] = useState<WorkspaceSource[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [runs, setRuns] = useState<GenerationRun[]>([]);
   const [artifacts, setArtifacts] = useState<ArtifactList | null>(null);
@@ -297,8 +218,8 @@ export function DataWorkspace({ session }: { session: Session }) {
   const subscribed = selectedProduct ? subscribedProductIds.has(selectedProduct.id) : false;
   const activeKind = selectedRun?.kind ?? selectedProduct?.kind ?? "relational";
   const connectionOptions = useMemo(
-    () => workspaceConnectionsForProduct(selectedProduct),
-    [selectedProduct],
+    () => workspaceConnectionsForProduct(selectedProduct, workspaceSources),
+    [selectedProduct, workspaceSources],
   );
   const selectedConnection =
     connectionOptions.find((connection) => connection.id === selectedConnectionId) ??
@@ -351,10 +272,11 @@ export function DataWorkspace({ session }: { session: Session }) {
     setIsLoading(true);
     setError(null);
     try {
-      const [nextProducts, nextSubscriptions, nextRuns] = await Promise.all([
+      const [nextProducts, nextSubscriptions, nextRuns, nextSources] = await Promise.all([
         getProducts(),
         getSubscriptions(session.token),
         getRuns(),
+        getWorkspaceSources(),
       ]);
       const newestRuns = nextRuns.slice().reverse();
       const activeProductIds = new Set(nextProducts.map((product) => product.id));
@@ -370,9 +292,10 @@ export function DataWorkspace({ session }: { session: Session }) {
       const firstRun = firstProduct
         ? newestRuns.find((run) => runMatchesProduct(run, firstProduct))
         : newestRuns[0];
-      const firstConnection = workspaceConnectionsForProduct(firstProduct)[0] ?? null;
+      const firstConnection = workspaceConnectionsForProduct(firstProduct, nextSources)[0] ?? null;
 
       setProducts(nextProducts);
+      setWorkspaceSources(nextSources);
       setSubscriptions(nextSubscriptions);
       setRuns(nextRuns);
       setSelectedProductId(firstProductId);
@@ -397,7 +320,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   async function chooseProduct(product: Product) {
     setSelectedProductId(product.id);
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
-    const nextConnection = workspaceConnectionsForProduct(product)[0] ?? null;
+    const nextConnection = workspaceConnectionsForProduct(product, workspaceSources)[0] ?? null;
     setSelectedRunId(matchingRun?.run_id ?? null);
     setSelectedConnectionId(nextConnection?.id ?? "");
     setSelectedResource(
@@ -452,9 +375,17 @@ export function DataWorkspace({ session }: { session: Session }) {
     setError(null);
     try {
       const run = await createAsyncProductRun(session.token, selectedProduct.id, {
-        row_counts: selectedProduct.default_row_counts,
+        row_counts: selectedConnection
+          ? Object.fromEntries(
+              selectedConnection.resources.map((resource) => [
+                resource.name,
+                Math.min(resource.estimated_rows, 10_000),
+              ]),
+            )
+          : selectedProduct.default_row_counts,
         seed: `${selectedProduct.id}-workspace`,
-        output_formats: selectedProduct.output_formats,
+        output_formats: downloadOptions(activeKind).map((option) => option.id),
+        source_id: selectedConnection?.id,
       });
       setRuns((current) => upsertRun(current, run));
       setSelectedRunId(run.run_id);
@@ -678,11 +609,11 @@ function WorkspaceSidebar({
 }: {
   activeKind: Product["kind"];
   collapsed: boolean;
-  connectionOptions: WorkspaceConnection[];
+  connectionOptions: WorkspaceSource[];
   onToggleCollapse: () => void;
   product: Product | null;
   resourceNames: string[];
-  selectedConnection: WorkspaceConnection | null;
+  selectedConnection: WorkspaceSource | null;
   selectedConnectionId: string;
   selectedResource: string | null;
   onBackToProducts: () => void;
@@ -858,7 +789,7 @@ function WorkspaceOverview({
   run,
   visibleRows,
 }: {
-  connection: WorkspaceConnection | null;
+  connection: WorkspaceSource | null;
   product: Product | null;
   run: GenerationRun | null;
   visibleRows: number;
@@ -2140,15 +2071,23 @@ function runResourcesWithCounts(run: GenerationRun) {
   return run.tables.map((table) => ({ name: table.table_name, rowCount: table.row_count }));
 }
 
-function workspaceConnectionsForProduct(product: Product | null) {
+function workspaceConnectionsForProduct(product: Product | null, sources: WorkspaceSource[]) {
   if (!product) {
     return [];
   }
-  return workspaceConnections.filter((connection) => connectionResources(connection, product.kind).length);
+  return sources.filter(
+    (source) =>
+      source.product_id === product.id &&
+      source.kind === product.kind &&
+      connectionResources(source, product.kind).length,
+  );
 }
 
-function connectionResources(connection: WorkspaceConnection, kind: Product["kind"]) {
-  return connection.resources[kind] ?? [];
+function connectionResources(connection: WorkspaceSource, kind: Product["kind"]) {
+  if (connection.kind !== kind) {
+    return [];
+  }
+  return connection.resources.map((resource) => resource.name);
 }
 
 function viewOptions(kind: Product["kind"]): FormatOption[] {
