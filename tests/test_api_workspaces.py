@@ -7,9 +7,11 @@ from databoom.core.config import Settings
 from databoom.schema import (
     ColumnSchema,
     DatabaseSchema,
+    ForeignKeyConstraint,
     PostgresType,
     PrimaryKeyConstraint,
     TableSchema,
+    UniqueConstraint,
 )
 from databoom.schema.models import TypeFamily
 
@@ -237,6 +239,20 @@ def test_workspace_source_refresh_replaces_resources_from_postgres_schema(
     ]
     assert payload["resources"][0]["columns"] == ["id", "customer_id", "amount", "status"]
     assert payload["resources"][0]["estimated_rows"] == 7
+    assert payload["resources"][0]["schema_name"] == "billing"
+    assert payload["resources"][0]["primary_key"] == ["id"]
+    assert payload["resources"][0]["column_details"][0] == {
+        "name": "id",
+        "data_type": "numeric",
+        "type_family": "numeric",
+        "nullable": False,
+        "default": None,
+        "is_primary_key": True,
+        "is_foreign_key": False,
+    }
+    assert payload["resources"][1]["foreign_keys"][0]["columns"] == ["invoice_id"]
+    assert payload["resources"][1]["foreign_keys"][0]["referred_table"] == "invoices"
+    assert "FOREIGN KEY" in payload["schema_ddl"]
 
     detail = client.get("/workspace-sources/commerce-store")
     assert detail.status_code == 200, detail.text
@@ -283,10 +299,18 @@ def test_product_run_uses_refreshed_workspace_source_resources(tmp_path: Path, m
     assert response.status_code == 201, response.text
     payload = response.json()
     assert [table["table_name"] for table in payload["tables"]] == [
-        "public.invoices",
-        "public.invoice_lines",
+        "billing.invoices",
+        "billing.invoice_lines",
     ]
     assert payload["total_rows"] == 5
+
+    preview = client.get(
+        f"/runs/{payload['run_id']}/preview",
+        params={"table": "invoice_lines", "limit": 3},
+    )
+    assert preview.status_code == 200, preview.text
+    rows = preview.json()["rows"]
+    assert {row["invoice_id"] for row in rows} <= {"1", "2"}
 
 
 def _login(client: TestClient) -> str:
@@ -312,6 +336,7 @@ def _billing_schema() -> DatabaseSchema:
                     _column("status", TypeFamily.STRING),
                 ),
                 primary_key=PrimaryKeyConstraint(columns=("id",)),
+                unique_constraints=(UniqueConstraint(columns=("customer_id", "status")),),
             ),
             TableSchema(
                 name="invoice_lines",
@@ -323,6 +348,15 @@ def _billing_schema() -> DatabaseSchema:
                     _column("amount", TypeFamily.NUMERIC),
                 ),
                 primary_key=PrimaryKeyConstraint(columns=("id",)),
+                foreign_keys=(
+                    ForeignKeyConstraint(
+                        columns=("invoice_id",),
+                        referred_schema="billing",
+                        referred_table="invoices",
+                        referred_columns=("id",),
+                        name="invoice_lines_invoice_id_fkey",
+                    ),
+                ),
             ),
         )
     )

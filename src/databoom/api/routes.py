@@ -31,10 +31,13 @@ from databoom.api.models import (
     SubscriptionStatus,
     TableArtifactResponse,
     TablePreviewResponse,
+    WorkspaceColumnResponse,
+    WorkspaceForeignKeyResponse,
     WorkspaceResourceResponse,
     WorkspaceSourceRefreshRequest,
     WorkspaceSourceRequest,
     WorkspaceSourceResponse,
+    WorkspaceUniqueConstraintResponse,
 )
 from databoom.api.products import ProductCatalogEntry, get_product, list_products
 from databoom.api.runs import (
@@ -681,12 +684,47 @@ def _workspace_source_response(source: WorkspaceSource) -> WorkspaceSourceRespon
         host=source.host,
         description=source.description,
         status=source.status,
+        schema_ddl=source.schema_ddl,
+        refreshed_at=source.refreshed_at,
         resources=tuple(
             WorkspaceResourceResponse(
                 name=resource.name,
                 resource_type=resource.resource_type,
                 estimated_rows=resource.estimated_rows,
                 columns=resource.columns,
+                schema_name=resource.schema_name,
+                primary_key=resource.primary_key,
+                foreign_keys=tuple(
+                    WorkspaceForeignKeyResponse(
+                        columns=foreign_key.columns,
+                        referred_schema=foreign_key.referred_schema,
+                        referred_table=foreign_key.referred_table,
+                        referred_columns=foreign_key.referred_columns,
+                        name=foreign_key.name,
+                        on_delete=foreign_key.on_delete,
+                        on_update=foreign_key.on_update,
+                    )
+                    for foreign_key in resource.foreign_keys
+                ),
+                unique_constraints=tuple(
+                    WorkspaceUniqueConstraintResponse(
+                        columns=unique_constraint.columns,
+                        name=unique_constraint.name,
+                    )
+                    for unique_constraint in resource.unique_constraints
+                ),
+                column_details=tuple(
+                    WorkspaceColumnResponse(
+                        name=column.name,
+                        data_type=column.data_type,
+                        type_family=column.type_family,
+                        nullable=column.nullable,
+                        default=column.default,
+                        is_primary_key=column.is_primary_key,
+                        is_foreign_key=column.is_foreign_key,
+                    )
+                    for column in resource.column_details
+                ),
             )
             for resource in source.resources
         ),

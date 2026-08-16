@@ -162,6 +162,48 @@ class WorkspaceResourceResponse(BaseModel):
     resource_type: str
     estimated_rows: int
     columns: tuple[str, ...] = ()
+    schema_name: str | None = None
+    primary_key: tuple[str, ...] = ()
+    foreign_keys: tuple[WorkspaceForeignKeyResponse, ...] = ()
+    unique_constraints: tuple[WorkspaceUniqueConstraintResponse, ...] = ()
+    column_details: tuple[WorkspaceColumnResponse, ...] = ()
+
+
+class WorkspaceColumnResponse(BaseModel):
+    """Column metadata discovered for one source resource."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    data_type: str
+    type_family: str
+    nullable: bool
+    default: str | None = None
+    is_primary_key: bool = False
+    is_foreign_key: bool = False
+
+
+class WorkspaceForeignKeyResponse(BaseModel):
+    """Foreign-key metadata discovered for one source resource."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    columns: tuple[str, ...]
+    referred_schema: str
+    referred_table: str
+    referred_columns: tuple[str, ...]
+    name: str | None = None
+    on_delete: str | None = None
+    on_update: str | None = None
+
+
+class WorkspaceUniqueConstraintResponse(BaseModel):
+    """Unique constraint metadata discovered for one source resource."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    columns: tuple[str, ...]
+    name: str | None = None
 
 
 class WorkspaceSourceResponse(BaseModel):
@@ -178,6 +220,8 @@ class WorkspaceSourceResponse(BaseModel):
     description: str
     status: WorkspaceSourceStatus
     resources: tuple[WorkspaceResourceResponse, ...]
+    schema_ddl: str | None = None
+    refreshed_at: datetime | None = None
 
 
 class WorkspaceResourceRequest(BaseModel):

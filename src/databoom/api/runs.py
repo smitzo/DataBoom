@@ -279,6 +279,8 @@ def _source_default_counts(source: WorkspaceSource | None) -> dict[str, int]:
 def _schema_ddl_for_source(source: WorkspaceSource | None) -> str | None:
     if source is None:
         return None
+    if source.schema_ddl:
+        return source.schema_ddl
     statements = []
     for resource in source.resources:
         columns = resource.columns or ("id", "name", "status")

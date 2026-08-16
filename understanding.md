@@ -1194,3 +1194,56 @@ This change is mostly correctness and architecture, not raw speed. It does, howe
 - With persisted source metadata, the UI and generator can reuse cached table/column data immediately.
 
 The next optimization step is to attach a schema version hash or refresh timestamp to each source. Then DataBoom can skip unnecessary introspection, show when metadata is stale, and refresh only when the operator asks or when a background job detects schema drift.
+
+## Decision: store refreshed schema metadata as both resource details and a DDL snapshot
+
+### Question
+
+Why not store only table names and column names after PostgreSQL refresh?
+
+### Answer
+
+Table and column names are enough for navigation, but they are not enough for relational data generation. A real relational generator needs to know which columns are primary keys, which columns are foreign keys, which table is the parent, which columns are nullable, and what each column's database type is.
+
+Without that metadata, a source refresh can make the UI look correct while the generator still behaves like a flat-table generator. For example, `invoice_lines.invoice_id` would be just another integer column instead of a child key that must point to `invoices.id`.
+
+### What Changed
+
+Workspace resources now keep richer schema metadata:
+
+- `schema_name`
+- `primary_key`
+- `foreign_keys`
+- `unique_constraints`
+- `column_details`
+- `schema_ddl` on the workspace source
+- `refreshed_at` on the workspace source
+
+The `columns` list still exists because it is convenient for frontend navigation, but it is no longer the only schema representation.
+
+### Why Store a DDL Snapshot?
+
+The existing Table-Boom planner already understands PostgreSQL DDL. Instead of inventing a separate generation path for refreshed sources, the refresh step converts normalized introspection metadata back into PostgreSQL `CREATE TABLE` DDL.
+
+That gives us a clean bridge:
+
+1. PostgreSQL introspection reads the live database.
+2. DataBoom normalizes it into `DatabaseSchema`.
+3. Workspace refresh stores resource metadata for the UI.
+4. Workspace refresh stores a DDL snapshot for the generator.
+5. Product runs parse that DDL snapshot and reuse the existing relationship-aware planner.
+
+This avoids duplicate planner logic and keeps the engine modular.
+
+### Beginner-Friendly Example
+
+If PostgreSQL introspection finds:
+
+- `billing.invoices(id primary key)`
+- `billing.invoice_lines(invoice_id references billing.invoices(id))`
+
+DataBoom now stores that relationship and generates from it. During generation, `invoice_lines.invoice_id` is selected from generated `invoices.id` values, so child rows point to real parent rows.
+
+### Performance Note
+
+This is not a micro-optimization. It is a planning-quality improvement. The performance benefit is that future runs can use the saved DDL snapshot immediately instead of introspecting the source database again. That reduces repeated connection overhead and makes generation less dependent on source database availability after refresh.

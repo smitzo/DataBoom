@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from databoom.api.models import (
@@ -11,7 +12,41 @@ from databoom.api.models import (
     WorkspaceSourceRequest,
     WorkspaceSourceStatus,
 )
-from databoom.schema import DatabaseSchema
+from databoom.schema import ColumnSchema, DatabaseSchema, ForeignKeyConstraint, TableSchema
+
+
+@dataclass(frozen=True)
+class WorkspaceColumn:
+    """Column metadata discovered for a workspace resource."""
+
+    name: str
+    data_type: str
+    type_family: str
+    nullable: bool
+    default: str | None = None
+    is_primary_key: bool = False
+    is_foreign_key: bool = False
+
+
+@dataclass(frozen=True)
+class WorkspaceForeignKey:
+    """Foreign-key metadata discovered for a workspace resource."""
+
+    columns: tuple[str, ...]
+    referred_schema: str
+    referred_table: str
+    referred_columns: tuple[str, ...]
+    name: str | None = None
+    on_delete: str | None = None
+    on_update: str | None = None
+
+
+@dataclass(frozen=True)
+class WorkspaceUniqueConstraint:
+    """Unique constraint metadata discovered for a workspace resource."""
+
+    columns: tuple[str, ...]
+    name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -22,6 +57,11 @@ class WorkspaceResource:
     resource_type: str
     estimated_rows: int
     columns: tuple[str, ...] = ()
+    schema_name: str | None = None
+    primary_key: tuple[str, ...] = ()
+    foreign_keys: tuple[WorkspaceForeignKey, ...] = ()
+    unique_constraints: tuple[WorkspaceUniqueConstraint, ...] = ()
+    column_details: tuple[WorkspaceColumn, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -37,6 +77,8 @@ class WorkspaceSource:
     description: str
     status: WorkspaceSourceStatus
     resources: tuple[WorkspaceResource, ...]
+    schema_ddl: str | None = None
+    refreshed_at: datetime | None = None
 
 
 WORKSPACE_SOURCES: tuple[WorkspaceSource, ...] = (
@@ -220,15 +262,43 @@ def workspace_source_from_schema(
         description=source.description,
         status=WorkspaceSourceStatus.CONNECTED,
         resources=tuple(
-            WorkspaceResource(
-                name=table.name,
-                resource_type="table",
-                estimated_rows=previous_counts.get(table.name, default_estimated_rows),
-                columns=table.column_names,
-            )
+            _resource_from_table(table, previous_counts, default_estimated_rows)
             for table in database.tables
         ),
+        schema_ddl=database_schema_to_postgres_ddl(database),
+        refreshed_at=datetime.now(UTC),
     )
+
+
+def database_schema_to_postgres_ddl(database: DatabaseSchema) -> str:
+    """Serialize normalized schema metadata into PostgreSQL CREATE TABLE DDL."""
+
+    statements = []
+    for table in database.tables:
+        definitions = [_column_definition_from_schema(column) for column in table.columns]
+        if table.primary_key is not None:
+            definitions.append(
+                _constraint_definition(
+                    table.primary_key.name,
+                    "PRIMARY KEY",
+                    table.primary_key.columns,
+                )
+            )
+        for unique_constraint in table.unique_constraints:
+            definitions.append(
+                _constraint_definition(
+                    unique_constraint.name,
+                    "UNIQUE",
+                    unique_constraint.columns,
+                )
+            )
+        for foreign_key in table.foreign_keys:
+            definitions.append(_foreign_key_definition(foreign_key))
+
+        table_name = f"{_sql_identifier(table.schema_name)}.{_sql_identifier(table.name)}"
+        body = ",\n    ".join(definitions)
+        statements.append(f"CREATE TABLE {table_name} (\n    {body}\n);")
+    return "\n\n".join(statements)
 
 
 def workspace_source_to_payload(source: WorkspaceSource) -> dict[str, Any]:
@@ -243,12 +313,47 @@ def workspace_source_to_payload(source: WorkspaceSource) -> dict[str, Any]:
         "host": source.host,
         "description": source.description,
         "status": source.status.value,
+        "schema_ddl": source.schema_ddl,
+        "refreshed_at": source.refreshed_at.isoformat() if source.refreshed_at else None,
         "resources": [
             {
                 "name": resource.name,
                 "resource_type": resource.resource_type,
                 "estimated_rows": resource.estimated_rows,
                 "columns": list(resource.columns),
+                "schema_name": resource.schema_name,
+                "primary_key": list(resource.primary_key),
+                "foreign_keys": [
+                    {
+                        "columns": list(foreign_key.columns),
+                        "referred_schema": foreign_key.referred_schema,
+                        "referred_table": foreign_key.referred_table,
+                        "referred_columns": list(foreign_key.referred_columns),
+                        "name": foreign_key.name,
+                        "on_delete": foreign_key.on_delete,
+                        "on_update": foreign_key.on_update,
+                    }
+                    for foreign_key in resource.foreign_keys
+                ],
+                "unique_constraints": [
+                    {
+                        "columns": list(unique_constraint.columns),
+                        "name": unique_constraint.name,
+                    }
+                    for unique_constraint in resource.unique_constraints
+                ],
+                "column_details": [
+                    {
+                        "name": column.name,
+                        "data_type": column.data_type,
+                        "type_family": column.type_family,
+                        "nullable": column.nullable,
+                        "default": column.default,
+                        "is_primary_key": column.is_primary_key,
+                        "is_foreign_key": column.is_foreign_key,
+                    }
+                    for column in resource.column_details
+                ],
             }
             for resource in source.resources
         ],
@@ -273,9 +378,48 @@ def workspace_source_from_payload(payload: dict[str, Any]) -> WorkspaceSource:
                 resource_type=str(resource["resource_type"]),
                 estimated_rows=int(resource.get("estimated_rows", 100)),
                 columns=tuple(str(column) for column in resource.get("columns", ())),
+                schema_name=_optional_string(resource.get("schema_name")),
+                primary_key=tuple(str(column) for column in resource.get("primary_key", ())),
+                foreign_keys=tuple(
+                    WorkspaceForeignKey(
+                        columns=tuple(str(column) for column in foreign_key.get("columns", ())),
+                        referred_schema=str(foreign_key.get("referred_schema", "public")),
+                        referred_table=str(foreign_key["referred_table"]),
+                        referred_columns=tuple(
+                            str(column) for column in foreign_key.get("referred_columns", ())
+                        ),
+                        name=_optional_string(foreign_key.get("name")),
+                        on_delete=_optional_string(foreign_key.get("on_delete")),
+                        on_update=_optional_string(foreign_key.get("on_update")),
+                    )
+                    for foreign_key in resource.get("foreign_keys", ())
+                ),
+                unique_constraints=tuple(
+                    WorkspaceUniqueConstraint(
+                        columns=tuple(
+                            str(column) for column in unique_constraint.get("columns", ())
+                        ),
+                        name=_optional_string(unique_constraint.get("name")),
+                    )
+                    for unique_constraint in resource.get("unique_constraints", ())
+                ),
+                column_details=tuple(
+                    WorkspaceColumn(
+                        name=str(column["name"]),
+                        data_type=str(column.get("data_type", "")),
+                        type_family=str(column.get("type_family", "")),
+                        nullable=bool(column.get("nullable", True)),
+                        default=_optional_string(column.get("default")),
+                        is_primary_key=bool(column.get("is_primary_key", False)),
+                        is_foreign_key=bool(column.get("is_foreign_key", False)),
+                    )
+                    for column in resource.get("column_details", ())
+                ),
             )
             for resource in payload.get("resources", ())
         ),
+        schema_ddl=_optional_string(payload.get("schema_ddl")),
+        refreshed_at=_optional_datetime(payload.get("refreshed_at")),
     )
 
 
@@ -286,3 +430,122 @@ def _resource_from_request(payload: WorkspaceResourceRequest) -> WorkspaceResour
         estimated_rows=payload.estimated_rows,
         columns=payload.columns,
     )
+
+
+def _resource_from_table(
+    table: TableSchema,
+    previous_counts: dict[str, int],
+    default_estimated_rows: int,
+) -> WorkspaceResource:
+    primary_key = table.primary_key.columns if table.primary_key else ()
+    foreign_key_columns = {
+        column_name
+        for foreign_key in table.foreign_keys
+        for column_name in foreign_key.columns
+    }
+    return WorkspaceResource(
+        name=table.name,
+        resource_type="table",
+        estimated_rows=previous_counts.get(table.name, default_estimated_rows),
+        columns=table.column_names,
+        schema_name=table.schema_name,
+        primary_key=primary_key,
+        foreign_keys=tuple(
+            WorkspaceForeignKey(
+                columns=foreign_key.columns,
+                referred_schema=foreign_key.referred_schema,
+                referred_table=foreign_key.referred_table,
+                referred_columns=foreign_key.referred_columns,
+                name=foreign_key.name,
+                on_delete=foreign_key.on_delete,
+                on_update=foreign_key.on_update,
+            )
+            for foreign_key in table.foreign_keys
+        ),
+        unique_constraints=tuple(
+            WorkspaceUniqueConstraint(
+                columns=unique_constraint.columns,
+                name=unique_constraint.name,
+            )
+            for unique_constraint in table.unique_constraints
+        ),
+        column_details=tuple(
+            _workspace_column(column, primary_key, foreign_key_columns)
+            for column in table.columns
+        ),
+    )
+
+
+def _workspace_column(
+    column: ColumnSchema,
+    primary_key: tuple[str, ...],
+    foreign_key_columns: set[str],
+) -> WorkspaceColumn:
+    return WorkspaceColumn(
+        name=column.name,
+        data_type=column.data_type.raw,
+        type_family=column.data_type.family.value,
+        nullable=column.nullable,
+        default=column.default,
+        is_primary_key=column.name in primary_key,
+        is_foreign_key=column.name in foreign_key_columns,
+    )
+
+
+def _column_definition_from_schema(column: ColumnSchema) -> str:
+    parts = [_sql_identifier(column.name), column.data_type.raw]
+    if not column.nullable:
+        parts.append("NOT NULL")
+    if column.default is not None:
+        parts.extend(("DEFAULT", column.default))
+    return " ".join(parts)
+
+
+def _constraint_definition(
+    name: str | None,
+    keyword: str,
+    columns: tuple[str, ...],
+) -> str:
+    prefix = f"CONSTRAINT {_sql_identifier(name)} " if name else ""
+    return f"{prefix}{keyword} ({_column_list(columns)})"
+
+
+def _foreign_key_definition(foreign_key: ForeignKeyConstraint) -> str:
+    prefix = f"CONSTRAINT {_sql_identifier(foreign_key.name)} " if foreign_key.name else ""
+    referred_table = (
+        f"{_sql_identifier(foreign_key.referred_schema)}."
+        f"{_sql_identifier(foreign_key.referred_table)}"
+    )
+    statement = (
+        f"{prefix}FOREIGN KEY ({_column_list(foreign_key.columns)}) "
+        f"REFERENCES {referred_table} ({_column_list(foreign_key.referred_columns)})"
+    )
+    if foreign_key.on_delete:
+        statement += f" ON DELETE {foreign_key.on_delete}"
+    if foreign_key.on_update:
+        statement += f" ON UPDATE {foreign_key.on_update}"
+    return statement
+
+
+def _column_list(columns: tuple[str, ...]) -> str:
+    return ", ".join(_sql_identifier(column) for column in columns)
+
+
+def _sql_identifier(value: str | None) -> str:
+    if value is None:
+        raise ValueError("SQL identifier cannot be None")
+    return '"' + value.replace('"', '""') + '"'
+
+
+def _optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
+def _optional_datetime(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value))
