@@ -273,8 +273,8 @@ export function DataWorkspace({ session }: { session: Session }) {
   }, [activeKind, selectedProductId]);
 
   const agentSteps = useMemo(
-    () => buildAgentSteps(status, selectedRun, selectedProduct),
-    [selectedProduct, selectedRun, status],
+    () => buildAgentSteps(status, selectedRun, selectedProduct, selectedConnection, sourceProfile),
+    [selectedProduct, selectedConnection, selectedRun, sourceProfile, status],
   );
   const insight = useMemo(
     () => buildInsight(selectedTablePreview, selectedDocumentPreview),
@@ -632,6 +632,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             connection={selectedConnection}
             product={selectedProduct}
             run={selectedRun}
+            sourceProfile={sourceProfile}
             visibleRows={visibleRows}
           />
           <WorkspaceToolbar
@@ -672,7 +673,9 @@ export function DataWorkspace({ session }: { session: Session }) {
           onSubscribe={subscribe}
           prompt={prompt}
           run={selectedRun}
+          selectedConnection={selectedConnection}
           selectedProduct={selectedProduct}
+          sourceProfile={sourceProfile}
           status={status}
           steps={agentSteps}
           subscribed={subscribed}
@@ -1160,11 +1163,13 @@ function WorkspaceOverview({
   connection,
   product,
   run,
+  sourceProfile,
   visibleRows,
 }: {
   connection: WorkspaceSource | null;
   product: Product | null;
   run: GenerationRun | null;
+  sourceProfile: WorkspaceSourceProfile | null;
   visibleRows: number;
 }) {
   const resourceCount = product ? productResources(product).length : 0;
@@ -1173,6 +1178,7 @@ function WorkspaceOverview({
     : 0;
   const progress = run ? progressPercent(run) : 0;
   const runState = runStateLabel(run);
+  const schemaLabels = connection ? sourceSchemaLabels(connection) : [];
 
   return (
     <section className="border-b border-zinc-200 bg-white">
@@ -1191,6 +1197,23 @@ function WorkspaceOverview({
             </span>
             <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
             <span className="truncate">{connection?.host ?? "local workspace"}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-zinc-400">
+            <span className="truncate">
+              Schema {schemaLabels.length ? schemaLabels.join(", ") : "not refreshed"}
+            </span>
+            <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
+            <span>
+              {connection?.refreshed_at
+                ? `Refreshed ${formatDateTime(connection.refreshed_at)}`
+                : "Awaiting schema refresh"}
+            </span>
+            {sourceProfile ? (
+              <>
+                <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
+                <span>{formatNumber(sourceProfile.total_rows)} source rows profiled</span>
+              </>
+            ) : null}
           </div>
 
           {run ? (
@@ -1835,7 +1858,9 @@ function AgentPanel({
   onSubscribe,
   prompt,
   run,
+  selectedConnection,
   selectedProduct,
+  sourceProfile,
   status,
   steps,
   subscribed,
@@ -1847,7 +1872,9 @@ function AgentPanel({
   onSubscribe: () => void;
   prompt: string;
   run: GenerationRun | null;
+  selectedConnection: WorkspaceSource | null;
   selectedProduct: Product | null;
+  sourceProfile: WorkspaceSourceProfile | null;
   status: AgentStatus;
   steps: AgentStep[];
   subscribed: boolean;
@@ -1887,6 +1914,11 @@ function AgentPanel({
         </div>
 
         <GenerationPulse active={busy} />
+        <SourceMetadataCard
+          connection={selectedConnection}
+          product={selectedProduct}
+          profile={sourceProfile}
+        />
 
         <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
           <div className="mb-2 flex items-center justify-between gap-3">
@@ -2004,6 +2036,60 @@ function GenerationPulse({ active }: { active: boolean }) {
               : "w-full bg-gradient-to-r from-emerald-500 to-cyan-500"
           }`}
         />
+      </div>
+    </div>
+  );
+}
+
+function SourceMetadataCard({
+  connection,
+  product,
+  profile,
+}: {
+  connection: WorkspaceSource | null;
+  product: Product | null;
+  profile: WorkspaceSourceProfile | null;
+}) {
+  const resourceLabel = product?.kind === "document" ? "Collections" : "Tables";
+  const schemaLabels = connection ? sourceSchemaLabels(connection) : [];
+
+  return (
+    <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold uppercase text-zinc-500">Source context</span>
+        <Database className="h-4 w-4 text-cyan-700" />
+      </div>
+      <div className="mt-3 space-y-2 text-xs">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Database</span>
+          <span className="max-w-36 truncate font-semibold text-zinc-900">
+            {connection?.name ?? "Not selected"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">{resourceLabel}</span>
+          <span className="font-semibold text-zinc-900">
+            {connection?.resources.length ?? 0}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Schema</span>
+          <span className="max-w-36 truncate font-semibold text-zinc-900">
+            {schemaLabels.length ? schemaLabels.join(", ") : "Not refreshed"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Refreshed</span>
+          <span className="font-semibold text-zinc-900">
+            {connection?.refreshed_at ? formatDateTime(connection.refreshed_at) : "Pending"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-zinc-500">Profile</span>
+          <span className="font-semibold text-zinc-900">
+            {profile ? `${formatNumber(profile.total_rows)} rows` : "Optional"}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -2256,6 +2342,25 @@ function formatNumber(value: number) {
   return value.toLocaleString();
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function sourceSchemaLabels(connection: WorkspaceSource) {
+  return Array.from(
+    new Set(
+      connection.resources
+        .map((resource) => resource.schema_name)
+        .filter((schemaName): schemaName is string => Boolean(schemaName)),
+    ),
+  );
+}
+
 function slugify(value: string) {
   const slug = value
     .trim()
@@ -2295,34 +2400,66 @@ function buildAgentSteps(
   status: AgentStatus,
   run: GenerationRun | null,
   product: Product | null,
+  connection: WorkspaceSource | null,
+  profile: WorkspaceSourceProfile | null,
 ): AgentStep[] {
-  const done = status === "complete" || run?.status === "completed";
-  const active = status === "generating";
-  const resourceCount = product ? productResources(product).length : 0;
+  const completed = status === "complete" || run?.status === "completed";
+  const running = status === "generating" || run?.status === "running";
+  const sourceReady = product ? product.kind !== "relational" || Boolean(connection) : false;
+  const schemaReady = product
+    ? product.kind !== "relational" || Boolean(connection?.resources.length)
+    : false;
+  const profileReady = product ? product.kind !== "relational" || Boolean(profile) : false;
+  const resourceCount =
+    connection?.resources.length || (product ? productResources(product).length : 0);
   const resourceLabel = product?.kind === "document" ? "collections" : "resources";
+
   return [
     {
-      label: product?.kind === "document" ? "Read document spec" : "Read data shape",
-      detail: product ? `${resourceCount} ${resourceLabel} in ${product.name}` : "Waiting for dataset",
-      state: done ? "done" : active ? "active" : "waiting",
+      label: "Select source",
+      detail:
+        product && connection
+          ? `${connection.name} drives ${product.name}`
+          : product
+            ? `${product.name} workspace selected`
+            : "Waiting for product workspace",
+      state: sourceReady ? "done" : "waiting",
     },
     {
-      label: "Resolve identifiers",
+      label: product?.kind === "document" ? "Load document contract" : "Refresh schema contract",
       detail:
-        product?.kind === "document"
-          ? "Object IDs, nested fields, arrays, and references"
-          : "Primary keys, foreign keys, and generation order",
-      state: done ? "done" : active ? "active" : "waiting",
+        product && connection?.refreshed_at
+          ? `${resourceCount} ${resourceLabel}, refreshed ${formatDateTime(
+              connection.refreshed_at,
+            )}`
+          : product
+            ? `${resourceCount} ${resourceLabel} available`
+            : "Waiting for schema metadata",
+      state: schemaReady ? "done" : running ? "active" : "waiting",
+    },
+    {
+      label: product?.kind === "document" ? "Resolve document shape" : "Profile and resolve keys",
+      detail:
+        profile
+          ? `${formatNumber(profile.total_rows)} source rows profiled`
+          : product?.kind === "document"
+            ? "Object IDs, nested arrays, and collection references"
+            : "Optional profiling plus primary and foreign keys",
+      state: profileReady || run ? "done" : running ? "active" : "waiting",
     },
     {
       label: product?.kind === "document" ? "Generate documents" : "Generate rows",
-      detail: run ? `${run.total_rows} records written` : "Local artifact stream",
-      state: done ? "done" : active ? "active" : "waiting",
+      detail: run
+        ? `${formatNumber(run.generated_rows)} / ${formatNumber(run.total_rows)} records`
+        : "Local artifact stream",
+      state: completed ? "done" : running ? "active" : "waiting",
     },
     {
-      label: "Validate and export",
-      detail: run?.validation?.passed ? "Validation passed" : "Awaiting validation report",
-      state: done && run?.validation?.passed ? "done" : active ? "active" : "waiting",
+      label: "Validate, time, and export",
+      detail: run?.validation?.passed
+        ? `${run.operation_timings.length} timed operations, validation passed`
+        : "Awaiting validation report and operation timings",
+      state: completed && run?.validation?.passed ? "done" : running ? "active" : "waiting",
     },
   ];
 }
