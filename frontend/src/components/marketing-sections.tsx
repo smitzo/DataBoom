@@ -169,9 +169,9 @@ const questions = [
       "LLMs are useful for planning and schema interpretation, but high-volume generation needs streaming execution, deterministic seeds, memory control, validation, and artifact writing.",
   },
   {
-    question: "How is this different from Tonic or Gretel?",
+    question: "How is this different from other synthetic-data platforms?",
     answer:
-      "Those are mature synthetic-data platforms. DataBoom is being built as an open, local-first engine with explicit product surfaces for relational, document, graph, and masking workflows.",
+      "DataBoom is being built as an open, local-first engine with explicit product surfaces for relational, document, graph, and masking workflows.",
   },
   {
     question: "Can DataBoom generate fintech or healthcare-style data?",

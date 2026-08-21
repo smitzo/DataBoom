@@ -261,10 +261,11 @@ docker compose --profile tools run --rm app
 - `docs/product/product-family.md`: DataBoom platform products and use-case naming rules.
 - `docs/product/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
 - `docs/product/product-reasoning-faq.md`: 4W1H reasoning and competitive/product FAQ.
-- `docs/product/synthetic-data-inspiration.md`: lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
+- `docs/product/synthetic-data-inspiration.md`: lessons from adjacent synthetic-data tools and workflow references.
 - `docs/engineering/architecture.md`: architecture diagrams, extensibility model, API flow, frontend routes, and deployment topology.
 - `docs/engineering/engineering-standards.md`: reusable backend/frontend code standards.
 - `docs/engineering/technical-design-and-roadmap.md`: system design, phase roadmap, objectives, and commit sequence.
+- `docs/engineering/optimization-plan.md`: optimization roadmap for engine speed, quality, profiling, blueprints, and observability.
 - `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
 - `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
 - `docs/operations/phase1-usage.md`: current backend setup, CLI, benchmark, and Docker usage.

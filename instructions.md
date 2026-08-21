@@ -14,9 +14,10 @@ This repository is in active implementation. Keep documentation, roadmap status,
 - [Functional Specification](docs/product/functional-specification.md): users, workflows, product behavior, MVP scope, acceptance criteria, and out-of-scope items.
 - [Product Reasoning and FAQ](docs/product/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
 - [Technical Design and Roadmap](docs/engineering/technical-design-and-roadmap.md): stack, high-level design, low-level design, five-phase technical plan, deployment objectives, and commit sequence.
+- [Optimization Plan](docs/engineering/optimization-plan.md): backend optimization roadmap for speed, quality, profiling, blueprints, and observability.
 - [Phase 1 Usage](docs/operations/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
 - [Frontend Development Plan](docs/engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
-- [Synthetic Data Inspiration Notes](docs/product/synthetic-data-inspiration.md): lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
+- [Synthetic Data Inspiration Notes](docs/product/synthetic-data-inspiration.md): lessons from adjacent synthetic-data tools and workflow references.
 - [Agent Operating Guide](AGENTS.md): persistent Codex guidance for this repository, including commit labels, phase discipline, and documentation rules.
 - [Understanding Log](understanding.md): detailed beginner-friendly explanations for significant design, architecture, performance, reliability, and product decisions.
 

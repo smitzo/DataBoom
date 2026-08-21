@@ -7,7 +7,7 @@ The docs are split by concern so product scope, engineering design, and local op
 - [Product Family](product/product-family.md): canonical Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom taxonomy.
 - [Functional Specification](product/functional-specification.md): users, workflows, MVP behavior, acceptance criteria, and scope boundaries.
 - [Product Reasoning FAQ](product/product-reasoning-faq.md): 4W1H answers for why DataBoom exists and how it compares with alternatives.
-- [Synthetic Data Inspiration](product/synthetic-data-inspiration.md): lessons from Tonic.ai, Gretel Synthetics, and generatedata.com.
+- [Synthetic Data Inspiration](product/synthetic-data-inspiration.md): lessons from adjacent synthetic-data tools and workflow references.
 
 ## Engineering
 
@@ -15,6 +15,7 @@ The docs are split by concern so product scope, engineering design, and local op
 - [Technical Design and Roadmap](engineering/technical-design-and-roadmap.md): five-phase technical plan, objectives, and commit sequence.
 - [Engineering Standards](engineering/engineering-standards.md): reusable backend/frontend code rules and product-kind rendering rules.
 - [Frontend Development Plan](engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
+- [Optimization Plan](engineering/optimization-plan.md): backend optimization roadmap for speed, quality, profiling, blueprints, and observability.
 - [Prompt Caching and Instructions](engineering/prompt-caching-and-instructions.md): prompt architecture and Codex/OpenAI instruction strategy.
 
 ## Operations

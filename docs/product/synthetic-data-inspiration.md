@@ -6,7 +6,6 @@ This document captures product and implementation lessons from adjacent tools. T
 
 - Tonic.ai product documentation: https://www.tonic.ai/docs
 - Tonic Fabricate product page: https://www.tonic.ai/products/fabricate
-- Gretel Synthetics repository: https://github.com/gretelai/gretel-synthetics
 - generatedata.com: https://generatedata.com/
 
 ## Lessons To Apply
@@ -50,7 +49,7 @@ Future direction:
 
 ### Modular Generation Engines
 
-Gretel Synthetics separates different model families and generation approaches. DataBoom should follow that modular idea at an engine level: Table-Boom and Docu-Boom deterministic generation first, optional LLM planning later, specialized providers for domain semantics, and Masker-Boom policies as a separate service layer.
+Mature synthetic-data systems separate model families, generation approaches, privacy workflows, and evaluation workflows. DataBoom should follow that modular idea at an engine level: Table-Boom and Docu-Boom deterministic generation first, optional LLM planning later, specialized providers for domain semantics, and Masker-Boom policies as a separate service layer.
 
 Current application:
 
@@ -83,6 +82,6 @@ Frontend implication:
 ## Product Guardrails
 
 - Do not claim Masker-Boom is implemented in Phase 1.
-- Do not position DataBoom as universally better than Tonic or Gretel.
+- Do not position DataBoom as universally better than mature commercial platforms.
 - Keep the differentiator focused on owned, local-first, inspectable, PostgreSQL-first relational generation.
 - Use commercial tools as inspiration for workflow clarity, not as implementation dependencies.
