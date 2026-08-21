@@ -48,6 +48,36 @@ export type WorkspaceResource = {
   resource_type: string;
   estimated_rows: number;
   columns: string[];
+  schema_name: string | null;
+  primary_key: string[];
+  foreign_keys: WorkspaceForeignKey[];
+  unique_constraints: WorkspaceUniqueConstraint[];
+  column_details: WorkspaceColumn[];
+};
+
+export type WorkspaceColumn = {
+  name: string;
+  data_type: string;
+  type_family: string;
+  nullable: boolean;
+  default: string | null;
+  is_primary_key: boolean;
+  is_foreign_key: boolean;
+};
+
+export type WorkspaceForeignKey = {
+  columns: string[];
+  referred_schema: string;
+  referred_table: string;
+  referred_columns: string[];
+  name: string | null;
+  on_delete: string | null;
+  on_update: string | null;
+};
+
+export type WorkspaceUniqueConstraint = {
+  columns: string[];
+  name: string | null;
 };
 
 export type WorkspaceSource = {
@@ -60,6 +90,45 @@ export type WorkspaceSource = {
   description: string;
   status: "connected" | "planned";
   resources: WorkspaceResource[];
+  schema_ddl: string | null;
+  refreshed_at: string | null;
+};
+
+export type WorkspaceConnectionTest = {
+  ok: boolean;
+  message: string;
+  checked_at: string;
+};
+
+export type WorkspaceTopValue = {
+  value: string;
+  count: number;
+};
+
+export type WorkspaceColumnProfile = {
+  name: string;
+  data_type: string;
+  row_count: number;
+  null_count: number;
+  null_rate: number;
+  distinct_count: number;
+  min_value: string | null;
+  max_value: string | null;
+  top_values: WorkspaceTopValue[];
+};
+
+export type WorkspaceTableProfile = {
+  name: string;
+  schema_name: string;
+  row_count: number;
+  columns: WorkspaceColumnProfile[];
+};
+
+export type WorkspaceSourceProfile = {
+  source_id: string;
+  generated_at: string;
+  total_rows: number;
+  tables: WorkspaceTableProfile[];
 };
 
 export type Subscription = {
@@ -181,6 +250,46 @@ export async function getProductWorkspaceSources(productId: string) {
   return apiRequest<WorkspaceSource[]>(`/products/${productId}/workspace-sources`);
 }
 
+export async function saveWorkspaceSource(
+  token: string,
+  payload: {
+    id: string;
+    product_id: string;
+    kind: Product["kind"];
+    name: string;
+    engine: string;
+    host: string;
+    description: string;
+    status?: WorkspaceSource["status"];
+    resources?: {
+      name: string;
+      resource_type: string;
+      estimated_rows: number;
+      columns: string[];
+    }[];
+  },
+) {
+  return apiRequest<WorkspaceSource>(
+    "/workspace-sources",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function testWorkspaceConnection(token: string, databaseUrl: string) {
+  return apiRequest<WorkspaceConnectionTest>(
+    "/workspace-sources/test-connection",
+    {
+      method: "POST",
+      body: JSON.stringify({ database_url: databaseUrl }),
+    },
+    token,
+  );
+}
+
 export async function refreshWorkspaceSource(
   token: string,
   sourceId: string,
@@ -192,6 +301,24 @@ export async function refreshWorkspaceSource(
 ) {
   return apiRequest<WorkspaceSource>(
     `/workspace-sources/${sourceId}/refresh`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function profileWorkspaceSource(
+  token: string,
+  sourceId: string,
+  payload: {
+    database_url: string;
+    top_values_limit?: number;
+  },
+) {
+  return apiRequest<WorkspaceSourceProfile>(
+    `/workspace-sources/${sourceId}/profile`,
     {
       method: "POST",
       body: JSON.stringify(payload),

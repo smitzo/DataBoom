@@ -37,6 +37,7 @@ import type {
   Product,
   Subscription,
   TablePreview,
+  WorkspaceSourceProfile,
   WorkspaceSource,
 } from "@/lib/api";
 import {
@@ -50,8 +51,11 @@ import {
   getSubscriptions,
   getTablePreview,
   getWorkspaceSources,
+  profileWorkspaceSource,
   refreshWorkspaceSource,
+  saveWorkspaceSource,
   subscribeToProduct,
+  testWorkspaceConnection,
 } from "@/lib/api";
 import type { Session } from "@/lib/session";
 
@@ -89,9 +93,15 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
   const [sourceWarning, setSourceWarning] = useState<string | null>(null);
   const [sourceRefreshMessage, setSourceRefreshMessage] = useState<string | null>(null);
+  const [sourceProfile, setSourceProfile] = useState<WorkspaceSourceProfile | null>(null);
+  const [sourceName, setSourceName] = useState("");
+  const [sourceHost, setSourceHost] = useState("");
   const [sourceDatabaseUrl, setSourceDatabaseUrl] = useState("");
   const [sourceSchemaNames, setSourceSchemaNames] = useState("public");
   const [isRefreshingSource, setIsRefreshingSource] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isSavingSource, setIsSavingSource] = useState(false);
+  const [isProfilingSource, setIsProfilingSource] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorkspaceRailCollapsed, setIsWorkspaceRailCollapsed] = useState(false);
 
@@ -335,6 +345,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   async function chooseProduct(product: Product) {
     setSelectedProductId(product.id);
     setSourceRefreshMessage(null);
+    setSourceProfile(null);
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
     const nextConnection = workspaceConnectionsForProduct(product, workspaceSources)[0] ?? null;
     setSelectedRunId(matchingRun?.run_id ?? null);
@@ -354,9 +365,71 @@ export function DataWorkspace({ session }: { session: Session }) {
     const nextConnection = connectionOptions.find((connection) => connection.id === connectionId);
     setSelectedConnectionId(connectionId);
     setSourceRefreshMessage(null);
+    setSourceProfile(null);
     setSelectedResource(
       nextConnection ? connectionResources(nextConnection, activeKind)[0] ?? null : null,
     );
+  }
+
+  async function testSelectedSourceConnection() {
+    if (!sourceDatabaseUrl.trim()) {
+      setSourceRefreshMessage("Enter a PostgreSQL connection URL before testing.");
+      return;
+    }
+
+    setIsTestingConnection(true);
+    setSourceRefreshMessage(null);
+    try {
+      const result = await testWorkspaceConnection(session.token, sourceDatabaseUrl.trim());
+      setSourceRefreshMessage(result.message);
+    } catch (caughtError) {
+      setSourceRefreshMessage(
+        caughtError instanceof Error ? caughtError.message : "Unable to test connection",
+      );
+    } finally {
+      setIsTestingConnection(false);
+    }
+  }
+
+  async function saveSelectedSource() {
+    if (!selectedProduct || activeKind !== "relational") {
+      setSourceRefreshMessage("Source creation is currently available for Table-Boom.");
+      return;
+    }
+    const cleanName = sourceName.trim();
+    if (!cleanName) {
+      setSourceRefreshMessage("Enter a source name before saving.");
+      return;
+    }
+
+    setIsSavingSource(true);
+    setSourceRefreshMessage(null);
+    try {
+      const saved = await saveWorkspaceSource(session.token, {
+        id: `${selectedProduct.id}-${slugify(cleanName)}`,
+        product_id: selectedProduct.id,
+        kind: selectedProduct.kind,
+        name: cleanName,
+        engine: "PostgreSQL",
+        host: sourceHost.trim() || "custom source",
+        description: `Operator-created ${selectedProduct.name} source.`,
+        status: "connected",
+        resources: [],
+      });
+      setWorkspaceSources((current) => [
+        ...current.filter((source) => source.id !== saved.id),
+        saved,
+      ]);
+      setSelectedConnectionId(saved.id);
+      setSelectedResource(null);
+      setSourceRefreshMessage(`${saved.name} saved. Refresh schema to load tables.`);
+    } catch (caughtError) {
+      setSourceRefreshMessage(
+        caughtError instanceof Error ? caughtError.message : "Unable to save source",
+      );
+    } finally {
+      setIsSavingSource(false);
+    }
   }
 
   async function refreshSelectedSource() {
@@ -391,6 +464,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       setSelectedConnectionId(refreshed.id);
       setSelectedResource(connectionResources(refreshed, refreshed.kind)[0] ?? null);
       setSourceWarning(null);
+      setSourceProfile(null);
       setSourceRefreshMessage(`Loaded ${refreshed.resources.length} tables from ${refreshed.name}.`);
     } catch (caughtError) {
       setSourceRefreshMessage(
@@ -398,6 +472,39 @@ export function DataWorkspace({ session }: { session: Session }) {
       );
     } finally {
       setIsRefreshingSource(false);
+    }
+  }
+
+  async function profileSelectedSource() {
+    if (!selectedConnection) {
+      return;
+    }
+    if (activeKind !== "relational") {
+      setSourceRefreshMessage("Profiling is currently available for PostgreSQL sources.");
+      return;
+    }
+    if (!sourceDatabaseUrl.trim()) {
+      setSourceRefreshMessage("Enter a PostgreSQL connection URL before profiling.");
+      return;
+    }
+
+    setIsProfilingSource(true);
+    setSourceRefreshMessage(null);
+    try {
+      const profile = await profileWorkspaceSource(session.token, selectedConnection.id, {
+        database_url: sourceDatabaseUrl.trim(),
+        top_values_limit: 5,
+      });
+      setSourceProfile(profile);
+      setSourceRefreshMessage(
+        `Profiled ${profile.tables.length} tables and ${formatNumber(profile.total_rows)} rows.`,
+      );
+    } catch (caughtError) {
+      setSourceRefreshMessage(
+        caughtError instanceof Error ? caughtError.message : "Unable to profile source",
+      );
+    } finally {
+      setIsProfilingSource(false);
     }
   }
 
@@ -491,6 +598,10 @@ export function DataWorkspace({ session }: { session: Session }) {
           activeKind={activeKind}
           collapsed={isWorkspaceRailCollapsed}
           connectionOptions={connectionOptions}
+          isProfilingSource={isProfilingSource}
+          isRefreshingSource={isRefreshingSource}
+          isSavingSource={isSavingSource}
+          isTestingConnection={isTestingConnection}
           onToggleCollapse={() => setIsWorkspaceRailCollapsed((current) => !current)}
           product={selectedProduct}
           resourceNames={resourceNames}
@@ -498,15 +609,22 @@ export function DataWorkspace({ session }: { session: Session }) {
           selectedConnectionId={selectedConnectionId}
           selectedResource={selectedResource}
           sourceDatabaseUrl={sourceDatabaseUrl}
+          sourceHost={sourceHost}
+          sourceName={sourceName}
+          sourceProfile={sourceProfile}
           sourceRefreshMessage={sourceRefreshMessage}
           sourceSchemaNames={sourceSchemaNames}
           onBackToProducts={() => setWorkspaceMode("catalog")}
+          onProfileSource={profileSelectedSource}
           onRefreshSource={refreshSelectedSource}
+          onSaveSource={saveSelectedSource}
           onSelectConnection={chooseConnection}
           onSelectResource={setSelectedResource}
           onSourceDatabaseUrlChange={setSourceDatabaseUrl}
+          onSourceHostChange={setSourceHost}
+          onSourceNameChange={setSourceName}
           onSourceSchemaNamesChange={setSourceSchemaNames}
-          isRefreshingSource={isRefreshingSource}
+          onTestConnection={testSelectedSourceConnection}
         />
 
         <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
@@ -686,7 +804,10 @@ function WorkspaceSidebar({
   activeKind,
   collapsed,
   connectionOptions,
+  isProfilingSource,
   isRefreshingSource,
+  isSavingSource,
+  isTestingConnection,
   onToggleCollapse,
   product,
   resourceNames,
@@ -694,19 +815,30 @@ function WorkspaceSidebar({
   selectedConnectionId,
   selectedResource,
   sourceDatabaseUrl,
+  sourceHost,
+  sourceName,
+  sourceProfile,
   sourceRefreshMessage,
   sourceSchemaNames,
   onBackToProducts,
+  onProfileSource,
   onRefreshSource,
+  onSaveSource,
   onSelectConnection,
   onSelectResource,
   onSourceDatabaseUrlChange,
+  onSourceHostChange,
+  onSourceNameChange,
   onSourceSchemaNamesChange,
+  onTestConnection,
 }: {
   activeKind: Product["kind"];
   collapsed: boolean;
   connectionOptions: WorkspaceSource[];
+  isProfilingSource: boolean;
   isRefreshingSource: boolean;
+  isSavingSource: boolean;
+  isTestingConnection: boolean;
   onToggleCollapse: () => void;
   product: Product | null;
   resourceNames: string[];
@@ -714,14 +846,22 @@ function WorkspaceSidebar({
   selectedConnectionId: string;
   selectedResource: string | null;
   sourceDatabaseUrl: string;
+  sourceHost: string;
+  sourceName: string;
+  sourceProfile: WorkspaceSourceProfile | null;
   sourceRefreshMessage: string | null;
   sourceSchemaNames: string;
   onBackToProducts: () => void;
+  onProfileSource: () => void;
   onRefreshSource: () => void;
+  onSaveSource: () => void;
   onSelectConnection: (connectionId: string) => void;
   onSelectResource: (resourceName: string) => void;
   onSourceDatabaseUrlChange: (value: string) => void;
+  onSourceHostChange: (value: string) => void;
+  onSourceNameChange: (value: string) => void;
   onSourceSchemaNamesChange: (value: string) => void;
+  onTestConnection: () => void;
 }) {
   const ResourceIcon = activeKind === "document" ? FileJson : Table2;
   const ProductIcon = product ? productIcon(product.kind) : Database;
@@ -849,10 +989,24 @@ function WorkspaceSidebar({
             {activeKind === "relational" ? (
               <details className="group rounded-lg border border-white/10 bg-black/20 p-3">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold uppercase text-zinc-400">
-                  Refresh schema
+                  Source connection
                   <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
                 </summary>
                 <div className="mt-3 space-y-3">
+                  <div className="grid gap-2">
+                    <input
+                      className="h-9 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-xs text-zinc-100 outline-none transition placeholder:text-zinc-700 focus:border-cyan-300/40"
+                      onChange={(event) => onSourceNameChange(event.target.value)}
+                      placeholder="Source name"
+                      value={sourceName}
+                    />
+                    <input
+                      className="h-9 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-xs text-zinc-100 outline-none transition placeholder:text-zinc-700 focus:border-cyan-300/40"
+                      onChange={(event) => onSourceHostChange(event.target.value)}
+                      placeholder="Host label"
+                      value={sourceHost}
+                    />
+                  </div>
                   <label className="block">
                     <span className="text-[0.68rem] font-semibold uppercase text-zinc-600">
                       PostgreSQL URL
@@ -875,21 +1029,36 @@ function WorkspaceSidebar({
                       value={sourceSchemaNames}
                     />
                   </label>
-                  <button
-                    className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-cyan-300 text-xs font-semibold text-zinc-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-55"
-                    disabled={isRefreshingSource}
-                    onClick={onRefreshSource}
-                  >
-                    {isRefreshingSource ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Database className="h-3.5 w-3.5" />
-                    )}
-                    Refresh tables
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <SourceActionButton
+                      isLoading={isTestingConnection}
+                      label="Test"
+                      loadingLabel="Testing"
+                      onClick={onTestConnection}
+                    />
+                    <SourceActionButton
+                      isLoading={isSavingSource}
+                      label="Add"
+                      loadingLabel="Saving"
+                      onClick={onSaveSource}
+                    />
+                    <SourceActionButton
+                      isLoading={isRefreshingSource}
+                      label="Refresh"
+                      loadingLabel="Loading"
+                      onClick={onRefreshSource}
+                    />
+                    <SourceActionButton
+                      isLoading={isProfilingSource}
+                      label="Profile"
+                      loadingLabel="Profiling"
+                      onClick={onProfileSource}
+                    />
+                  </div>
                   {sourceRefreshMessage ? (
                     <p className="text-xs leading-5 text-zinc-500">{sourceRefreshMessage}</p>
                   ) : null}
+                  {sourceProfile ? <SourceProfileSummary profile={sourceProfile} /> : null}
                 </div>
               </details>
             ) : null}
@@ -930,6 +1099,60 @@ function WorkspaceSidebar({
         </details>
       </div>
     </aside>
+  );
+}
+
+function SourceActionButton({
+  isLoading,
+  label,
+  loadingLabel,
+  onClick,
+}: {
+  isLoading: boolean;
+  label: string;
+  loadingLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300/40 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-55"
+      disabled={isLoading}
+      onClick={onClick}
+    >
+      {isLoading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Database className="h-3.5 w-3.5" />
+      )}
+      {isLoading ? loadingLabel : label}
+    </button>
+  );
+}
+
+function SourceProfileSummary({ profile }: { profile: WorkspaceSourceProfile }) {
+  const firstTable = profile.tables[0];
+  const firstColumn = firstTable?.columns[0];
+
+  return (
+    <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase text-emerald-100">Profile snapshot</p>
+        <p className="text-[0.68rem] font-semibold text-emerald-200/70">
+          {formatNumber(profile.total_rows)} rows
+        </p>
+      </div>
+      {firstTable ? (
+        <p className="mt-2 text-xs leading-5 text-zinc-400">
+          {firstTable.schema_name}.{firstTable.name}: {formatNumber(firstTable.row_count)} rows
+        </p>
+      ) : null}
+      {firstColumn ? (
+        <p className="mt-1 text-xs leading-5 text-zinc-500">
+          {firstColumn.name} null rate {Math.round(firstColumn.null_rate * 100)}%,{" "}
+          {formatNumber(firstColumn.distinct_count)} distinct
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -2033,6 +2256,15 @@ function formatNumber(value: number) {
   return value.toLocaleString();
 }
 
+function slugify(value: string) {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug || "source";
+}
+
 function formatOperationName(operation: string) {
   return operation
     .split("_")
@@ -2228,8 +2460,7 @@ function workspaceConnectionsForProduct(product: Product | null, sources: Worksp
   return sources.filter(
     (source) =>
       source.product_id === product.id &&
-      source.kind === product.kind &&
-      connectionResources(source, product.kind).length,
+      source.kind === product.kind,
   );
 }
 
@@ -2256,11 +2487,18 @@ function fallbackWorkspaceSources(products: Product[]) {
         host: "local demo source",
         description: "Fallback source built from the product catalog while the workspace API is unavailable.",
         status: product.status === "active" ? "connected" : "planned",
+        schema_ddl: null,
+        refreshed_at: null,
         resources: resources.map((resourceName) => ({
           name: resourceName,
           resource_type: resourceType(product.kind),
           estimated_rows: product.default_row_counts[resourceName] ?? 20,
           columns: [],
+          schema_name: null,
+          primary_key: [],
+          foreign_keys: [],
+          unique_constraints: [],
+          column_details: [],
         })),
       } satisfies WorkspaceSource,
     ];
