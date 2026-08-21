@@ -286,6 +286,24 @@ class WorkspaceSourceProfileRequest(BaseModel):
     top_values_limit: int = Field(default=5, ge=0, le=20)
 
 
+class WorkspaceConnectionTestRequest(BaseModel):
+    """Test a live PostgreSQL connection before saving or refreshing a source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    database_url: str = Field(min_length=1)
+
+
+class WorkspaceConnectionTestResponse(BaseModel):
+    """Result of a source connection test."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ok: bool
+    message: str
+    checked_at: datetime
+
+
 class WorkspaceTopValueResponse(BaseModel):
     """Frequent value summary for a profiled source column."""
 

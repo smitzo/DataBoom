@@ -5,7 +5,13 @@ from fastapi.testclient import TestClient
 
 from databoom.api import create_app
 from databoom.core.config import Settings
-from databoom.profiling import ColumnProfile, SourceProfile, TableProfile, TopValue
+from databoom.profiling import (
+    ColumnProfile,
+    ConnectionTest,
+    SourceProfile,
+    TableProfile,
+    TopValue,
+)
 from databoom.schema import (
     ColumnSchema,
     DatabaseSchema,
@@ -365,6 +371,32 @@ def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monk
     assert payload["tables"][0]["columns"][0]["top_values"] == [
         {"value": "active", "count": 18}
     ]
+
+
+def test_workspace_connection_test_returns_probe_result(tmp_path: Path, monkeypatch) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    def test_connection(database_url: str) -> ConnectionTest:
+        assert database_url == "postgresql+psycopg://demo"
+        return ConnectionTest(
+            ok=True,
+            message="connection ok",
+            checked_at=datetime(2026, 1, 1, tzinfo=UTC),
+        )
+
+    monkeypatch.setattr("databoom.api.routes.test_postgres_connection", test_connection)
+
+    response = client.post(
+        "/workspace-sources/test-connection",
+        headers=_auth_headers(token),
+        json={"database_url": "postgresql+psycopg://demo"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["ok"] is True
+    assert response.json()["message"] == "connection ok"
 
 
 def _login(client: TestClient) -> str:

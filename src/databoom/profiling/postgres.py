@@ -59,6 +59,15 @@ class SourceProfile:
         return sum(table.row_count for table in self.tables)
 
 
+@dataclass(frozen=True)
+class ConnectionTest:
+    """Result of a live source connection probe."""
+
+    ok: bool
+    message: str
+    checked_at: datetime
+
+
 def profile_postgres_source(
     database_url: str,
     source: WorkspaceSource,
@@ -82,6 +91,23 @@ def profile_postgres_source(
         source_id=source.id,
         generated_at=datetime.now(UTC),
         tables=table_profiles,
+    )
+
+
+def test_postgres_connection(database_url: str) -> ConnectionTest:
+    """Open a PostgreSQL connection and execute a lightweight readiness query."""
+
+    engine = create_engine(database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("SELECT 1")).scalar_one()
+    finally:
+        engine.dispose()
+
+    return ConnectionTest(
+        ok=True,
+        message="connection ok",
+        checked_at=datetime.now(UTC),
     )
 
 

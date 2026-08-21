@@ -33,6 +33,8 @@ from databoom.api.models import (
     TablePreviewResponse,
     WorkspaceColumnProfileResponse,
     WorkspaceColumnResponse,
+    WorkspaceConnectionTestRequest,
+    WorkspaceConnectionTestResponse,
     WorkspaceForeignKeyResponse,
     WorkspaceResourceResponse,
     WorkspaceSourceProfileRequest,
@@ -60,7 +62,12 @@ from databoom.api.workspaces import (
 )
 from databoom.core.config import Settings
 from databoom.ingest.postgres import load_postgres_schema
-from databoom.profiling import SourceProfile, profile_postgres_source
+from databoom.profiling import (
+    ConnectionTest,
+    SourceProfile,
+    profile_postgres_source,
+    test_postgres_connection,
+)
 
 router = APIRouter()
 protected_route = Depends(require_api_key)
@@ -191,6 +198,24 @@ def save_workspace_source(
     source = workspace_source_from_request(payload)
     _state_store(request).save_workspace_source(source)
     return _workspace_source_response(source)
+
+
+@router.post(
+    "/workspace-sources/test-connection",
+    response_model=WorkspaceConnectionTestResponse,
+    tags=["workspaces"],
+)
+def test_workspace_connection(
+    payload: WorkspaceConnectionTestRequest,
+    user: DemoUserResponse = demo_user_dependency,
+) -> WorkspaceConnectionTestResponse:
+    """Test a live PostgreSQL connection before source refresh or creation."""
+
+    try:
+        result = test_postgres_connection(payload.database_url)
+    except SQLAlchemyError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    return _workspace_connection_test_response(result)
 
 
 @router.get(
@@ -807,6 +832,16 @@ def _workspace_source_profile_response(profile: SourceProfile) -> WorkspaceSourc
             )
             for table in profile.tables
         ),
+    )
+
+
+def _workspace_connection_test_response(
+    result: ConnectionTest,
+) -> WorkspaceConnectionTestResponse:
+    return WorkspaceConnectionTestResponse(
+        ok=result.ok,
+        message=result.message,
+        checked_at=result.checked_at,
     )
 
 
