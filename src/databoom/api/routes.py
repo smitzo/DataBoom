@@ -31,12 +31,17 @@ from databoom.api.models import (
     SubscriptionStatus,
     TableArtifactResponse,
     TablePreviewResponse,
+    WorkspaceColumnProfileResponse,
     WorkspaceColumnResponse,
     WorkspaceForeignKeyResponse,
     WorkspaceResourceResponse,
+    WorkspaceSourceProfileRequest,
+    WorkspaceSourceProfileResponse,
     WorkspaceSourceRefreshRequest,
     WorkspaceSourceRequest,
     WorkspaceSourceResponse,
+    WorkspaceTableProfileResponse,
+    WorkspaceTopValueResponse,
     WorkspaceUniqueConstraintResponse,
 )
 from databoom.api.products import ProductCatalogEntry, get_product, list_products
@@ -55,6 +60,7 @@ from databoom.api.workspaces import (
 )
 from databoom.core.config import Settings
 from databoom.ingest.postgres import load_postgres_schema
+from databoom.profiling import SourceProfile, profile_postgres_source
 
 router = APIRouter()
 protected_route = Depends(require_api_key)
@@ -246,6 +252,43 @@ def refresh_workspace_source(
     )
     _state_store(request).save_workspace_source(refreshed)
     return _workspace_source_response(refreshed)
+
+
+@router.post(
+    "/workspace-sources/{source_id}/profile",
+    response_model=WorkspaceSourceProfileResponse,
+    tags=["workspaces"],
+)
+def profile_workspace_source(
+    request: Request,
+    source_id: str,
+    payload: WorkspaceSourceProfileRequest,
+    user: DemoUserResponse = demo_user_dependency,
+) -> WorkspaceSourceProfileResponse:
+    """Profile one relational workspace source from live PostgreSQL data."""
+
+    source = _state_store(request).get_workspace_source(source_id)
+    if source is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="workspace source not found",
+        )
+    if source.kind != "relational" or source.engine.lower() != "postgresql":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="only PostgreSQL relational sources can be profiled",
+        )
+
+    try:
+        profile = profile_postgres_source(
+            payload.database_url,
+            source,
+            top_values_limit=payload.top_values_limit,
+        )
+    except SQLAlchemyError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+
+    return _workspace_source_profile_response(profile)
 
 
 @router.get(
@@ -727,6 +770,42 @@ def _workspace_source_response(source: WorkspaceSource) -> WorkspaceSourceRespon
                 ),
             )
             for resource in source.resources
+        ),
+    )
+
+
+def _workspace_source_profile_response(profile: SourceProfile) -> WorkspaceSourceProfileResponse:
+    return WorkspaceSourceProfileResponse(
+        source_id=profile.source_id,
+        generated_at=profile.generated_at,
+        total_rows=profile.total_rows,
+        tables=tuple(
+            WorkspaceTableProfileResponse(
+                name=table.name,
+                schema_name=table.schema_name,
+                row_count=table.row_count,
+                columns=tuple(
+                    WorkspaceColumnProfileResponse(
+                        name=column.name,
+                        data_type=column.data_type,
+                        row_count=column.row_count,
+                        null_count=column.null_count,
+                        null_rate=column.null_rate,
+                        distinct_count=column.distinct_count,
+                        min_value=column.min_value,
+                        max_value=column.max_value,
+                        top_values=tuple(
+                            WorkspaceTopValueResponse(
+                                value=value.value,
+                                count=value.count,
+                            )
+                            for value in column.top_values
+                        ),
+                    )
+                    for column in table.columns
+                ),
+            )
+            for table in profile.tables
         ),
     )
 

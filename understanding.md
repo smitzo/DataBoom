@@ -1247,3 +1247,52 @@ DataBoom now stores that relationship and generates from it. During generation, 
 ### Performance Note
 
 This is not a micro-optimization. It is a planning-quality improvement. The performance benefit is that future runs can use the saved DDL snapshot immediately instead of introspecting the source database again. That reduces repeated connection overhead and makes generation less dependent on source database availability after refresh.
+
+## Decision: keep source profiling optional and separate from schema refresh
+
+### Question
+
+Why is profiling a separate endpoint instead of being bundled into every schema refresh?
+
+### Answer
+
+Schema refresh and data profiling answer different questions.
+
+Schema refresh asks: "What is the shape of this database?" It needs table names, column names, types, primary keys, foreign keys, and constraints.
+
+Profiling asks: "What does the data distribution look like?" It may need row counts, null counts, distinct counts, min/max values, and common values. Those queries can be much heavier than schema introspection because they scan actual table data.
+
+Bundling profiling into every refresh would make a simple metadata refresh slow and risky on large customer databases. Keeping profiling optional lets the operator decide when the extra accuracy is worth the extra database work.
+
+### What Changed
+
+DataBoom now has a profiling boundary under `databoom.profiling` and an API route:
+
+- `POST /workspace-sources/{source_id}/profile`
+
+The PostgreSQL profiler reports:
+
+- table row counts,
+- per-column null counts,
+- null rates,
+- distinct counts,
+- min and max values,
+- top observed values.
+
+### Why This Improves Output Quality
+
+Random-looking synthetic data is easy. Useful synthetic data needs shape. If a status column is usually `active`, sometimes `paused`, and rarely `blocked`, the generator should eventually learn that distribution. If a column is 70% null, generated data should reflect that. If amounts usually sit in a narrow range, generated values should not be wildly unrealistic.
+
+This profiling endpoint does not yet feed those statistics into generation automatically. It creates the backend contract needed for that next step: profile first, store profile hints, then use those hints during planning and value generation.
+
+### Performance Note
+
+Profiling uses aggregate SQL and can be expensive on large tables. In production, this should become a background job with:
+
+- sampling controls,
+- timeouts,
+- per-table limits,
+- cached profile snapshots,
+- clear freshness timestamps.
+
+For Phase 2, exposing profiling as an explicit endpoint is the right balance. It proves the contract without forcing every source refresh or generation run to scan source data.

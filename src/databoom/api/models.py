@@ -277,6 +277,62 @@ class WorkspaceSourceRefreshRequest(BaseModel):
         return value
 
 
+class WorkspaceSourceProfileRequest(BaseModel):
+    """Profile a relational workspace source from a live PostgreSQL database."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    database_url: str = Field(min_length=1)
+    top_values_limit: int = Field(default=5, ge=0, le=20)
+
+
+class WorkspaceTopValueResponse(BaseModel):
+    """Frequent value summary for a profiled source column."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: str
+    count: int
+
+
+class WorkspaceColumnProfileResponse(BaseModel):
+    """Profile statistics for a source column."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    data_type: str
+    row_count: int
+    null_count: int
+    null_rate: float
+    distinct_count: int
+    min_value: str | None = None
+    max_value: str | None = None
+    top_values: tuple[WorkspaceTopValueResponse, ...] = ()
+
+
+class WorkspaceTableProfileResponse(BaseModel):
+    """Profile statistics for a source table."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    schema_name: str
+    row_count: int
+    columns: tuple[WorkspaceColumnProfileResponse, ...]
+
+
+class WorkspaceSourceProfileResponse(BaseModel):
+    """Profile statistics for a workspace source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str
+    generated_at: datetime
+    total_rows: int
+    tables: tuple[WorkspaceTableProfileResponse, ...]
+
+
 class ProductRunRequest(BaseModel):
     """Generation request based on a subscribed product catalog entry."""
 

@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from databoom.api import create_app
 from databoom.core.config import Settings
+from databoom.profiling import ColumnProfile, SourceProfile, TableProfile, TopValue
 from databoom.schema import (
     ColumnSchema,
     DatabaseSchema,
@@ -311,6 +313,58 @@ def test_product_run_uses_refreshed_workspace_source_resources(tmp_path: Path, m
     assert preview.status_code == 200, preview.text
     rows = preview.json()["rows"]
     assert {row["invoice_id"] for row in rows} <= {"1", "2"}
+
+
+def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monkeypatch) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    def profile_source(database_url, source, *, top_values_limit):
+        assert database_url == "postgresql+psycopg://demo"
+        assert source.id == "commerce-store"
+        assert top_values_limit == 3
+        return SourceProfile(
+            source_id=source.id,
+            generated_at=datetime(2026, 1, 1, tzinfo=UTC),
+            tables=(
+                TableProfile(
+                    name="customers",
+                    schema_name="public",
+                    row_count=24,
+                    columns=(
+                        ColumnProfile(
+                            name="status",
+                            data_type="text",
+                            row_count=24,
+                            null_count=2,
+                            null_rate=0.0833,
+                            distinct_count=3,
+                            min_value="active",
+                            max_value="blocked",
+                            top_values=(TopValue(value="active", count=18),),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("databoom.api.routes.profile_postgres_source", profile_source)
+
+    response = client.post(
+        "/workspace-sources/commerce-store/profile",
+        headers=_auth_headers(token),
+        json={"database_url": "postgresql+psycopg://demo", "top_values_limit": 3},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["source_id"] == "commerce-store"
+    assert payload["total_rows"] == 24
+    assert payload["tables"][0]["columns"][0]["null_rate"] == 0.0833
+    assert payload["tables"][0]["columns"][0]["top_values"] == [
+        {"value": "active", "count": 18}
+    ]
 
 
 def _login(client: TestClient) -> str:
