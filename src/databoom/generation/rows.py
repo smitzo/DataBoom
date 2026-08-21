@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from math import gcd
 from typing import Any
 
 from databoom.generation.plan import (
     ColumnStrategy,
+    ForeignKeySelectionStrategy,
     ForeignKeySource,
     GenerationPlan,
     TablePlan,
@@ -35,6 +37,10 @@ class ForeignKeyRegistry:
     """Store generated parent key values for child-table foreign keys."""
 
     keys: dict[tuple[str, tuple[str, ...]], list[tuple[Any, ...]]] = field(default_factory=dict)
+    balanced_plans: dict[
+        tuple[str, str, tuple[str, ...], tuple[str, ...]],
+        tuple[int, int],
+    ] = field(default_factory=dict)
 
     def register(self, table: TablePlan, row: GeneratedRow) -> None:
         primary_key_columns = tuple(
@@ -51,6 +57,7 @@ class ForeignKeyRegistry:
         source: ForeignKeySource,
         *,
         seed_manager: SeedManager,
+        strategy: ForeignKeySelectionStrategy,
         table_name: str,
         row_index: int,
     ) -> tuple[Any, ...]:
@@ -62,8 +69,56 @@ class ForeignKeyRegistry:
                 f"({', '.join(source.parent_columns)})"
             )
 
-        stream = seed_manager.stream("foreign-key", table_name, source.parent_table, row_index)
-        return values[stream.randrange(len(values))]
+        if strategy == ForeignKeySelectionStrategy.RANDOM:
+            stream = seed_manager.stream(
+                "foreign-key-random",
+                table_name,
+                source.parent_table,
+                row_index,
+            )
+            return values[stream.randrange(len(values))]
+
+        index = self._balanced_index(
+            source,
+            seed_manager=seed_manager,
+            table_name=table_name,
+            parent_count=len(values),
+            row_index=row_index,
+        )
+        return values[index]
+
+    def _balanced_index(
+        self,
+        source: ForeignKeySource,
+        *,
+        seed_manager: SeedManager,
+        table_name: str,
+        parent_count: int,
+        row_index: int,
+    ) -> int:
+        if parent_count == 1:
+            return 0
+
+        cache_key = (
+            table_name,
+            source.parent_table,
+            source.child_columns,
+            source.parent_columns,
+        )
+        if cache_key not in self.balanced_plans:
+            stream = seed_manager.stream(
+                "foreign-key-balanced",
+                table_name,
+                source.parent_table,
+                ",".join(source.child_columns),
+                ",".join(source.parent_columns),
+            )
+            offset = stream.randrange(parent_count)
+            stride = _coprime_stride(parent_count, stream.randrange(1, parent_count))
+            self.balanced_plans[cache_key] = (offset, stride)
+
+        offset, stride = self.balanced_plans[cache_key]
+        return (offset + (row_index * stride)) % parent_count
 
 
 @dataclass
@@ -124,6 +179,7 @@ class RowGenerator:
             parent_values = self.foreign_keys.choose(
                 source,
                 seed_manager=self.seed_manager,
+                strategy=self.plan.foreign_key_strategy,
                 table_name=table.table_name,
                 row_index=row_index,
             )
@@ -148,3 +204,15 @@ def _unique_foreign_key_sources(table: TablePlan) -> tuple[ForeignKeySource, ...
             seen.add(key)
             sources.append(column.foreign_key_source)
     return tuple(sources)
+
+
+def _coprime_stride(parent_count: int, candidate: int) -> int:
+    if parent_count <= 2:
+        return 1
+
+    stride = max(1, candidate % parent_count)
+    while gcd(stride, parent_count) != 1:
+        stride = (stride + 1) % parent_count
+        if stride == 0:
+            stride = 1
+    return stride

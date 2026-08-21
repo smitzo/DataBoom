@@ -1296,3 +1296,57 @@ Profiling uses aggregate SQL and can be expensive on large tables. In production
 - clear freshness timestamps.
 
 For Phase 2, exposing profiling as an explicit endpoint is the right balance. It proves the contract without forcing every source refresh or generation run to scan source data.
+
+## Decision: make foreign-key selection an explicit generation strategy
+
+### Question
+
+Why did we add a `ForeignKeySelectionStrategy` instead of keeping foreign-key choice hidden inside the row generator?
+
+### Answer
+
+Foreign keys are not ordinary values. A generated email, amount, or status can be chosen independently for each row. A foreign key cannot. It must point to a generated parent key, and the way child rows choose parent rows changes the shape of the entire dataset.
+
+Before this change, DataBoom used deterministic random selection for foreign keys. That preserved referential integrity, but it could accidentally create poor fanout. For example, if 9 generated users reference 3 generated accounts, random selection might give one account 6 users, another 3 users, and another 0 users. The output is technically valid, but the relationship distribution is noisy and less useful for demos, tests, and downstream joins.
+
+The engine now makes that policy explicit through `ForeignKeySelectionStrategy`:
+
+- `balanced_fanout`
+- `random`
+
+The default is `balanced_fanout`.
+
+### How Balanced Fanout Works
+
+For each child-to-parent relationship, DataBoom computes:
+
+- a deterministic offset,
+- a deterministic stride that is coprime with the number of parent keys.
+
+Then each child row chooses:
+
+```text
+parent_index = (offset + row_index * stride) % parent_count
+```
+
+Because the stride is coprime with the parent count, the generator cycles through every parent key before repeating. This gives stable spread without storing a shuffled list of every parent key.
+
+### Beginner-Friendly Example
+
+Suppose DataBoom generates:
+
+- 3 accounts,
+- 9 users,
+- `users.account_id` references `accounts.id`.
+
+With balanced fanout, each account receives exactly 3 users. With random fanout, the output is still deterministic for a seed, but the distribution can be uneven.
+
+### Why Keep Random Fanout?
+
+Balanced fanout is a better default for stable local demos and test fixtures. Random fanout is still useful when a user wants simulation-style variation. Keeping both strategies makes the engine more flexible without adding complexity to the row loop.
+
+### Performance Note
+
+Balanced fanout is O(1) per child row. The registry stores one `(offset, stride)` pair per relationship. It does not sort parent keys, build a huge repeated key list, or shuffle all child assignments.
+
+This is mainly a quality optimization, but it also protects future performance: relationship behavior can now evolve behind a strategy boundary. The next steps are to add fanout quality metrics, profile source relationship distributions, and eventually choose child keys from observed fanout profiles.

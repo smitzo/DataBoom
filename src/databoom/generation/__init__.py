@@ -11,6 +11,7 @@ from databoom.generation.domains import (
 from databoom.generation.plan import (
     ColumnPlan,
     ColumnStrategy,
+    ForeignKeySelectionStrategy,
     ForeignKeySource,
     GenerationPlan,
     OutputFormat,
@@ -33,6 +34,7 @@ __all__ = [
     "DomainProfile",
     "DomainValueProvider",
     "FinancialValueProvider",
+    "ForeignKeySelectionStrategy",
     "ForeignKeySource",
     "ForeignKeyRegistry",
     "GeneralValueProvider",

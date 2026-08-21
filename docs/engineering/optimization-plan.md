@@ -53,9 +53,9 @@ Objective: make Table-Boom fast and structurally reliable at 1M+ rows.
 
 Todo:
 
-- [ ] Add `RelationshipStrategy` or `ForeignKeySelectionStrategy` to the generation plan.
-- [ ] Implement balanced fanout as the default relationship strategy.
-- [ ] Keep random fanout as an explicit strategy for simulation-style runs.
+- [x] Add `RelationshipStrategy` or `ForeignKeySelectionStrategy` to the generation plan.
+- [x] Implement balanced fanout as the default relationship strategy.
+- [x] Keep random fanout as an explicit strategy for simulation-style runs.
 - [ ] Add validation metrics for parent-child fanout distribution.
 - [ ] Store relationship profile hints from source profiling.
 - [ ] Add profile-driven fanout that preserves observed child-count distributions.
@@ -195,8 +195,8 @@ Recommended commit sequence:
 
 Focus only on backend engine quality and measurable performance.
 
-1. Add relationship strategy to `GenerationPlan`.
-2. Implement balanced fanout.
+1. Add relationship strategy to `GenerationPlan`. `complete`
+2. Implement balanced fanout. `complete`
 3. Add fanout validation/quality metrics.
 4. Add 1M relational benchmark.
 5. Update `understanding.md` with why the strategy improves quality and performance.

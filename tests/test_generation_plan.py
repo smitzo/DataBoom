@@ -1,6 +1,11 @@
 import pytest
 
-from databoom.generation import ColumnStrategy, OutputFormat, create_generation_plan
+from databoom.generation import (
+    ColumnStrategy,
+    ForeignKeySelectionStrategy,
+    OutputFormat,
+    create_generation_plan,
+)
 from databoom.ingest import parse_postgres_ddl
 
 
@@ -36,6 +41,7 @@ def test_generation_plan_orders_tables_and_marks_column_strategies() -> None:
     assert plan.table_plan("users").column_plan("email").strategy == ColumnStrategy.GENERATED
     assert plan.table_plan("users").column_plan("created_at").strategy == ColumnStrategy.DEFAULT
     assert plan.table_plan("users").dependencies == ("public.accounts",)
+    assert plan.foreign_key_strategy == ForeignKeySelectionStrategy.BALANCED_FANOUT
 
 
 def test_generation_plan_rejects_unknown_row_count_keys() -> None:
@@ -50,3 +56,14 @@ def test_generation_plan_rejects_negative_row_counts() -> None:
 
     with pytest.raises(ValueError, match="cannot be negative"):
         create_generation_plan(database, row_counts={"users": -1})
+
+
+def test_generation_plan_allows_random_foreign_key_strategy() -> None:
+    database = parse_postgres_ddl("CREATE TABLE users (id bigint PRIMARY KEY);")
+
+    plan = create_generation_plan(
+        database,
+        foreign_key_strategy=ForeignKeySelectionStrategy.RANDOM,
+    )
+
+    assert plan.foreign_key_strategy == ForeignKeySelectionStrategy.RANDOM

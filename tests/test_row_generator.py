@@ -1,6 +1,11 @@
 import pytest
 
-from databoom.generation import RowGenerationError, RowGenerator, create_generation_plan
+from databoom.generation import (
+    ForeignKeySelectionStrategy,
+    RowGenerationError,
+    RowGenerator,
+    create_generation_plan,
+)
 from databoom.ingest import parse_postgres_ddl
 
 
@@ -33,6 +38,54 @@ def test_row_generator_preserves_single_column_foreign_keys() -> None:
     assert account_ids == {1, 2}
     assert {row["account_id"] for row in tables["public.users"]} <= account_ids
     assert [row["id"] for row in tables["public.users"]] == [1, 2, 3, 4, 5]
+
+
+def test_row_generator_balances_foreign_key_fanout_by_default() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE accounts (
+            id bigint PRIMARY KEY,
+            name text NOT NULL
+        );
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            account_id bigint NOT NULL REFERENCES accounts(id),
+            email text NOT NULL
+        );
+        """
+    )
+    plan = create_generation_plan(database, row_counts={"accounts": 3, "users": 9}, seed=42)
+
+    tables = rows_by_table(RowGenerator.from_plan(plan).iter_records())
+    fanout = {
+        account_id: sum(1 for row in tables["public.users"] if row["account_id"] == account_id)
+        for account_id in {row["id"] for row in tables["public.accounts"]}
+    }
+
+    assert fanout == {1: 3, 2: 3, 3: 3}
+
+
+def test_row_generator_keeps_random_foreign_key_strategy_available() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE accounts (id bigint PRIMARY KEY);
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            account_id bigint NOT NULL REFERENCES accounts(id)
+        );
+        """
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"accounts": 2, "users": 6},
+        seed=7,
+        foreign_key_strategy=ForeignKeySelectionStrategy.RANDOM,
+    )
+
+    tables = rows_by_table(RowGenerator.from_plan(plan).iter_records())
+    account_ids = {row["id"] for row in tables["public.accounts"]}
+
+    assert {row["account_id"] for row in tables["public.users"]} <= account_ids
 
 
 def test_row_generator_is_repeatable_for_same_plan() -> None:

@@ -29,6 +29,13 @@ class ColumnStrategy(StrEnum):
     GENERATED = "generated"
 
 
+class ForeignKeySelectionStrategy(StrEnum):
+    """How child rows should choose generated parent keys."""
+
+    BALANCED_FANOUT = "balanced_fanout"
+    RANDOM = "random"
+
+
 class PlanModel(BaseModel):
     """Base class for immutable generation plan models."""
 
@@ -85,6 +92,9 @@ class GenerationPlan(PlanModel):
     domain: DomainProfile = DomainProfile.GENERAL
     output_formats: tuple[OutputFormat, ...]
     tables: tuple[TablePlan, ...]
+    foreign_key_strategy: ForeignKeySelectionStrategy = (
+        ForeignKeySelectionStrategy.BALANCED_FANOUT
+    )
 
     @field_validator("output_formats")
     @classmethod
@@ -112,6 +122,9 @@ def create_generation_plan(
     seed: int | str = 0,
     domain: DomainProfile = DomainProfile.GENERAL,
     output_formats: tuple[OutputFormat, ...] = (OutputFormat.CSV,),
+    foreign_key_strategy: ForeignKeySelectionStrategy = (
+        ForeignKeySelectionStrategy.BALANCED_FANOUT
+    ),
 ) -> GenerationPlan:
     """Create a deterministic generation plan from schema metadata."""
 
@@ -131,6 +144,7 @@ def create_generation_plan(
         domain=domain,
         output_formats=output_formats,
         tables=table_plans,
+        foreign_key_strategy=foreign_key_strategy,
     )
 
 
