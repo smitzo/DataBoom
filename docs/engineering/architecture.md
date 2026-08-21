@@ -125,6 +125,34 @@ sequenceDiagram
     API->>Store: save completed run metadata
 ```
 
+## Workspace Source Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Dashboard
+    participant API as FastAPI API
+    participant SourceDB as Source PostgreSQL
+    participant Store as StateStore
+    participant Engine as Generation engine
+
+    UI->>API: POST /workspace-sources/test-connection
+    API->>SourceDB: SELECT 1
+    API-->>UI: connection ok or error
+    UI->>API: POST /workspace-sources
+    API->>Store: persist source shell
+    UI->>API: POST /workspace-sources/{source_id}/refresh
+    API->>SourceDB: inspect schemas, columns, PKs, FKs, uniques
+    API->>Store: save resource metadata and DDL snapshot
+    UI->>API: POST /workspace-sources/{source_id}/profile
+    API->>SourceDB: row counts, nulls, distinct counts, ranges, top values
+    API-->>UI: profile snapshot
+    UI->>API: POST /products/{product_id}/runs/async with source_id
+    API->>Store: resolve refreshed source contract
+    API->>Engine: generate from source DDL snapshot
+```
+
+This makes the engine extendable because the dashboard does not send ad hoc table lists. It selects a persisted source, and the backend uses the refreshed schema contract for planning and generation.
+
 ## Frontend Route Architecture
 
 ```mermaid
@@ -180,6 +208,17 @@ The Phase 2 local API exposes a lightweight asynchronous run lifecycle:
 - Completed relational runs report timings for schema parsing, plan building, export, validation, and total runtime.
 
 The current `AsyncRunManager` is intentionally in-process. It is enough for local MVP workflows, demos, and frontend progress polling. A production worker queue can replace this boundary later without changing the frontend run contract.
+
+## Source Observability
+
+Phase 2 source workflows expose separate operations so the dashboard can show where time and risk sit:
+
+- connection test checks that credentials and network access work before a source is saved or refreshed,
+- schema refresh captures table names, schema names, columns, primary keys, foreign keys, unique constraints, a DDL snapshot, and a refresh timestamp,
+- source profiling scans selected tables for row counts, null rates, distinct counts, min/max values, and top values,
+- product runs can reference a `source_id`, allowing the engine to generate from the refreshed source contract.
+
+These operations are separate on purpose. A quick schema refresh should not always scan table data, and a profiling scan should be an explicit operator action.
 
 ## How To Add A New Product Kind
 

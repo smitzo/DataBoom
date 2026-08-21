@@ -113,14 +113,19 @@ The dashboard can:
 - show the product catalog,
 - subscribe the demo user to a product,
 - generate data through the backend product-run endpoint,
-- preview the top 10 rows for generated CSV-backed tables,
-- download generated table artifacts and validation files.
+- test PostgreSQL source connections,
+- save workspace sources,
+- refresh relational schema metadata from a live source,
+- profile source tables for row counts, null rates, cardinality, ranges, and top values,
+- preview the top 20 rows for generated CSV-backed tables,
+- preview MongoDB-style JSON documents for Docu-Boom runs,
+- download generated artifacts and validation files.
 
 In the Dockerized stack, demo sessions, subscriptions, and generation-run metadata are persisted in PostgreSQL. Generated datasets are still written to local disk under `artifacts/`, which keeps Phase 1/2 storage simple and inspectable.
 
 ## Live PostgreSQL Introspection
 
-Phase 2 adds a backend ingestion helper for reading schema metadata from a live PostgreSQL database through SQLAlchemy:
+Phase 2 adds backend helpers for reading schema metadata from a live PostgreSQL database through SQLAlchemy:
 
 ```python
 from databoom.ingest import load_postgres_schema
@@ -128,7 +133,7 @@ from databoom.ingest import load_postgres_schema
 schema = load_postgres_schema("postgresql+psycopg://user:password@localhost:5432/app")
 ```
 
-The helper returns the same normalized `DatabaseSchema` used by the DDL parser, planner, generator, and validator.
+The schema helper returns the same normalized `DatabaseSchema` used by the DDL parser, planner, generator, and validator. The API also exposes source connection testing, persisted source definitions, schema refresh, and source profiling so the dashboard can drive a full source-to-generation workflow.
 
 ## Demo Datasets
 

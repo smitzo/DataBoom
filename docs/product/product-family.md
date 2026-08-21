@@ -42,6 +42,10 @@ Phase 2 completes the local product workflow by adding:
 - API-backed product catalog and subscriptions,
 - persisted demo sessions, subscriptions, and run metadata,
 - generic DataBoom workspace with relational and document surfaces,
+- backend-owned workspace sources,
+- PostgreSQL source connection testing,
+- source schema refresh with primary keys, foreign keys, unique constraints, and column metadata,
+- optional source profiling for row counts, null rates, cardinality, ranges, and top values,
 - Docu-Boom NoSQL document generation and preview,
 - local JSON/NDJSON artifacts for document runs,
 - documentation and reusable UI/backend contracts for product-kind based rendering.

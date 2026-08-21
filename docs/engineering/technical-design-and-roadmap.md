@@ -303,7 +303,7 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
-Current status: the functional Phase 2 product workflow is implemented for local MVP use. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are now backend-owned, persisted in API state, and refreshable from live PostgreSQL introspection for relational sources. A 500k benchmark baseline exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs can execute asynchronously with row-level progress, ETA, throughput, and operation timings. Export speed, deeper structural profiling, source-secret management, and production-grade distributed worker orchestration remain Phase 2 hardening work before the project should claim production-scale completion.
+Current status: Phase 2 is complete for the local full-stack product workflow. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are backend-owned, persisted in API state, testable from the dashboard, refreshable from live PostgreSQL introspection, and profileable for row counts, null rates, distinct counts, ranges, and top values. Refreshed relational sources store both resource-level metadata and a PostgreSQL DDL snapshot, so generation can run from the source contract instead of a hardcoded demo schema. A 500k benchmark baseline exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs execute asynchronously with row-level progress, ETA, throughput, and operation timings. Source-secret management, distributed worker orchestration, production retention, privacy controls, and deployment-grade observability move to later production phases instead of blocking Phase 2.
 
 Technical objectives:
 
@@ -340,6 +340,10 @@ Implemented MVP capabilities:
 - Generic frontend workspace that renders relational tables or MongoDB-style documents based on product kind.
 - Async product-run endpoint with in-process background execution, generated row counters, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.
 - Frontend polling that shows live run status, row progress, throughput, and attempts top-20 table/document previews during generation.
+- Dashboard source controls for PostgreSQL connection testing, source creation, schema refresh, and profiling.
+- Rich refreshed source metadata: schema name, column details, primary keys, foreign keys, unique constraints, DDL snapshot, and refresh timestamp.
+- Product run requests can pass a persisted `source_id`, so Table-Boom generation can use refreshed workspace schema contracts.
+- Run builder UI shows selected source context, schema freshness, profiling state, generation progress, validation, and operation timing stages.
 - 500k relational benchmark baseline with export, validation, memory, and artifact-size metrics.
 - Chunk-aware CSV validation that avoids holding every generated row in memory.
 

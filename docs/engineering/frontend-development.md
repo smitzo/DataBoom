@@ -63,6 +63,8 @@ Goals:
 - Download generated artifacts. `complete for CSV/JSON/manifest/validation artifacts`
 - Present `/dashboard` as the generic DataBoom workspace with product navigation, relational table previews, NoSQL document previews, an agent run panel, and export links. `complete`
 - Render Table-Boom as a spreadsheet-style relational surface and Docu-Boom as a MongoDB-style JSON document surface from the same workspace shell. `complete`
+- Test, save, refresh, and profile PostgreSQL workspace sources from the dashboard. `complete for Table-Boom sources`
+- Show selected source context, schema freshness, profile state, run progress, validation state, and operation timing stages in the run builder. `complete`
 - Display manifest and validation report. `partial: validation pass/fail and downloads are visible; detailed report UI is still planned`
 - Surface validation failures clearly.
 - Keep Graph-Boom and Masker-Boom visible as planned work without building their runtime UI before their phases.

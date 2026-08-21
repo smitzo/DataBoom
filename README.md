@@ -34,7 +34,8 @@ The current implementation includes Table-Boom relational generation and the Pha
 - SQL-backed demo sessions, subscriptions, and run metadata in Dockerized API runs.
 - DataBoom workspace with product navigation, live top-20 relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Row-level async progress with generated-row counts, current resource, rows/sec, remaining time, and operation timings.
-- Live PostgreSQL schema introspection foundation.
+- Live PostgreSQL source testing, schema refresh, DDL snapshot storage, and source profiling.
+- Refreshed relational sources retain schema names, column details, primary keys, foreign keys, unique constraints, and refresh timestamps.
 - 100k-record Phase 1 benchmark.
 - 500k-record Phase 2 benchmark baseline.
 - Next.js and Tailwind frontend workbench.
@@ -42,7 +43,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 ## Roadmap Summary
 
 - Phase 1: Table-Boom relational foundation for PostgreSQL schema-driven generation.
-- Phase 2: Table-Boom scale, FastAPI workflows, profiling, and Docu-Boom NoSQL document support.
+- Phase 2: Table-Boom scale, FastAPI workflows, source profiling, refreshed-source generation, and Docu-Boom NoSQL document support. `complete for local full-stack MVP`
 - Phase 3: LLM-assisted planning, Graph-Boom support, and richer operator-facing review flows.
 - Phase 4: Masker-Boom policies, redaction, masking, hashing, tokenization, audit logs, and security hardening.
 - Phase 5: production deployment, CI, observability, retention, and adapter extensibility.
@@ -201,7 +202,7 @@ Then open:
 http://localhost:3000
 ```
 
-Login with email `demo` and password `demo`. The dashboard can subscribe to active products, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display generated rows, rows/sec, expected and remaining time, operation timings, and link to downloadable artifacts.
+Login with email `demo` and password `demo`. The dashboard can subscribe to active products, test PostgreSQL source connections, save workspace sources, refresh relational schema metadata, profile source tables, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display generated rows, rows/sec, expected and remaining time, operation timings, and link to downloadable artifacts.
 
 ## Docker
 
@@ -240,6 +241,7 @@ docker compose --profile tools run --rm app
 - `src/databoom`: Python backend package.
 - `src/databoom/api`: FastAPI app factory, response models, HTTP routes, product catalog, and API state storage.
 - `src/databoom/ingest`: PostgreSQL DDL ingestion.
+- `src/databoom/profiling`: source connection testing and PostgreSQL table profiling.
 - `src/databoom/schema`: normalized schema models and relationship graph code.
 - `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
 - `src/databoom/export`: local artifact writers.
