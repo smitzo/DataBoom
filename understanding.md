@@ -1350,3 +1350,62 @@ Balanced fanout is a better default for stable local demos and test fixtures. Ra
 Balanced fanout is O(1) per child row. The registry stores one `(offset, stride)` pair per relationship. It does not sort parent keys, build a huge repeated key list, or shuffle all child assignments.
 
 This is mainly a quality optimization, but it also protects future performance: relationship behavior can now evolve behind a strategy boundary. The next steps are to add fanout quality metrics, profile source relationship distributions, and eventually choose child keys from observed fanout profiles.
+
+## Decision: report relationship fanout metrics during validation
+
+### Question
+
+Why add relationship fanout metrics to the validation report if validation already checks foreign keys?
+
+### Answer
+
+Foreign-key validation answers a yes/no question: "Does every child key point to an existing parent key?"
+
+That is necessary, but it is not enough. A dataset can pass foreign-key validation while still having poor relationship shape. For example:
+
+- 100 customers exist,
+- 1,000 orders exist,
+- every order references a valid customer,
+- but 90 customers receive zero orders.
+
+The database is valid, yet the synthetic data is not very useful for testing customer-order workflows. Fanout metrics make this visible.
+
+### What Changed
+
+`ValidationReport` now includes `relationship_metrics`. Each metric describes one generated foreign-key relationship:
+
+- child table and child columns,
+- parent table and parent columns,
+- number of parent keys,
+- number of child rows,
+- minimum children per parent,
+- maximum children per parent,
+- average children per parent,
+- number of empty parents.
+
+The API validation summary also exposes these metrics, so the dashboard and future quality reports can use the same backend contract.
+
+### Beginner-Friendly Example
+
+If DataBoom generates:
+
+- 2 accounts,
+- 3 users,
+- `users.account_id` references `accounts.id`,
+
+the relationship metric can report:
+
+- `parent_key_count = 2`
+- `child_row_count = 3`
+- `min_children_per_parent = 1`
+- `max_children_per_parent = 2`
+- `average_children_per_parent = 1.5`
+- `empty_parent_count = 0`
+
+This tells us that every account received at least one user.
+
+### Why This Helps Performance Work
+
+Optimization should not only make generation faster. It should protect useful output quality while speed improves. Fanout metrics give us a measurable guardrail when we change relationship strategies, parent-key storage, batching, or profile-driven generation.
+
+In the next stages, source profiling can record observed fanout distributions from real schemas, and quality reports can compare generated fanout against those source profiles.

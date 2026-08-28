@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,18 +31,52 @@ class ValidationIssue:
 
 
 @dataclass(frozen=True)
+class RelationshipFanoutMetric:
+    """Fanout distribution for one generated foreign-key relationship."""
+
+    child_table: str
+    child_columns: tuple[str, ...]
+    parent_table: str
+    parent_columns: tuple[str, ...]
+    parent_key_count: int
+    child_row_count: int
+    min_children_per_parent: int
+    max_children_per_parent: int
+    average_children_per_parent: float
+    empty_parent_count: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "child_table": self.child_table,
+            "child_columns": list(self.child_columns),
+            "parent_table": self.parent_table,
+            "parent_columns": list(self.parent_columns),
+            "parent_key_count": self.parent_key_count,
+            "child_row_count": self.child_row_count,
+            "min_children_per_parent": self.min_children_per_parent,
+            "max_children_per_parent": self.max_children_per_parent,
+            "average_children_per_parent": self.average_children_per_parent,
+            "empty_parent_count": self.empty_parent_count,
+        }
+
+
+@dataclass(frozen=True)
 class ValidationReport:
     """Machine-readable validation result."""
 
     passed: bool
     issues: tuple[ValidationIssue, ...]
     checked_tables: tuple[str, ...]
+    relationship_metrics: tuple[RelationshipFanoutMetric, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "passed": self.passed,
             "checked_tables": list(self.checked_tables),
             "issues": [issue.to_dict() for issue in self.issues],
+            "relationship_metrics": [
+                metric.to_dict() for metric in self.relationship_metrics
+            ],
         }
 
     def write_json(self, path: Path) -> None:
@@ -55,6 +90,10 @@ def validate_export(plan: GenerationPlan, manifest: ExportManifest) -> Validatio
     table_artifacts = {artifact.table_name: artifact for artifact in manifest.tables}
     referenced_keys = _referenced_parent_keys(plan)
     keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] = {}
+    relationship_counts: dict[
+        tuple[str, tuple[str, ...], str, tuple[str, ...]],
+        Counter[tuple[str, ...]],
+    ] = {}
 
     for table in plan.tables:
         artifact = table_artifacts.get(table.table_name)
@@ -68,6 +107,7 @@ def validate_export(plan: GenerationPlan, manifest: ExportManifest) -> Validatio
                 table,
                 artifact.csv_path,
                 keys_by_table,
+                relationship_counts,
                 should_keep_primary_keys=(
                     table.table_name,
                     _primary_key_columns(table),
@@ -81,6 +121,7 @@ def validate_export(plan: GenerationPlan, manifest: ExportManifest) -> Validatio
         passed=not issues,
         issues=tuple(issues),
         checked_tables=tuple(table.table_name for table in plan.tables),
+        relationship_metrics=_relationship_metrics(plan, keys_by_table, relationship_counts),
     )
 
 
@@ -110,6 +151,10 @@ def _validate_csv_artifact(
     table: TablePlan,
     path: Path,
     keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]],
+    relationship_counts: dict[
+        tuple[str, tuple[str, ...], str, tuple[str, ...]],
+        Counter[tuple[str, ...]],
+    ],
     *,
     should_keep_primary_keys: bool,
 ) -> tuple[dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]], list[ValidationIssue]]:
@@ -149,7 +194,15 @@ def _validate_csv_artifact(
                     )
                 seen_primary_keys.add(primary_key)
 
-            issues.extend(_validate_row_foreign_keys(table, row, index, keys_by_table))
+            issues.extend(
+                _validate_row_foreign_keys(
+                    table,
+                    row,
+                    index,
+                    keys_by_table,
+                    relationship_counts,
+                )
+            )
 
     if row_count != table.row_count:
         issues.append(
@@ -171,6 +224,10 @@ def _validate_row_foreign_keys(
     row: dict[str, str],
     row_index: int,
     keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]],
+    relationship_counts: dict[
+        tuple[str, tuple[str, ...], str, tuple[str, ...]],
+        Counter[tuple[str, ...]],
+    ],
 ) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     for source in _foreign_key_sources(table):
@@ -179,6 +236,13 @@ def _validate_row_foreign_keys(
             set(),
         )
         child_key = tuple(row[column] for column in source.child_columns)
+        relationship_key = (
+            table.table_name,
+            source.child_columns,
+            source.parent_table,
+            source.parent_columns,
+        )
+        relationship_counts.setdefault(relationship_key, Counter())[child_key] += 1
         if child_key not in valid_parent_keys:
             issues.append(
                 _issue(
@@ -188,6 +252,54 @@ def _validate_row_foreign_keys(
                 )
             )
     return issues
+
+
+def _relationship_metrics(
+    plan: GenerationPlan,
+    keys_by_table: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]],
+    relationship_counts: dict[
+        tuple[str, tuple[str, ...], str, tuple[str, ...]],
+        Counter[tuple[str, ...]],
+    ],
+) -> tuple[RelationshipFanoutMetric, ...]:
+    metrics: list[RelationshipFanoutMetric] = []
+    for table in plan.tables:
+        for source in _foreign_key_sources(table):
+            metric_key = (
+                table.table_name,
+                source.child_columns,
+                source.parent_table,
+                source.parent_columns,
+            )
+            counts = relationship_counts.get(metric_key)
+            parent_keys = keys_by_table.get((source.parent_table, source.parent_columns))
+            if counts is None or parent_keys is None:
+                continue
+
+            child_row_count = sum(counts.values())
+            parent_key_count = len(parent_keys)
+            children_per_parent = [counts.get(parent_key, 0) for parent_key in parent_keys]
+            metrics.append(
+                RelationshipFanoutMetric(
+                    child_table=table.table_name,
+                    child_columns=source.child_columns,
+                    parent_table=source.parent_table,
+                    parent_columns=source.parent_columns,
+                    parent_key_count=parent_key_count,
+                    child_row_count=child_row_count,
+                    min_children_per_parent=(
+                        min(children_per_parent) if children_per_parent else 0
+                    ),
+                    max_children_per_parent=(
+                        max(children_per_parent) if children_per_parent else 0
+                    ),
+                    average_children_per_parent=(
+                        child_row_count / parent_key_count if parent_key_count else 0.0
+                    ),
+                    empty_parent_count=sum(1 for count in children_per_parent if count == 0),
+                )
+            )
+    return tuple(metrics)
 
 
 def _referenced_parent_keys(

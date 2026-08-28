@@ -18,6 +18,7 @@ from databoom.api.models import (
     OperationStatus,
     OperationTimingResponse,
     ProductRunRequest,
+    RelationshipFanoutMetricResponse,
     RunArtifactListResponse,
     RunArtifactResponse,
     RunStatus,
@@ -440,7 +441,28 @@ def _completed_response(
                 )
                 for issue in validation.issues
             ),
+            relationship_metrics=_relationship_metric_responses(validation),
         ),
+    )
+
+
+def _relationship_metric_responses(
+    validation: ValidationReport,
+) -> tuple[RelationshipFanoutMetricResponse, ...]:
+    return tuple(
+        RelationshipFanoutMetricResponse(
+            child_table=metric.child_table,
+            child_columns=metric.child_columns,
+            parent_table=metric.parent_table,
+            parent_columns=metric.parent_columns,
+            parent_key_count=metric.parent_key_count,
+            child_row_count=metric.child_row_count,
+            min_children_per_parent=metric.min_children_per_parent,
+            max_children_per_parent=metric.max_children_per_parent,
+            average_children_per_parent=metric.average_children_per_parent,
+            empty_parent_count=metric.empty_parent_count,
+        )
+        for metric in validation.relationship_metrics
     )
 
 

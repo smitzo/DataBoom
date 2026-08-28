@@ -27,6 +27,18 @@ def test_validate_export_passes_for_generated_artifacts(tmp_path) -> None:
 
     assert report.passed is True
     assert report.issues == ()
+    assert len(report.relationship_metrics) == 1
+    metric = report.relationship_metrics[0]
+    assert metric.child_table == "public.users"
+    assert metric.child_columns == ("account_id",)
+    assert metric.parent_table == "public.accounts"
+    assert metric.parent_columns == ("id",)
+    assert metric.parent_key_count == 2
+    assert metric.child_row_count == 3
+    assert metric.min_children_per_parent == 1
+    assert metric.max_children_per_parent == 2
+    assert metric.average_children_per_parent == 1.5
+    assert metric.empty_parent_count == 0
 
 
 def test_validate_export_detects_broken_foreign_key(tmp_path) -> None:
@@ -86,5 +98,33 @@ def test_validate_export_writes_json_report(tmp_path) -> None:
     report_path = tmp_path / "validation.json"
 
     report.write_json(report_path)
+    payload = report_path.read_text(encoding="utf-8")
 
-    assert '"passed": true' in report_path.read_text(encoding="utf-8")
+    assert '"passed": true' in payload
+    assert '"relationship_metrics": []' in payload
+
+
+def test_validate_export_reports_empty_parent_fanout(tmp_path) -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE accounts (id bigint PRIMARY KEY);
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            account_id bigint NOT NULL REFERENCES accounts(id)
+        );
+        """
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"accounts": 3, "users": 2},
+        seed=42,
+        output_formats=(OutputFormat.CSV,),
+    )
+    manifest = ArtifactExporter(plan, tmp_path).export()
+
+    report = validate_export(plan, manifest)
+
+    assert report.passed is True
+    assert report.relationship_metrics[0].empty_parent_count == 1
+    assert report.relationship_metrics[0].min_children_per_parent == 0
+    assert report.relationship_metrics[0].max_children_per_parent == 1

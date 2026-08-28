@@ -1,5 +1,15 @@
 """Validation reports for generated artifacts."""
 
-from databoom.validation.report import ValidationIssue, ValidationReport, validate_export
+from databoom.validation.report import (
+    RelationshipFanoutMetric,
+    ValidationIssue,
+    ValidationReport,
+    validate_export,
+)
 
-__all__ = ["ValidationIssue", "ValidationReport", "validate_export"]
+__all__ = [
+    "RelationshipFanoutMetric",
+    "ValidationIssue",
+    "ValidationReport",
+    "validate_export",
+]

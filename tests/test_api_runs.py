@@ -18,6 +18,9 @@ def test_create_generation_run_writes_artifacts(tmp_path: Path) -> None:
     assert payload["total_rows"] == 5
     assert payload["table_count"] == 2
     assert payload["validation"]["passed"] is True
+    assert payload["validation"]["relationship_metrics"][0]["child_table"] == "public.users"
+    assert payload["validation"]["relationship_metrics"][0]["parent_table"] == "public.accounts"
+    assert payload["validation"]["relationship_metrics"][0]["empty_parent_count"] == 0
     assert Path(payload["manifest_path"]).exists()
     assert Path(payload["validation_path"]).exists()
 

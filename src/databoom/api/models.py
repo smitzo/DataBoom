@@ -449,6 +449,23 @@ class ValidationIssueResponse(BaseModel):
     table_name: str | None = None
 
 
+class RelationshipFanoutMetricResponse(BaseModel):
+    """API representation of generated relationship fanout."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    child_table: str
+    child_columns: tuple[str, ...]
+    parent_table: str
+    parent_columns: tuple[str, ...]
+    parent_key_count: int
+    child_row_count: int
+    min_children_per_parent: int
+    max_children_per_parent: int
+    average_children_per_parent: float
+    empty_parent_count: int
+
+
 class ValidationSummaryResponse(BaseModel):
     """API representation of a validation report."""
 
@@ -457,6 +474,7 @@ class ValidationSummaryResponse(BaseModel):
     passed: bool
     checked_tables: tuple[str, ...]
     issues: tuple[ValidationIssueResponse, ...]
+    relationship_metrics: tuple[RelationshipFanoutMetricResponse, ...] = ()
 
 
 class OperationTimingResponse(BaseModel):

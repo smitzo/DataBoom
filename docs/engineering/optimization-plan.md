@@ -56,7 +56,7 @@ Todo:
 - [x] Add `RelationshipStrategy` or `ForeignKeySelectionStrategy` to the generation plan.
 - [x] Implement balanced fanout as the default relationship strategy.
 - [x] Keep random fanout as an explicit strategy for simulation-style runs.
-- [ ] Add validation metrics for parent-child fanout distribution.
+- [x] Add validation metrics for parent-child fanout distribution.
 - [ ] Store relationship profile hints from source profiling.
 - [ ] Add profile-driven fanout that preserves observed child-count distributions.
 - [ ] Optimize parent-key storage for simple sequential primary keys.
@@ -197,7 +197,7 @@ Focus only on backend engine quality and measurable performance.
 
 1. Add relationship strategy to `GenerationPlan`. `complete`
 2. Implement balanced fanout. `complete`
-3. Add fanout validation/quality metrics.
+3. Add fanout validation/quality metrics. `complete`
 4. Add 1M relational benchmark.
 5. Update `understanding.md` with why the strategy improves quality and performance.
 
