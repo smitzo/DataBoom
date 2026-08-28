@@ -3,6 +3,7 @@
 from databoom.profiling.postgres import (
     ColumnProfile,
     ConnectionTest,
+    RelationshipProfile,
     SourceProfile,
     TableProfile,
     TopValue,
@@ -13,6 +14,7 @@ from databoom.profiling.postgres import (
 __all__ = [
     "ColumnProfile",
     "ConnectionTest",
+    "RelationshipProfile",
     "SourceProfile",
     "TableProfile",
     "TopValue",

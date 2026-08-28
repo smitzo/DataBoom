@@ -340,6 +340,26 @@ class WorkspaceTableProfileResponse(BaseModel):
     columns: tuple[WorkspaceColumnProfileResponse, ...]
 
 
+class WorkspaceRelationshipProfileResponse(BaseModel):
+    """Profile statistics for one source relationship."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    child_table: str
+    child_schema: str
+    child_columns: tuple[str, ...]
+    parent_table: str
+    parent_schema: str
+    parent_columns: tuple[str, ...]
+    parent_key_count: int
+    child_row_count: int
+    distinct_parent_keys_referenced: int
+    min_children_per_parent: int
+    max_children_per_parent: int
+    average_children_per_parent: float
+    empty_parent_count: int
+
+
 class WorkspaceSourceProfileResponse(BaseModel):
     """Profile statistics for a workspace source."""
 
@@ -349,6 +369,7 @@ class WorkspaceSourceProfileResponse(BaseModel):
     generated_at: datetime
     total_rows: int
     tables: tuple[WorkspaceTableProfileResponse, ...]
+    relationships: tuple[WorkspaceRelationshipProfileResponse, ...] = ()
 
 
 class ProductRunRequest(BaseModel):

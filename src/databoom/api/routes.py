@@ -36,6 +36,7 @@ from databoom.api.models import (
     WorkspaceConnectionTestRequest,
     WorkspaceConnectionTestResponse,
     WorkspaceForeignKeyResponse,
+    WorkspaceRelationshipProfileResponse,
     WorkspaceResourceResponse,
     WorkspaceSourceProfileRequest,
     WorkspaceSourceProfileResponse,
@@ -831,6 +832,26 @@ def _workspace_source_profile_response(profile: SourceProfile) -> WorkspaceSourc
                 ),
             )
             for table in profile.tables
+        ),
+        relationships=tuple(
+            WorkspaceRelationshipProfileResponse(
+                child_table=relationship.child_table,
+                child_schema=relationship.child_schema,
+                child_columns=relationship.child_columns,
+                parent_table=relationship.parent_table,
+                parent_schema=relationship.parent_schema,
+                parent_columns=relationship.parent_columns,
+                parent_key_count=relationship.parent_key_count,
+                child_row_count=relationship.child_row_count,
+                distinct_parent_keys_referenced=(
+                    relationship.distinct_parent_keys_referenced
+                ),
+                min_children_per_parent=relationship.min_children_per_parent,
+                max_children_per_parent=relationship.max_children_per_parent,
+                average_children_per_parent=relationship.average_children_per_parent,
+                empty_parent_count=relationship.empty_parent_count,
+            )
+            for relationship in profile.relationships
         ),
     )
 

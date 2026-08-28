@@ -45,12 +45,32 @@ class TableProfile:
 
 
 @dataclass(frozen=True)
+class RelationshipProfile:
+    """Observed fanout statistics for one source foreign-key relationship."""
+
+    child_table: str
+    child_schema: str
+    child_columns: tuple[str, ...]
+    parent_table: str
+    parent_schema: str
+    parent_columns: tuple[str, ...]
+    parent_key_count: int
+    child_row_count: int
+    distinct_parent_keys_referenced: int
+    min_children_per_parent: int
+    max_children_per_parent: int
+    average_children_per_parent: float
+    empty_parent_count: int
+
+
+@dataclass(frozen=True)
 class SourceProfile:
     """Observed profile statistics for one workspace source."""
 
     source_id: str
     generated_at: datetime
     tables: tuple[TableProfile, ...]
+    relationships: tuple[RelationshipProfile, ...] = ()
 
     @property
     def total_rows(self) -> int:
@@ -84,6 +104,12 @@ def profile_postgres_source(
                 for resource in source.resources
                 if resource.resource_type == "table"
             )
+            relationship_profiles = tuple(
+                _profile_relationship(connection, resource, foreign_key)
+                for resource in source.resources
+                if resource.resource_type == "table"
+                for foreign_key in resource.foreign_keys
+            )
     finally:
         engine.dispose()
 
@@ -91,6 +117,7 @@ def profile_postgres_source(
         source_id=source.id,
         generated_at=datetime.now(UTC),
         tables=table_profiles,
+        relationships=relationship_profiles,
     )
 
 
@@ -178,6 +205,54 @@ def _profile_column(
         min_value=_optional_string(stats["min_value"]),
         max_value=_optional_string(stats["max_value"]),
         top_values=top_values,
+    )
+
+
+def _profile_relationship(connection: Any, resource, foreign_key) -> RelationshipProfile:
+    child_schema = resource.schema_name or "public"
+    parent_schema = foreign_key.referred_schema or "public"
+    child_table = _qualified_table(child_schema, resource.name)
+    parent_table = _qualified_table(parent_schema, foreign_key.referred_table)
+    child_columns = tuple(_sql_identifier(column) for column in foreign_key.columns)
+    parent_key_count = int(
+        connection.execute(text(f"SELECT COUNT(*) FROM {parent_table}")).scalar_one()
+    )
+    where_clause = " AND ".join(f"{column} IS NOT NULL" for column in child_columns)
+    grouped_counts = [
+        int(row["child_count"])
+        for row in connection.execute(
+            text(
+                "SELECT "
+                f"{', '.join(child_columns)}, "
+                "COUNT(*) AS child_count "
+                f"FROM {child_table} "
+                f"WHERE {where_clause} "
+                f"GROUP BY {', '.join(child_columns)}"
+            )
+        ).mappings()
+    ]
+    child_row_count = sum(grouped_counts)
+    distinct_parent_keys_referenced = len(grouped_counts)
+    empty_parent_count = max(0, parent_key_count - distinct_parent_keys_referenced)
+    min_children = min(grouped_counts) if grouped_counts and empty_parent_count == 0 else 0
+    max_children = max(grouped_counts) if grouped_counts else 0
+
+    return RelationshipProfile(
+        child_table=resource.name,
+        child_schema=child_schema,
+        child_columns=foreign_key.columns,
+        parent_table=foreign_key.referred_table,
+        parent_schema=parent_schema,
+        parent_columns=foreign_key.referred_columns,
+        parent_key_count=parent_key_count,
+        child_row_count=child_row_count,
+        distinct_parent_keys_referenced=distinct_parent_keys_referenced,
+        min_children_per_parent=min_children,
+        max_children_per_parent=max_children,
+        average_children_per_parent=(
+            child_row_count / parent_key_count if parent_key_count else 0.0
+        ),
+        empty_parent_count=empty_parent_count,
     )
 
 

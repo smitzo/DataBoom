@@ -57,7 +57,8 @@ Todo:
 - [x] Implement balanced fanout as the default relationship strategy.
 - [x] Keep random fanout as an explicit strategy for simulation-style runs.
 - [x] Add validation metrics for parent-child fanout distribution.
-- [ ] Store relationship profile hints from source profiling.
+- [x] Expose relationship cardinality from source profiling.
+- [ ] Persist relationship profile hints from source profiling.
 - [ ] Add profile-driven fanout that preserves observed child-count distributions.
 - [ ] Optimize parent-key storage for simple sequential primary keys.
 - [ ] Add benchmark: 1M records across five related tables.

@@ -1409,3 +1409,57 @@ This tells us that every account received at least one user.
 Optimization should not only make generation faster. It should protect useful output quality while speed improves. Fanout metrics give us a measurable guardrail when we change relationship strategies, parent-key storage, batching, or profile-driven generation.
 
 In the next stages, source profiling can record observed fanout distributions from real schemas, and quality reports can compare generated fanout against those source profiles.
+
+## Decision: add source relationship profiling before profile-driven fanout
+
+### Question
+
+Why profile source relationship fanout if generated validation already reports fanout?
+
+### Answer
+
+Generated fanout metrics describe DataBoom's output. Source relationship profiling describes the input database shape. We need both before we can make profile-driven generation credible.
+
+Generated metrics answer:
+
+"What did DataBoom produce?"
+
+Source relationship profiling answers:
+
+"What does the source relationship distribution look like?"
+
+Once both exist, a future quality report can compare them.
+
+### What Changed
+
+The source profiler now reports `RelationshipProfile` entries for live PostgreSQL sources. For each foreign-key relationship, the profiler captures:
+
+- child table and child columns,
+- parent table and parent columns,
+- number of parent keys,
+- number of non-null child rows,
+- number of distinct parent keys referenced by children,
+- minimum children per parent,
+- maximum children per parent,
+- average children per parent,
+- number of parent keys with no child rows.
+
+The workspace source profile API exposes these relationship profiles alongside table and column profiles.
+
+### Why This Is Not Yet Full Profile-Driven Generation
+
+This change only measures source fanout. It does not yet make the generator reproduce that fanout. That separation is intentional.
+
+The correct sequence is:
+
+1. Measure generated fanout.
+2. Measure source fanout.
+3. Persist source fanout snapshots.
+4. Compare generated fanout to source fanout.
+5. Add a profile-driven relationship strategy.
+
+Skipping straight to step 5 would make the generator harder to debug because we would not have the measurement layer needed to prove improvement.
+
+### Performance Note
+
+Relationship profiling groups child rows by foreign-key columns. That can be expensive on very large source tables. In production, this should support sampling, limits, and cached snapshots. For now, the profile endpoint is explicit, so operators choose when to run that heavier scan.

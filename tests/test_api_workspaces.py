@@ -8,6 +8,7 @@ from databoom.core.config import Settings
 from databoom.profiling import (
     ColumnProfile,
     ConnectionTest,
+    RelationshipProfile,
     SourceProfile,
     TableProfile,
     TopValue,
@@ -353,6 +354,23 @@ def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monk
                     ),
                 ),
             ),
+            relationships=(
+                RelationshipProfile(
+                    child_table="orders",
+                    child_schema="public",
+                    child_columns=("customer_id",),
+                    parent_table="customers",
+                    parent_schema="public",
+                    parent_columns=("id",),
+                    parent_key_count=24,
+                    child_row_count=48,
+                    distinct_parent_keys_referenced=20,
+                    min_children_per_parent=0,
+                    max_children_per_parent=5,
+                    average_children_per_parent=2.0,
+                    empty_parent_count=4,
+                ),
+            ),
         )
 
     monkeypatch.setattr("databoom.api.routes.profile_postgres_source", profile_source)
@@ -371,6 +389,9 @@ def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monk
     assert payload["tables"][0]["columns"][0]["top_values"] == [
         {"value": "active", "count": 18}
     ]
+    assert payload["relationships"][0]["child_table"] == "orders"
+    assert payload["relationships"][0]["parent_table"] == "customers"
+    assert payload["relationships"][0]["empty_parent_count"] == 4
 
 
 def test_workspace_connection_test_returns_probe_result(tmp_path: Path, monkeypatch) -> None:
