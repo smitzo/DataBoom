@@ -31,6 +31,11 @@ from databoom.api.workspaces import (
     workspace_source_to_payload,
 )
 from databoom.core.config import Settings
+from databoom.profiling import (
+    SourceProfile,
+    source_profile_from_payload,
+    source_profile_to_payload,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,6 +77,15 @@ workspace_sources_table = Table(
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
+source_profiles_table = Table(
+    "databoom_source_profiles",
+    metadata,
+    Column("source_id", String(120), primary_key=True),
+    Column("payload", JSON, nullable=False),
+    Column("generated_at", DateTime(timezone=True), nullable=False, index=True),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
 
 class StateStore(Protocol):
     """Persistence boundary for API state."""
@@ -109,6 +123,12 @@ class StateStore(Protocol):
     def get_workspace_source(self, source_id: str) -> WorkspaceSource | None:
         """Return one workspace source by ID."""
 
+    def save_source_profile(self, profile: SourceProfile) -> None:
+        """Persist the latest source profile snapshot."""
+
+    def get_source_profile(self, source_id: str) -> SourceProfile | None:
+        """Return the latest source profile snapshot for one source."""
+
 
 class MemoryStateStore:
     """In-process state store for tests and fallback local development."""
@@ -120,6 +140,7 @@ class MemoryStateStore:
         self._workspace_sources: dict[str, WorkspaceSource] = {
             source.id: source for source in default_workspace_sources()
         }
+        self._source_profiles: dict[str, SourceProfile] = {}
 
     def save_session(self, token: str, user: DemoUserResponse) -> None:
         self._sessions[token] = user
@@ -158,6 +179,12 @@ class MemoryStateStore:
 
     def get_workspace_source(self, source_id: str) -> WorkspaceSource | None:
         return self._workspace_sources.get(source_id)
+
+    def save_source_profile(self, profile: SourceProfile) -> None:
+        self._source_profiles[profile.source_id] = profile
+
+    def get_source_profile(self, source_id: str) -> SourceProfile | None:
+        return self._source_profiles.get(source_id)
 
 
 class SQLAlchemyStateStore:
@@ -287,6 +314,32 @@ class SQLAlchemyStateStore:
                 )
             ).scalar_one_or_none()
         return workspace_source_from_payload(payload) if payload else None
+
+    def save_source_profile(self, profile: SourceProfile) -> None:
+        payload = source_profile_to_payload(profile)
+        with self.engine.begin() as connection:
+            connection.execute(
+                delete(source_profiles_table).where(
+                    source_profiles_table.c.source_id == profile.source_id
+                )
+            )
+            connection.execute(
+                insert(source_profiles_table).values(
+                    source_id=profile.source_id,
+                    payload=payload,
+                    generated_at=profile.generated_at,
+                    updated_at=datetime.now(UTC),
+                )
+            )
+
+    def get_source_profile(self, source_id: str) -> SourceProfile | None:
+        with self.engine.begin() as connection:
+            payload = connection.execute(
+                select(source_profiles_table.c.payload).where(
+                    source_profiles_table.c.source_id == source_id
+                )
+            ).scalar_one_or_none()
+        return source_profile_from_payload(payload) if payload else None
 
     def _seed_workspace_sources(self) -> None:
         with self.engine.begin() as connection:

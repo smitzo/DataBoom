@@ -58,7 +58,7 @@ Todo:
 - [x] Keep random fanout as an explicit strategy for simulation-style runs.
 - [x] Add validation metrics for parent-child fanout distribution.
 - [x] Expose relationship cardinality from source profiling.
-- [ ] Persist relationship profile hints from source profiling.
+- [x] Persist relationship profile hints from source profiling.
 - [ ] Add profile-driven fanout that preserves observed child-count distributions.
 - [ ] Optimize parent-key storage for simple sequential primary keys.
 - [ ] Add benchmark: 1M records across five related tables.
@@ -78,7 +78,7 @@ Objective: move from realistic-looking values to source-shaped values.
 
 Todo:
 
-- [ ] Persist source profile snapshots with freshness timestamps.
+- [x] Persist source profile snapshots with freshness timestamps.
 - [ ] Add `ColumnProfileHint` model for null rate, distinct count, min/max, top values, and sample count.
 - [ ] Add categorical weighted sampling from top values.
 - [ ] Add numeric range and distribution-aware sampling.
@@ -206,7 +206,7 @@ Focus only on backend engine quality and measurable performance.
 
 Focus on profile-driven generation.
 
-1. Persist source profile snapshots.
+1. Persist source profile snapshots. `complete`
 2. Add profile hint models.
 3. Use top values, null rates, and ranges during value generation.
 4. Add quality report comparing source profile vs generated output.

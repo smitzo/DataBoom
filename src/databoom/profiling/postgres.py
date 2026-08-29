@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -135,6 +136,121 @@ def test_postgres_connection(database_url: str) -> ConnectionTest:
         ok=True,
         message="connection ok",
         checked_at=datetime.now(UTC),
+    )
+
+
+def source_profile_to_payload(profile: SourceProfile) -> dict[str, Any]:
+    """Serialize a source profile snapshot into JSON-compatible storage."""
+
+    return {
+        "source_id": profile.source_id,
+        "generated_at": profile.generated_at.isoformat(),
+        "total_rows": profile.total_rows,
+        "tables": [
+            {
+                "name": table.name,
+                "schema_name": table.schema_name,
+                "row_count": table.row_count,
+                "columns": [
+                    {
+                        "name": column.name,
+                        "data_type": column.data_type,
+                        "row_count": column.row_count,
+                        "null_count": column.null_count,
+                        "null_rate": column.null_rate,
+                        "distinct_count": column.distinct_count,
+                        "min_value": column.min_value,
+                        "max_value": column.max_value,
+                        "top_values": [
+                            {"value": top_value.value, "count": top_value.count}
+                            for top_value in column.top_values
+                        ],
+                    }
+                    for column in table.columns
+                ],
+            }
+            for table in profile.tables
+        ],
+        "relationships": [
+            {
+                "child_table": relationship.child_table,
+                "child_schema": relationship.child_schema,
+                "child_columns": list(relationship.child_columns),
+                "parent_table": relationship.parent_table,
+                "parent_schema": relationship.parent_schema,
+                "parent_columns": list(relationship.parent_columns),
+                "parent_key_count": relationship.parent_key_count,
+                "child_row_count": relationship.child_row_count,
+                "distinct_parent_keys_referenced": (
+                    relationship.distinct_parent_keys_referenced
+                ),
+                "min_children_per_parent": relationship.min_children_per_parent,
+                "max_children_per_parent": relationship.max_children_per_parent,
+                "average_children_per_parent": relationship.average_children_per_parent,
+                "empty_parent_count": relationship.empty_parent_count,
+            }
+            for relationship in profile.relationships
+        ],
+    }
+
+
+def source_profile_from_payload(payload: Mapping[str, Any]) -> SourceProfile:
+    """Hydrate a source profile snapshot from JSON-compatible storage."""
+
+    generated_at = payload["generated_at"]
+    if isinstance(generated_at, str):
+        generated_at = datetime.fromisoformat(generated_at)
+
+    return SourceProfile(
+        source_id=str(payload["source_id"]),
+        generated_at=generated_at,
+        tables=tuple(
+            TableProfile(
+                name=str(table["name"]),
+                schema_name=str(table["schema_name"]),
+                row_count=int(table["row_count"]),
+                columns=tuple(
+                    ColumnProfile(
+                        name=str(column["name"]),
+                        data_type=str(column["data_type"]),
+                        row_count=int(column["row_count"]),
+                        null_count=int(column["null_count"]),
+                        null_rate=float(column["null_rate"]),
+                        distinct_count=int(column["distinct_count"]),
+                        min_value=_optional_string(column.get("min_value")),
+                        max_value=_optional_string(column.get("max_value")),
+                        top_values=tuple(
+                            TopValue(value=str(value["value"]), count=int(value["count"]))
+                            for value in column.get("top_values", ())
+                        ),
+                    )
+                    for column in table.get("columns", ())
+                ),
+            )
+            for table in payload.get("tables", ())
+        ),
+        relationships=tuple(
+            RelationshipProfile(
+                child_table=str(relationship["child_table"]),
+                child_schema=str(relationship["child_schema"]),
+                child_columns=tuple(relationship["child_columns"]),
+                parent_table=str(relationship["parent_table"]),
+                parent_schema=str(relationship["parent_schema"]),
+                parent_columns=tuple(relationship["parent_columns"]),
+                parent_key_count=int(relationship["parent_key_count"]),
+                child_row_count=int(relationship["child_row_count"]),
+                distinct_parent_keys_referenced=int(
+                    relationship["distinct_parent_keys_referenced"]
+                ),
+                min_children_per_parent=int(relationship["min_children_per_parent"]),
+                max_children_per_parent=int(relationship["max_children_per_parent"]),
+                average_children_per_parent=float(
+                    relationship["average_children_per_parent"]
+                ),
+                empty_parent_count=int(relationship["empty_parent_count"]),
+            )
+            for relationship in payload.get("relationships", ())
+        ),
     )
 
 

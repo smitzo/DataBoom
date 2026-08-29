@@ -314,6 +314,35 @@ def profile_workspace_source(
     except SQLAlchemyError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
+    _state_store(request).save_source_profile(profile)
+    return _workspace_source_profile_response(profile)
+
+
+@router.get(
+    "/workspace-sources/{source_id}/profile",
+    response_model=WorkspaceSourceProfileResponse,
+    tags=["workspaces"],
+)
+def workspace_source_profile_snapshot(
+    request: Request,
+    source_id: str,
+    user: DemoUserResponse = demo_user_dependency,
+) -> WorkspaceSourceProfileResponse:
+    """Return the latest persisted source profile snapshot."""
+
+    store = _state_store(request)
+    if store.get_workspace_source(source_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="workspace source not found",
+        )
+
+    profile = store.get_source_profile(source_id)
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="source profile snapshot not found",
+        )
     return _workspace_source_profile_response(profile)
 
 

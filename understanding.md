@@ -1463,3 +1463,65 @@ Skipping straight to step 5 would make the generator harder to debug because we 
 ### Performance Note
 
 Relationship profiling groups child rows by foreign-key columns. That can be expensive on very large source tables. In production, this should support sampling, limits, and cached snapshots. For now, the profile endpoint is explicit, so operators choose when to run that heavier scan.
+
+## Decision: persist latest source profile snapshots
+
+### Question
+
+Why store source profiles instead of profiling the database every time generation runs?
+
+### Answer
+
+Profiling a source database is measurement work. Generation is production work. If we mix the two on every run, generation latency becomes dependent on the size and load of the source database.
+
+For example, column profiling may run `COUNT`, `COUNT DISTINCT`, `MIN`, `MAX`, and top-value grouping queries. Relationship profiling may group child rows by foreign-key values. These operations are useful, but they are not free. On a small demo database they finish quickly. On a real customer database with millions of rows, they can take seconds or minutes depending on indexing, table size, network latency, and database load.
+
+By persisting the latest profile snapshot, DataBoom gets a clean workflow:
+
+1. Refresh schema when table structure changes.
+2. Profile source data when an operator wants updated statistics.
+3. Store the profile snapshot with `generated_at`.
+4. Let generation and quality checks read the stored snapshot.
+
+That means a generation run can use known source hints without scanning the live source every time.
+
+### What Changed
+
+DataBoom now stores the latest source profile per workspace source in the API state store.
+
+In memory-backed mode, the profile snapshot is kept in process. In SQL-backed mode, it is stored as JSON in the state database. The snapshot includes:
+
+- table row counts,
+- column null rates,
+- distinct counts,
+- min and max values,
+- top values,
+- relationship fanout statistics.
+
+The profile endpoint now saves the snapshot after a successful source scan, and a read endpoint returns the latest stored profile.
+
+### Why This Improves Architecture
+
+This introduces a clear boundary:
+
+- `profiling` knows how to measure source data and serialize profile snapshots,
+- `state` knows how to persist and retrieve the latest snapshot,
+- `routes` only coordinates the HTTP flow,
+- future `generation` and `quality` modules can consume profile hints without knowing where they were stored.
+
+That separation matters because profile-driven generation should not depend on a live database connection. A generated dataset should be reproducible from a schema, seed, row counts, and a profile snapshot.
+
+### Performance Impact
+
+The main latency improvement is avoiding repeated source scans. If source profiling takes 5 seconds and generation takes 1 second, running both every time makes each generation feel like a 6 second job. With a cached profile, repeated generation can stay close to the 1 second path until the profile needs refreshing.
+
+The exact numbers will depend on the source database and dataset size, so the next benchmark work should measure:
+
+- profile scan time,
+- cached generation time,
+- uncached generation plus profiling time,
+- how snapshot size grows with table and column count.
+
+### Why Only The Latest Snapshot For Now?
+
+A profile history table would be useful later for drift analysis. But for the current engine optimization path, the planner only needs one current profile to generate better hints. Keeping the first version as "latest snapshot per source" gives us the value without adding retention policy, cleanup jobs, or UI complexity before they are needed.

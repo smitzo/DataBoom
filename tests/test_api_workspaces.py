@@ -393,6 +393,27 @@ def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monk
     assert payload["relationships"][0]["parent_table"] == "customers"
     assert payload["relationships"][0]["empty_parent_count"] == 4
 
+    snapshot = client.get(
+        "/workspace-sources/commerce-store/profile",
+        headers=_auth_headers(token),
+    )
+    assert snapshot.status_code == 200, snapshot.text
+    assert snapshot.json() == payload
+
+
+def test_workspace_source_profile_snapshot_returns_404_when_missing(tmp_path: Path) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    response = client.get(
+        "/workspace-sources/commerce-store/profile",
+        headers=_auth_headers(token),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "source profile snapshot not found"
+
 
 def test_workspace_connection_test_returns_probe_result(tmp_path: Path, monkeypatch) -> None:
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
