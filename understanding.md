@@ -1525,3 +1525,71 @@ The exact numbers will depend on the source database and dataset size, so the ne
 ### Why Only The Latest Snapshot For Now?
 
 A profile history table would be useful later for drift analysis. But for the current engine optimization path, the planner only needs one current profile to generate better hints. Keeping the first version as "latest snapshot per source" gives us the value without adding retention policy, cleanup jobs, or UI complexity before they are needed.
+
+## Decision: compress sequential parent keys in the foreign-key registry
+
+### Question
+
+Why optimize the foreign-key registry if generation was already correct?
+
+### Answer
+
+Correctness and scale are different problems.
+
+The generator must remember parent primary keys so child rows can reference valid parents. For example, accounts must be generated before transactions, and every transaction needs an existing `account_id`.
+
+The first implementation stored every parent key as a tuple in a Python list:
+
+```text
+[(1,), (2,), (3,), ...]
+```
+
+That works, but for the most common relational schema pattern, it wastes memory. Most tables use a single integer primary key where generated IDs are simply:
+
+```text
+1, 2, 3, 4, 5, ...
+```
+
+For one million parent rows, storing one million Python tuples is far heavier than remembering:
+
+```text
+sequential_count = 1_000_000
+```
+
+The child selector can still retrieve key number `314` by returning `(315,)`, because row indexes are zero-based and generated IDs are one-based.
+
+### What Changed
+
+DataBoom now uses a `ParentKeyStore` inside the foreign-key registry.
+
+For sequential single-column integer keys, it stores only a count. No tuple list is materialized.
+
+If the key shape stops matching that simple pattern, the store falls back to regular materialized storage. That protects cases like:
+
+- composite primary keys,
+- UUID primary keys,
+- string primary keys,
+- imported or future non-sequential key strategies.
+
+### Why This Is Safe
+
+The optimization does not change the public row output. It only changes how parent keys are stored internally.
+
+Balanced fanout and random fanout still ask the registry for "the key at index N". The registry decides whether that key comes from:
+
+- a compressed sequential range, or
+- a materialized tuple list.
+
+That means generation behavior stays deterministic while memory usage improves for the common case.
+
+### Performance Impact
+
+The biggest gain is memory pressure, not CPU.
+
+Before this change, one million generated parent IDs meant one million tuple objects plus one million integer references in a list. After this change, the registry can represent that same parent-key set with a single integer count.
+
+Lower memory pressure helps large runs because Python spends less time allocating objects, keeping them alive, and eventually cleaning them up. It also leaves more memory available for export buffers, validation, and API responses.
+
+### Tradeoff
+
+The fallback path must materialize previously compressed keys if a sequence breaks. That is acceptable because sequence breaks should be rare for generated numeric primary keys. If a future generator deliberately produces non-sequential parent IDs, correctness matters more than compression, so materializing the keys is the right behavior.

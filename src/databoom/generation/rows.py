@@ -33,10 +33,50 @@ class GeneratedRecord:
 
 
 @dataclass
+class ParentKeyStore:
+    """Store parent keys, compressing the common sequential integer key path."""
+
+    values: list[tuple[Any, ...]] = field(default_factory=list)
+    sequential_count: int = 0
+    compressed_sequential: bool = True
+
+    def append(self, key: tuple[Any, ...]) -> None:
+        if self.compressed_sequential and _is_next_sequential_key(
+            key,
+            self.sequential_count + 1,
+        ):
+            self.sequential_count += 1
+            return
+
+        if self.compressed_sequential:
+            self.values = [(value,) for value in range(1, self.sequential_count + 1)]
+            self.compressed_sequential = False
+        self.values.append(key)
+
+    def __len__(self) -> int:
+        if self.compressed_sequential:
+            return self.sequential_count
+        return len(self.values)
+
+    def get(self, index: int) -> tuple[Any, ...]:
+        if self.compressed_sequential:
+            if not 0 <= index < self.sequential_count:
+                raise IndexError(index)
+            return (index + 1,)
+        return self.values[index]
+
+    @property
+    def stored_value_count(self) -> int:
+        """Return how many key tuples are materialized in memory."""
+
+        return len(self.values)
+
+
+@dataclass
 class ForeignKeyRegistry:
     """Store generated parent key values for child-table foreign keys."""
 
-    keys: dict[tuple[str, tuple[str, ...]], list[tuple[Any, ...]]] = field(default_factory=dict)
+    keys: dict[tuple[str, tuple[str, ...]], ParentKeyStore] = field(default_factory=dict)
     balanced_plans: dict[
         tuple[str, str, tuple[str, ...], tuple[str, ...]],
         tuple[int, int],
@@ -50,7 +90,9 @@ class ForeignKeyRegistry:
             return
 
         key = (table.table_name, primary_key_columns)
-        self.keys.setdefault(key, []).append(tuple(row[column] for column in primary_key_columns))
+        self.keys.setdefault(key, ParentKeyStore()).append(
+            tuple(row[column] for column in primary_key_columns)
+        )
 
     def choose(
         self,
@@ -62,8 +104,8 @@ class ForeignKeyRegistry:
         row_index: int,
     ) -> tuple[Any, ...]:
         key = (source.parent_table, source.parent_columns)
-        values = self.keys.get(key, [])
-        if not values:
+        store = self.keys.get(key)
+        if store is None or len(store) == 0:
             raise RowGenerationError(
                 f"no generated parent keys for {source.parent_table}"
                 f"({', '.join(source.parent_columns)})"
@@ -76,16 +118,16 @@ class ForeignKeyRegistry:
                 source.parent_table,
                 row_index,
             )
-            return values[stream.randrange(len(values))]
+            return store.get(stream.randrange(len(store)))
 
         index = self._balanced_index(
             source,
             seed_manager=seed_manager,
             table_name=table_name,
-            parent_count=len(values),
+            parent_count=len(store),
             row_index=row_index,
         )
-        return values[index]
+        return store.get(index)
 
     def _balanced_index(
         self,
@@ -216,3 +258,11 @@ def _coprime_stride(parent_count: int, candidate: int) -> int:
         if stride == 0:
             stride = 1
     return stride
+
+
+def _is_next_sequential_key(key: tuple[Any, ...], expected_value: int) -> bool:
+    if len(key) != 1:
+        return False
+
+    value = key[0]
+    return isinstance(value, int) and not isinstance(value, bool) and value == expected_value

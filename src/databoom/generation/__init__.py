@@ -22,6 +22,7 @@ from databoom.generation.rows import (
     ForeignKeyRegistry,
     GeneratedRecord,
     GeneratedRow,
+    ParentKeyStore,
     RowGenerationError,
     RowGenerator,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "GenerationPlan",
     "HealthcareValueProvider",
     "OutputFormat",
+    "ParentKeyStore",
     "GeneratedValue",
     "RowGenerationError",
     "RowGenerator",

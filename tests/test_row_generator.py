@@ -2,6 +2,7 @@ import pytest
 
 from databoom.generation import (
     ForeignKeySelectionStrategy,
+    ParentKeyStore,
     RowGenerationError,
     RowGenerator,
     create_generation_plan,
@@ -63,6 +64,27 @@ def test_row_generator_balances_foreign_key_fanout_by_default() -> None:
     }
 
     assert fanout == {1: 3, 2: 3, 3: 3}
+
+
+def test_row_generator_keeps_sequential_parent_keys_compressed() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE accounts (id bigint PRIMARY KEY);
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            account_id bigint NOT NULL REFERENCES accounts(id)
+        );
+        """
+    )
+    plan = create_generation_plan(database, row_counts={"accounts": 5, "users": 2}, seed=42)
+    generator = RowGenerator.from_plan(plan)
+
+    list(generator.iter_records())
+    store = generator.foreign_keys.keys[("public.accounts", ("id",))]
+
+    assert len(store) == 5
+    assert store.compressed_sequential is True
+    assert store.stored_value_count == 0
 
 
 def test_row_generator_keeps_random_foreign_key_strategy_available() -> None:
@@ -152,3 +174,29 @@ def test_row_generator_rejects_child_rows_without_parent_keys() -> None:
 
     with pytest.raises(RowGenerationError, match="no generated parent keys"):
         list(RowGenerator.from_plan(plan).iter_records())
+
+
+def test_parent_key_store_compresses_sequential_integer_keys() -> None:
+    store = ParentKeyStore()
+
+    for value in range(1, 6):
+        store.append((value,))
+
+    assert len(store) == 5
+    assert store.compressed_sequential is True
+    assert store.stored_value_count == 0
+    assert store.get(3) == (4,)
+
+
+def test_parent_key_store_materializes_when_sequence_breaks() -> None:
+    store = ParentKeyStore()
+
+    store.append((1,))
+    store.append((2,))
+    store.append((9,))
+
+    assert len(store) == 3
+    assert store.compressed_sequential is False
+    assert store.stored_value_count == 3
+    assert store.get(0) == (1,)
+    assert store.get(2) == (9,)

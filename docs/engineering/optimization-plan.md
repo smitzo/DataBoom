@@ -60,7 +60,7 @@ Todo:
 - [x] Expose relationship cardinality from source profiling.
 - [x] Persist relationship profile hints from source profiling.
 - [ ] Add profile-driven fanout that preserves observed child-count distributions.
-- [ ] Optimize parent-key storage for simple sequential primary keys.
+- [x] Optimize parent-key storage for simple sequential primary keys.
 - [ ] Add benchmark: 1M records across five related tables.
 - [ ] Add benchmark: 1M records with composite keys.
 
