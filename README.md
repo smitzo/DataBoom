@@ -38,6 +38,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - Refreshed relational sources retain schema names, column details, primary keys, foreign keys, unique constraints, and refresh timestamps.
 - 100k-record Phase 1 benchmark.
 - 500k-record Phase 2 benchmark baseline.
+- 1M-record five-table relational benchmark harness.
 - Next.js and Tailwind frontend workbench.
 
 ## Roadmap Summary
@@ -116,6 +117,18 @@ Run the Phase 2 500k benchmark:
 
 ```bash
 .venv/bin/python benchmarks/phase2_500k.py --overwrite
+```
+
+Smoke-test the 1M benchmark shape with scaled row counts:
+
+```bash
+.venv/bin/python benchmarks/relational_1m.py --scale 0.001 --overwrite
+```
+
+Run the full 1M relational benchmark:
+
+```bash
+.venv/bin/python benchmarks/relational_1m.py --overwrite
 ```
 
 Run the API locally:

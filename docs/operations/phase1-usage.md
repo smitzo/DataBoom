@@ -204,6 +204,30 @@ Current baseline from this environment:
 - 35.96 MB artifact size
 - validation passed
 
+Smoke-test the 1M five-table relational benchmark shape with scaled row counts:
+
+```bash
+.venv/bin/python benchmarks/relational_1m.py --scale 0.001 --overwrite
+```
+
+Run the full 1M five-table relational benchmark:
+
+```bash
+.venv/bin/python benchmarks/relational_1m.py --overwrite
+```
+
+The benchmark writes generated artifacts under:
+
+```text
+artifacts/benchmarks/relational_1m
+```
+
+It also writes:
+
+```text
+artifacts/benchmarks/relational_1m/metrics.json
+```
+
 Use `--skip-validation` only for export-only experiments. Official benchmark numbers should keep validation enabled.
 
 ## Docker Compose

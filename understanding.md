@@ -1593,3 +1593,80 @@ Lower memory pressure helps large runs because Python spends less time allocatin
 ### Tradeoff
 
 The fallback path must materialize previously compressed keys if a sequence breaks. That is acceptable because sequence breaks should be rare for generated numeric primary keys. If a future generator deliberately produces non-sequential parent IDs, correctness matters more than compression, so materializing the keys is the right behavior.
+
+## Decision: add a one-million-row relational benchmark harness
+
+### Question
+
+Why add another benchmark if 100k and 500k benchmarks already exist?
+
+### Answer
+
+The 100k and 500k benchmarks prove early scale, but they do not fully answer whether the engine shape is ready for million-row workloads. One million rows is where memory pressure, artifact size, validation time, and relationship storage choices become harder to hand-wave.
+
+A benchmark is not just a demo. It is a repeatable contract that says:
+
+- this schema shape was tested,
+- these row counts were tested,
+- these output formats were tested,
+- parse, plan, export, validation, memory, and artifact-size timings were recorded.
+
+Without that contract, performance discussions become vague.
+
+### What Changed
+
+DataBoom now has a `benchmarks/relational_1m.py` script for a five-table relational workload:
+
+- `customers`,
+- `products`,
+- `orders`,
+- `order_items`,
+- `payments`.
+
+The default row counts add up to exactly 1,000,000 records. The relationships exercise parent-child selection across multiple paths: orders reference customers, order items reference orders and products, and payments reference orders.
+
+### Why Include `--scale`?
+
+The script supports `--scale` for smoke tests. A smoke run checks that the benchmark code path works without generating the full million rows.
+
+The official benchmark should use:
+
+```bash
+.venv/bin/python benchmarks/relational_1m.py --overwrite
+```
+
+A quick local smoke check can use:
+
+```bash
+.venv/bin/python benchmarks/relational_1m.py --scale 0.001 --overwrite
+```
+
+This distinction matters. Smoke tests prove the script works. Full-scale runs produce benchmark numbers.
+
+### Why This Helps Optimization
+
+Future changes can now compare against the same one-million-row workload. That gives us a clean way to evaluate improvements like:
+
+- parent-key compression,
+- chunked export,
+- larger CSV buffers,
+- profile-driven fanout,
+- validation streaming,
+- future direct database loading.
+
+The benchmark does not automatically make the engine faster. It makes speed measurable, which is the first requirement for serious optimization.
+
+### Smoke Result From This Commit
+
+I ran the benchmark at `--scale 0.001`, which generated 1,000 records across the same five-table shape.
+
+Result from this environment:
+
+- total time: 0.365 seconds,
+- export time: 0.317 seconds,
+- validation time: 0.027 seconds,
+- peak memory: 0.778 MB,
+- artifact size: 0.041 MB,
+- validation passed.
+
+This is not the official 1M benchmark number. It proves the benchmark path works quickly after implementation.

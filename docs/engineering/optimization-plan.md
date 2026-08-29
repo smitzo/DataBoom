@@ -61,7 +61,7 @@ Todo:
 - [x] Persist relationship profile hints from source profiling.
 - [ ] Add profile-driven fanout that preserves observed child-count distributions.
 - [x] Optimize parent-key storage for simple sequential primary keys.
-- [ ] Add benchmark: 1M records across five related tables.
+- [x] Add benchmark: 1M records across five related tables.
 - [ ] Add benchmark: 1M records with composite keys.
 
 Recommended commit sequence:
@@ -199,7 +199,7 @@ Focus only on backend engine quality and measurable performance.
 1. Add relationship strategy to `GenerationPlan`. `complete`
 2. Implement balanced fanout. `complete`
 3. Add fanout validation/quality metrics. `complete`
-4. Add 1M relational benchmark.
+4. Add 1M relational benchmark. `complete`
 5. Update `understanding.md` with why the strategy improves quality and performance.
 
 ### Second Implementation Batch
