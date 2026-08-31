@@ -80,7 +80,7 @@ Objective: move from realistic-looking values to source-shaped values.
 Todo:
 
 - [x] Persist source profile snapshots with freshness timestamps.
-- [ ] Add `ColumnProfileHint` model for null rate, distinct count, min/max, top values, and sample count.
+- [x] Add `ColumnProfileHint` model for null rate, distinct count, min/max, top values, and sample count.
 - [ ] Add categorical weighted sampling from top values.
 - [ ] Add numeric range and distribution-aware sampling.
 - [ ] Add datetime range and seasonality hints.

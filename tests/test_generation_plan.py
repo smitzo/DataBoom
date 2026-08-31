@@ -2,6 +2,7 @@ import pytest
 
 from databoom.generation import (
     ChildCountFrequency,
+    ColumnProfileHint,
     ColumnStrategy,
     ForeignKeySelectionStrategy,
     OutputFormat,
@@ -103,3 +104,29 @@ def test_generation_plan_attaches_relationship_fanout_hints() -> None:
     assert plan.foreign_key_strategy == ForeignKeySelectionStrategy.PROFILE_DRIVEN
     assert source is not None
     assert source.fanout_hint == hint
+
+
+def test_generation_plan_attaches_column_profile_hints() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE customers (
+            id bigint PRIMARY KEY,
+            status text NOT NULL
+        );
+        """
+    )
+    hint = ColumnProfileHint(
+        table_name="public.customers",
+        column_name="status",
+        sample_count=100,
+        null_rate=0.0,
+        distinct_count=3,
+        min_value="active",
+        max_value="pending",
+    )
+
+    plan = create_generation_plan(database, column_hints=(hint,))
+    column = plan.table_plan("customers").column_plan("status")
+
+    assert plan.column_hints == (hint,)
+    assert column.profile_hint == hint

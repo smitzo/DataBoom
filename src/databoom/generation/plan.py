@@ -75,6 +75,34 @@ class RelationshipFanoutHint(PlanModel):
         return value
 
 
+class TopValueHint(PlanModel):
+    """Frequent source value for one profiled column."""
+
+    value: str
+    count: int = Field(gt=0)
+
+
+class ColumnProfileHint(PlanModel):
+    """Observed source profile for one table column."""
+
+    table_name: str
+    column_name: str
+    sample_count: int = Field(ge=0)
+    null_rate: float = Field(ge=0.0, le=1.0)
+    distinct_count: int = Field(ge=0)
+    min_value: str | None = None
+    max_value: str | None = None
+    top_values: tuple[TopValueHint, ...] = ()
+
+    @field_validator("table_name", "column_name")
+    @classmethod
+    def require_identifier(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("column profile hint identifiers cannot be empty")
+        return value
+
+
 class ForeignKeySource(PlanModel):
     """Source table and columns for a foreign-key column plan."""
 
@@ -94,6 +122,7 @@ class ColumnPlan(PlanModel):
     nullable: bool
     default: str | None = None
     foreign_key_source: ForeignKeySource | None = None
+    profile_hint: ColumnProfileHint | None = None
 
     @model_validator(mode="after")
     def validate_foreign_key_strategy(self) -> Self:
@@ -130,6 +159,7 @@ class GenerationPlan(PlanModel):
         ForeignKeySelectionStrategy.BALANCED_FANOUT
     )
     relationship_hints: tuple[RelationshipFanoutHint, ...] = ()
+    column_hints: tuple[ColumnProfileHint, ...] = ()
 
     @field_validator("output_formats")
     @classmethod
@@ -161,6 +191,7 @@ def create_generation_plan(
         ForeignKeySelectionStrategy.BALANCED_FANOUT
     ),
     relationship_hints: tuple[RelationshipFanoutHint, ...] = (),
+    column_hints: tuple[ColumnProfileHint, ...] = (),
 ) -> GenerationPlan:
     """Create a deterministic generation plan from schema metadata."""
 
@@ -178,6 +209,7 @@ def create_generation_plan(
             row_counts,
             default_row_count,
             relationship_hints,
+            column_hints,
         )
         for table in graph.dependency_order()
     )
@@ -188,6 +220,7 @@ def create_generation_plan(
         tables=table_plans,
         foreign_key_strategy=foreign_key_strategy,
         relationship_hints=relationship_hints,
+        column_hints=column_hints,
     )
 
 
@@ -197,6 +230,7 @@ def _build_table_plan(
     row_counts: dict[str, int],
     default_row_count: int,
     relationship_hints: tuple[RelationshipFanoutHint, ...],
+    column_hints: tuple[ColumnProfileHint, ...],
 ) -> TablePlan:
     foreign_key_columns = {
         column_name: (
@@ -215,7 +249,13 @@ def _build_table_plan(
             edge.parent_table for edge in dependencies if not edge.is_self_reference
         ),
         columns=tuple(
-            _build_column_plan(column, primary_key_columns, foreign_key_columns)
+            _build_column_plan(
+                column,
+                table,
+                primary_key_columns,
+                foreign_key_columns,
+                column_hints,
+            )
             for column in table.columns
         ),
     )
@@ -223,9 +263,12 @@ def _build_table_plan(
 
 def _build_column_plan(
     column: ColumnSchema,
+    table: TableSchema,
     primary_key_columns: set[str],
     foreign_key_columns,
+    column_hints: tuple[ColumnProfileHint, ...],
 ) -> ColumnPlan:
+    profile_hint = _column_hint_for_column(table, column, column_hints)
     if column.name in primary_key_columns:
         return ColumnPlan(
             name=column.name,
@@ -233,6 +276,7 @@ def _build_column_plan(
             type_family=column.data_type.family,
             nullable=column.nullable,
             default=column.default,
+            profile_hint=profile_hint,
         )
     if column.name in foreign_key_columns:
         edge, fanout_hint = foreign_key_columns[column.name]
@@ -242,6 +286,7 @@ def _build_column_plan(
             type_family=column.data_type.family,
             nullable=column.nullable,
             default=column.default,
+            profile_hint=profile_hint,
             foreign_key_source=ForeignKeySource(
                 parent_table=edge.parent_table,
                 child_columns=edge.child_columns,
@@ -256,6 +301,7 @@ def _build_column_plan(
         type_family=column.data_type.family,
         nullable=column.nullable,
         default=column.default,
+        profile_hint=profile_hint,
     )
 
 
@@ -284,6 +330,20 @@ def _relationship_hint_for_edge(
             and _table_matches(hint.parent_table, edge.parent_table)
             and hint.child_columns == edge.child_columns
             and hint.parent_columns == edge.parent_columns
+        ):
+            return hint
+    return None
+
+
+def _column_hint_for_column(
+    table: TableSchema,
+    column: ColumnSchema,
+    column_hints: tuple[ColumnProfileHint, ...],
+) -> ColumnProfileHint | None:
+    for hint in column_hints:
+        if (
+            _table_matches(hint.table_name, table.qualified_name)
+            and hint.column_name == column.name
         ):
             return hint
     return None

@@ -34,9 +34,11 @@ from databoom.document import DocumentCollectionSpec, DocumentFieldSpec, Documen
 from databoom.export import ArtifactExporter, ExportManifest
 from databoom.generation import (
     ChildCountFrequency,
+    ColumnProfileHint,
     ForeignKeySelectionStrategy,
     GenerationPlan,
     RelationshipFanoutHint,
+    TopValueHint,
     create_generation_plan,
 )
 from databoom.generation.plan import OutputFormat
@@ -57,6 +59,7 @@ def execute_generation_run(
     progress_callback: RunProgressCallback | None = None,
     foreign_key_strategy: ForeignKeySelectionStrategy | None = None,
     relationship_hints: tuple[RelationshipFanoutHint, ...] = (),
+    column_hints: tuple[ColumnProfileHint, ...] = (),
 ) -> GenerationRunResponse:
     """Execute a synchronous local generation run."""
 
@@ -84,6 +87,7 @@ def execute_generation_run(
         output_formats=request.output_formats,
         foreign_key_strategy=effective_foreign_key_strategy,
         relationship_hints=relationship_hints,
+        column_hints=column_hints,
     )
     timings.append(_completed_timing("build_plan", plan_started))
 
@@ -137,6 +141,7 @@ def execute_product_generation_run(
             if schema_ddl is None:
                 raise ValueError("relational product is missing schema DDL")
             relationship_hints = _relationship_hints_from_source_profile(source_profile)
+            column_hints = _column_hints_from_source_profile(source_profile)
             return execute_generation_run(
                 GenerationRunRequest(
                     schema_ddl=schema_ddl,
@@ -155,6 +160,7 @@ def execute_product_generation_run(
                 artifact_dir=artifact_dir,
                 progress_callback=progress_callback,
                 relationship_hints=relationship_hints,
+                column_hints=column_hints,
             )
         case DataProductKind.DOCUMENT:
             return execute_document_generation_run(
@@ -518,6 +524,31 @@ def _relationship_hints_from_source_profile(
             ),
         )
         for relationship in source_profile.relationships
+    )
+
+
+def _column_hints_from_source_profile(
+    source_profile: SourceProfile | None,
+) -> tuple[ColumnProfileHint, ...]:
+    if source_profile is None:
+        return ()
+
+    return tuple(
+        ColumnProfileHint(
+            table_name=_qualified_table(table.schema_name, table.name),
+            column_name=column.name,
+            sample_count=column.row_count,
+            null_rate=column.null_rate,
+            distinct_count=column.distinct_count,
+            min_value=column.min_value,
+            max_value=column.max_value,
+            top_values=tuple(
+                TopValueHint(value=top_value.value, count=top_value.count)
+                for top_value in column.top_values
+            ),
+        )
+        for table in source_profile.tables
+        for column in table.columns
     )
 
 

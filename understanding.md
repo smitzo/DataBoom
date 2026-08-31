@@ -1865,3 +1865,62 @@ Result from this environment:
 - validation passed.
 
 This is not the official 1M benchmark number. It proves the composite benchmark path works quickly after implementation.
+
+## Decision: add column profile hints to the generation plan
+
+### Question
+
+Why add `ColumnProfileHint` before changing the value generator?
+
+### Answer
+
+Profile-driven generation needs a stable contract between source profiling and value generation.
+
+The source profiler observes facts like:
+
+- how many rows were sampled,
+- how often a column is null,
+- how many distinct values exist,
+- the minimum and maximum values,
+- the most common values.
+
+The value generator should not read raw profiler objects directly. If it did, generation would become tightly coupled to PostgreSQL profiling. Later, when DataBoom supports other sources, every source would need to mimic PostgreSQL internals.
+
+`ColumnProfileHint` solves that by converting source profiles into a generation-friendly contract.
+
+### What Changed
+
+The generation plan can now carry column hints. Each column plan can optionally hold:
+
+- `sample_count`,
+- `null_rate`,
+- `distinct_count`,
+- `min_value`,
+- `max_value`,
+- `top_values`.
+
+Product runs now convert cached source profile snapshots into these hints and attach them while building the plan.
+
+### Why This Is Good Architecture
+
+This separates responsibilities:
+
+- profiling measures the source,
+- planning decides which hints belong to which columns,
+- value generation consumes hints without knowing where they came from.
+
+That gives us a clean path for multiple source systems later. PostgreSQL, document stores, uploaded CSVs, and future graph sources can all produce the same hint contract.
+
+### Why It Does Not Change Output Yet
+
+This step only carries hints through the system. It does not yet use them to generate values.
+
+That is intentional. First we prove the data reaches the plan correctly. Then we add behavior one category at a time:
+
+1. categorical weighted sampling,
+2. numeric ranges,
+3. datetime ranges,
+4. string patterns,
+5. quality reports comparing generated output back to source hints.
+
+Doing it in this order makes bugs easier to isolate. If generated values look wrong later, we can tell whether the issue is in profiling, planning, or value generation.

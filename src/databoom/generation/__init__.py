@@ -11,6 +11,7 @@ from databoom.generation.domains import (
 from databoom.generation.plan import (
     ChildCountFrequency,
     ColumnPlan,
+    ColumnProfileHint,
     ColumnStrategy,
     ForeignKeySelectionStrategy,
     ForeignKeySource,
@@ -18,6 +19,7 @@ from databoom.generation.plan import (
     OutputFormat,
     RelationshipFanoutHint,
     TablePlan,
+    TopValueHint,
     create_generation_plan,
 )
 from databoom.generation.rows import (
@@ -33,6 +35,7 @@ from databoom.generation.values import GeneratedValue, ValueGenerator
 
 __all__ = [
     "ColumnPlan",
+    "ColumnProfileHint",
     "ColumnStrategy",
     "ChildCountFrequency",
     "DomainProfile",
@@ -54,6 +57,7 @@ __all__ = [
     "RowGenerator",
     "SeedManager",
     "TablePlan",
+    "TopValueHint",
     "ValueGenerator",
     "create_generation_plan",
     "provider_for",
