@@ -340,6 +340,15 @@ class WorkspaceTableProfileResponse(BaseModel):
     columns: tuple[WorkspaceColumnProfileResponse, ...]
 
 
+class WorkspaceChildCountFrequencyResponse(BaseModel):
+    """Source fanout distribution bucket."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    child_count: int
+    parent_frequency: int
+
+
 class WorkspaceRelationshipProfileResponse(BaseModel):
     """Profile statistics for one source relationship."""
 
@@ -358,6 +367,7 @@ class WorkspaceRelationshipProfileResponse(BaseModel):
     max_children_per_parent: int
     average_children_per_parent: float
     empty_parent_count: int
+    child_count_frequencies: tuple[WorkspaceChildCountFrequencyResponse, ...] = ()
 
 
 class WorkspaceSourceProfileResponse(BaseModel):

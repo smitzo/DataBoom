@@ -1670,3 +1670,115 @@ Result from this environment:
 - validation passed.
 
 This is not the official 1M benchmark number. It proves the benchmark path works quickly after implementation.
+
+## Decision: use source profile histograms for relationship fanout
+
+### Question
+
+Why did we need child-count histograms instead of only min, max, and average fanout?
+
+### Answer
+
+Minimum, maximum, and average are useful summaries, but they do not describe the shape of a relationship.
+
+Imagine two source databases:
+
+```text
+Source A: [2, 2, 2, 2, 2]
+Source B: [0, 0, 0, 0, 10]
+```
+
+Both have the same average: 2 children per parent.
+
+But they mean very different things:
+
+- Source A is evenly distributed.
+- Source B has many empty parents and one heavy parent.
+
+If DataBoom only uses the average, it will make both relationships look balanced. That is wrong for source B. Real datasets often have skew: inactive customers, accounts with no transactions, products with no orders, or one customer with many events.
+
+The profile now stores child-count frequencies, for example:
+
+```text
+0 children -> 2 parents
+1 child    -> 2 parents
+4 children -> 1 parent
+```
+
+That gives the generator enough shape information to create sparse and heavy parent relationships.
+
+### What Changed
+
+The generation plan now supports `ForeignKeySelectionStrategy.PROFILE_DRIVEN`.
+
+Each foreign-key source can carry a `RelationshipFanoutHint`, which contains:
+
+- child table,
+- child columns,
+- parent table,
+- parent columns,
+- child-count frequency buckets.
+
+The PostgreSQL profiler now records these buckets from live source data. The API stores them in source profile snapshots. When a product run selects a workspace source that already has a cached profile, Table-Boom converts the profile into relationship hints and uses profile-driven fanout.
+
+If there is no profile hint for a relationship, the generator falls back to balanced fanout.
+
+### How The Algorithm Works
+
+For each relationship:
+
+1. Read the source child-count frequency buckets.
+2. Scale those buckets to the number of generated parent rows.
+3. Scale the resulting per-parent child counts to the requested generated child row count.
+4. Build a deterministic parent assignment sequence.
+5. Use the assignment sequence while generating child rows.
+
+The algorithm is deterministic because it uses the run seed. The same schema, row counts, profile hint, and seed produce the same output.
+
+### Example
+
+Suppose the source profile says:
+
+```text
+0 children -> 2 parents
+1 child    -> 2 parents
+4 children -> 1 parent
+```
+
+For 5 generated parents and 10 generated children, DataBoom can produce a fanout shape like:
+
+```text
+[0, 0, 2, 2, 6]
+```
+
+That keeps the important pattern:
+
+- some parents remain empty,
+- some parents get a small number of children,
+- one parent is much heavier.
+
+Balanced fanout would produce something like:
+
+```text
+[2, 2, 2, 2, 2]
+```
+
+That is valid, but less source-shaped.
+
+### Why This Improves Quality
+
+Profile-driven fanout makes generated data better for testing real systems. Many application bugs appear only when data is uneven:
+
+- dashboards with empty accounts,
+- pagination with heavy customers,
+- reconciliation jobs with high-volume transactions,
+- joins where many parent rows have no children,
+- performance tests where relationship skew matters.
+
+This is a major step from "referentially valid synthetic data" toward "source-shaped synthetic data".
+
+### Performance Tradeoff
+
+Profile-driven fanout builds a parent-index assignment for the generated child rows in that relationship. That costs some memory proportional to child-row count. For the current local MVP, this is acceptable and keeps the algorithm simple and debuggable.
+
+The balanced strategy remains the lower-memory default when no profile hint is available. A later optimization can store profile assignments as run-length ranges instead of a full parent-index sequence if very large profiled relationships need lower memory.

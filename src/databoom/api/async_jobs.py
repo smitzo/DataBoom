@@ -34,6 +34,7 @@ from databoom.core.config import Settings
 from databoom.generation import create_generation_plan
 from databoom.generation.plan import OutputFormat
 from databoom.ingest import parse_postgres_ddl
+from databoom.profiling import SourceProfile
 
 BASELINE_RECORDS_PER_SECOND = 500_000 / 233.707
 
@@ -66,6 +67,7 @@ class ProductRunContext:
     product: ProductCatalogEntry
     payload: ProductRunRequest
     source: WorkspaceSource | None = None
+    source_profile: SourceProfile | None = None
     retry_of_run_id: str | None = None
 
 
@@ -104,6 +106,7 @@ class AsyncRunManager:
         run_id = uuid4().hex
         artifact_dir = ensure_artifact_root(settings) / "runs" / run_id
         cancel_event = Event()
+        source_profile = state_store.get_source_profile(source.id) if source is not None else None
         placeholder = _running_product_response(
             product=product,
             payload=payload,
@@ -119,6 +122,7 @@ class AsyncRunManager:
                 product=product,
                 payload=payload,
                 source=source,
+                source_profile=source_profile,
                 retry_of_run_id=retry_of_run_id,
             ),
             cancel_event,
@@ -131,6 +135,7 @@ class AsyncRunManager:
             settings,
             state_store,
             source,
+            source_profile,
             run_id,
             created_at,
             artifact_dir,
@@ -222,6 +227,7 @@ class AsyncRunManager:
         settings: Settings,
         state_store: StateStore,
         source: WorkspaceSource | None,
+        source_profile: SourceProfile | None,
         run_id: str,
         created_at: datetime,
         artifact_dir: Path,
@@ -243,6 +249,8 @@ class AsyncRunManager:
             }
             if source is not None:
                 execute_kwargs["source"] = source
+            if source_profile is not None:
+                execute_kwargs["source_profile"] = source_profile
             run = execute_product_generation_run(
                 product,
                 payload,

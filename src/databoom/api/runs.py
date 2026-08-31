@@ -32,9 +32,16 @@ from databoom.core.artifacts import ensure_artifact_root
 from databoom.core.config import Settings
 from databoom.document import DocumentCollectionSpec, DocumentFieldSpec, DocumentGenerator
 from databoom.export import ArtifactExporter, ExportManifest
-from databoom.generation import GenerationPlan, create_generation_plan
+from databoom.generation import (
+    ChildCountFrequency,
+    ForeignKeySelectionStrategy,
+    GenerationPlan,
+    RelationshipFanoutHint,
+    create_generation_plan,
+)
 from databoom.generation.plan import OutputFormat
 from databoom.ingest import parse_postgres_ddl
+from databoom.profiling import SourceProfile
 from databoom.validation import ValidationReport, validate_export
 
 RunProgressCallback = Callable[[int, str], None]
@@ -48,6 +55,8 @@ def execute_generation_run(
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
     progress_callback: RunProgressCallback | None = None,
+    foreign_key_strategy: ForeignKeySelectionStrategy | None = None,
+    relationship_hints: tuple[RelationshipFanoutHint, ...] = (),
 ) -> GenerationRunResponse:
     """Execute a synchronous local generation run."""
 
@@ -61,6 +70,11 @@ def execute_generation_run(
     timings.append(_completed_timing("parse_schema", parse_started))
 
     plan_started = _started_at()
+    effective_foreign_key_strategy = foreign_key_strategy or (
+        ForeignKeySelectionStrategy.PROFILE_DRIVEN
+        if relationship_hints
+        else ForeignKeySelectionStrategy.BALANCED_FANOUT
+    )
     plan = create_generation_plan(
         database,
         row_counts=request.row_counts,
@@ -68,6 +82,8 @@ def execute_generation_run(
         seed=request.seed,
         domain=request.domain,
         output_formats=request.output_formats,
+        foreign_key_strategy=effective_foreign_key_strategy,
+        relationship_hints=relationship_hints,
     )
     timings.append(_completed_timing("build_plan", plan_started))
 
@@ -106,6 +122,7 @@ def execute_product_generation_run(
     settings: Settings,
     *,
     source: WorkspaceSource | None = None,
+    source_profile: SourceProfile | None = None,
     run_id: str | None = None,
     created_at: datetime | None = None,
     artifact_dir: Path | None = None,
@@ -119,6 +136,7 @@ def execute_product_generation_run(
             schema_ddl = _schema_ddl_for_source(source) if source else product.schema_ddl
             if schema_ddl is None:
                 raise ValueError("relational product is missing schema DDL")
+            relationship_hints = _relationship_hints_from_source_profile(source_profile)
             return execute_generation_run(
                 GenerationRunRequest(
                     schema_ddl=schema_ddl,
@@ -136,6 +154,7 @@ def execute_product_generation_run(
                 created_at=created_at,
                 artifact_dir=artifact_dir,
                 progress_callback=progress_callback,
+                relationship_hints=relationship_hints,
             )
         case DataProductKind.DOCUMENT:
             return execute_document_generation_run(
@@ -476,6 +495,34 @@ def _relational_output_formats(output_formats: tuple[str, ...]) -> tuple[OutputF
                 f"unsupported relational output format: {output_format}"
             ) from error
     return tuple(formats)
+
+
+def _relationship_hints_from_source_profile(
+    source_profile: SourceProfile | None,
+) -> tuple[RelationshipFanoutHint, ...]:
+    if source_profile is None:
+        return ()
+
+    return tuple(
+        RelationshipFanoutHint(
+            child_table=_qualified_table(relationship.child_schema, relationship.child_table),
+            child_columns=relationship.child_columns,
+            parent_table=_qualified_table(relationship.parent_schema, relationship.parent_table),
+            parent_columns=relationship.parent_columns,
+            child_count_frequencies=tuple(
+                ChildCountFrequency(
+                    child_count=frequency.child_count,
+                    parent_frequency=frequency.parent_frequency,
+                )
+                for frequency in relationship.child_count_frequencies
+            ),
+        )
+        for relationship in source_profile.relationships
+    )
+
+
+def _qualified_table(schema_name: str, table_name: str) -> str:
+    return f"{schema_name}.{table_name}"
 
 
 def _started_at() -> tuple[datetime, float]:

@@ -36,6 +36,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - Row-level async progress with generated-row counts, current resource, rows/sec, remaining time, and operation timings.
 - Live PostgreSQL source testing, schema refresh, DDL snapshot storage, and source profiling.
 - Refreshed relational sources retain schema names, column details, primary keys, foreign keys, unique constraints, and refresh timestamps.
+- Cached source profiles can drive relationship fanout for source-shaped Table-Boom output.
 - 100k-record Phase 1 benchmark.
 - 500k-record Phase 2 benchmark baseline.
 - 1M-record five-table relational benchmark harness.

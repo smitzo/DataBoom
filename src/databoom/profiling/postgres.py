@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -46,6 +47,14 @@ class TableProfile:
 
 
 @dataclass(frozen=True)
+class ChildCountFrequency:
+    """How many parent keys have a specific number of child rows."""
+
+    child_count: int
+    parent_frequency: int
+
+
+@dataclass(frozen=True)
 class RelationshipProfile:
     """Observed fanout statistics for one source foreign-key relationship."""
 
@@ -62,6 +71,7 @@ class RelationshipProfile:
     max_children_per_parent: int
     average_children_per_parent: float
     empty_parent_count: int
+    child_count_frequencies: tuple[ChildCountFrequency, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -188,6 +198,13 @@ def source_profile_to_payload(profile: SourceProfile) -> dict[str, Any]:
                 "max_children_per_parent": relationship.max_children_per_parent,
                 "average_children_per_parent": relationship.average_children_per_parent,
                 "empty_parent_count": relationship.empty_parent_count,
+                "child_count_frequencies": [
+                    {
+                        "child_count": frequency.child_count,
+                        "parent_frequency": frequency.parent_frequency,
+                    }
+                    for frequency in relationship.child_count_frequencies
+                ],
             }
             for relationship in profile.relationships
         ],
@@ -248,6 +265,13 @@ def source_profile_from_payload(payload: Mapping[str, Any]) -> SourceProfile:
                     relationship["average_children_per_parent"]
                 ),
                 empty_parent_count=int(relationship["empty_parent_count"]),
+                child_count_frequencies=tuple(
+                    ChildCountFrequency(
+                        child_count=int(frequency["child_count"]),
+                        parent_frequency=int(frequency["parent_frequency"]),
+                    )
+                    for frequency in relationship.get("child_count_frequencies", ())
+                ),
             )
             for relationship in payload.get("relationships", ())
         ),
@@ -352,6 +376,9 @@ def _profile_relationship(connection: Any, resource, foreign_key) -> Relationshi
     empty_parent_count = max(0, parent_key_count - distinct_parent_keys_referenced)
     min_children = min(grouped_counts) if grouped_counts and empty_parent_count == 0 else 0
     max_children = max(grouped_counts) if grouped_counts else 0
+    child_count_frequency = Counter(grouped_counts)
+    if empty_parent_count:
+        child_count_frequency[0] += empty_parent_count
 
     return RelationshipProfile(
         child_table=resource.name,
@@ -369,6 +396,10 @@ def _profile_relationship(connection: Any, resource, foreign_key) -> Relationshi
             child_row_count / parent_key_count if parent_key_count else 0.0
         ),
         empty_parent_count=empty_parent_count,
+        child_count_frequencies=tuple(
+            ChildCountFrequency(child_count=count, parent_frequency=frequency)
+            for count, frequency in sorted(child_count_frequency.items())
+        ),
     )
 
 

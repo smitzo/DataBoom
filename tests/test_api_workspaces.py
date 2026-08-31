@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from databoom.api import create_app
 from databoom.core.config import Settings
 from databoom.profiling import (
+    ChildCountFrequency,
     ColumnProfile,
     ConnectionTest,
     RelationshipProfile,
@@ -322,6 +323,88 @@ def test_product_run_uses_refreshed_workspace_source_resources(tmp_path: Path, m
     assert {row["invoice_id"] for row in rows} <= {"1", "2"}
 
 
+def test_product_run_uses_cached_source_profile_for_relationship_fanout(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    monkeypatch.setattr(
+        "databoom.api.routes.load_postgres_schema",
+        lambda database_url, *, schema_names: _billing_schema(),
+    )
+    refresh = client.post(
+        "/workspace-sources/commerce-store/refresh",
+        headers=_auth_headers(token),
+        json={"database_url": "postgresql+psycopg://demo", "schema_names": ["billing"]},
+    )
+    assert refresh.status_code == 200, refresh.text
+
+    def profile_source(database_url, source, *, top_values_limit):
+        return SourceProfile(
+            source_id=source.id,
+            generated_at=datetime(2026, 1, 1, tzinfo=UTC),
+            tables=(),
+            relationships=(
+                RelationshipProfile(
+                    child_table="invoice_lines",
+                    child_schema="billing",
+                    child_columns=("invoice_id",),
+                    parent_table="invoices",
+                    parent_schema="billing",
+                    parent_columns=("id",),
+                    parent_key_count=5,
+                    child_row_count=10,
+                    distinct_parent_keys_referenced=3,
+                    min_children_per_parent=0,
+                    max_children_per_parent=4,
+                    average_children_per_parent=2.0,
+                    empty_parent_count=2,
+                    child_count_frequencies=(
+                        ChildCountFrequency(child_count=0, parent_frequency=2),
+                        ChildCountFrequency(child_count=1, parent_frequency=2),
+                        ChildCountFrequency(child_count=4, parent_frequency=1),
+                    ),
+                ),
+            ),
+        )
+
+    monkeypatch.setattr("databoom.api.routes.profile_postgres_source", profile_source)
+    profile = client.post(
+        "/workspace-sources/commerce-store/profile",
+        headers=_auth_headers(token),
+        json={"database_url": "postgresql+psycopg://demo"},
+    )
+    assert profile.status_code == 200, profile.text
+
+    subscription = client.post(
+        "/subscriptions",
+        headers=_auth_headers(token),
+        json={"product_id": "table-boom", "plan_id": "starter"},
+    )
+    assert subscription.status_code == 201, subscription.text
+
+    response = client.post(
+        "/products/table-boom/runs",
+        headers=_auth_headers(token),
+        json={
+            "row_counts": {"invoices": 5, "invoice_lines": 10},
+            "seed": "profiled-source",
+            "output_formats": ["csv"],
+            "source_id": "commerce-store",
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    metric = response.json()["validation"]["relationship_metrics"][0]
+    assert metric["child_table"] == "billing.invoice_lines"
+    assert metric["parent_table"] == "billing.invoices"
+    assert metric["empty_parent_count"] == 2
+    assert metric["max_children_per_parent"] == 6
+
+
 def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monkeypatch) -> None:
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
     client = TestClient(create_app(settings=settings))
@@ -369,6 +452,11 @@ def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monk
                     max_children_per_parent=5,
                     average_children_per_parent=2.0,
                     empty_parent_count=4,
+                    child_count_frequencies=(
+                        ChildCountFrequency(child_count=0, parent_frequency=4),
+                        ChildCountFrequency(child_count=2, parent_frequency=18),
+                        ChildCountFrequency(child_count=5, parent_frequency=2),
+                    ),
                 ),
             ),
         )
@@ -392,6 +480,11 @@ def test_workspace_source_profile_returns_column_statistics(tmp_path: Path, monk
     assert payload["relationships"][0]["child_table"] == "orders"
     assert payload["relationships"][0]["parent_table"] == "customers"
     assert payload["relationships"][0]["empty_parent_count"] == 4
+    assert payload["relationships"][0]["child_count_frequencies"] == [
+        {"child_count": 0, "parent_frequency": 4},
+        {"child_count": 2, "parent_frequency": 18},
+        {"child_count": 5, "parent_frequency": 2},
+    ]
 
     snapshot = client.get(
         "/workspace-sources/commerce-store/profile",

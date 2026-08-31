@@ -31,6 +31,7 @@ from databoom.api.models import (
     SubscriptionStatus,
     TableArtifactResponse,
     TablePreviewResponse,
+    WorkspaceChildCountFrequencyResponse,
     WorkspaceColumnProfileResponse,
     WorkspaceColumnResponse,
     WorkspaceConnectionTestRequest,
@@ -441,7 +442,9 @@ def create_product_run(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
         )
+    store = _state_store(request)
     source = _validate_source_for_product(request, payload.source_id, product)
+    source_profile = store.get_source_profile(source.id) if source is not None else None
 
     try:
         run = execute_product_generation_run(
@@ -449,11 +452,12 @@ def create_product_run(
             payload,
             request.app.state.settings,
             source=source,
+            source_profile=source_profile,
         )
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
-    _state_store(request).save_run(run)
+    store.save_run(run)
     return run
 
 
@@ -472,7 +476,8 @@ def create_async_product_run(
     """Start a catalog-backed generation run in the background."""
 
     product = _get_product_or_404(product_id)
-    if _state_store(request).get_subscription(user.email, product.id) is None:
+    store = _state_store(request)
+    if store.get_subscription(user.email, product.id) is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="subscribe to this product before generating data",
@@ -484,7 +489,7 @@ def create_async_product_run(
             product=product,
             payload=payload,
             settings=request.app.state.settings,
-            state_store=_state_store(request),
+            state_store=store,
             source=source,
         )
     except ValueError as error:
@@ -879,6 +884,13 @@ def _workspace_source_profile_response(profile: SourceProfile) -> WorkspaceSourc
                 max_children_per_parent=relationship.max_children_per_parent,
                 average_children_per_parent=relationship.average_children_per_parent,
                 empty_parent_count=relationship.empty_parent_count,
+                child_count_frequencies=tuple(
+                    WorkspaceChildCountFrequencyResponse(
+                        child_count=frequency.child_count,
+                        parent_frequency=frequency.parent_frequency,
+                    )
+                    for frequency in relationship.child_count_frequencies
+                ),
             )
             for relationship in profile.relationships
         ),

@@ -1,6 +1,7 @@
 """Source profiling helpers."""
 
 from databoom.profiling.postgres import (
+    ChildCountFrequency,
     ColumnProfile,
     ConnectionTest,
     RelationshipProfile,
@@ -14,6 +15,7 @@ from databoom.profiling.postgres import (
 )
 
 __all__ = [
+    "ChildCountFrequency",
     "ColumnProfile",
     "ConnectionTest",
     "RelationshipProfile",
