@@ -39,11 +39,13 @@ class ValueGenerator:
 
         stream = self.seed_manager.stream(table_name, column.name, row_index)
         if column.nullable and column.strategy != ColumnStrategy.PRIMARY_KEY:
-            if stream.random() < self.null_probability:
+            if stream.random() < self._null_probability_for(column):
                 return None
 
         if column.strategy == ColumnStrategy.PRIMARY_KEY:
             return self._primary_key_value(table_name, column, row_index)
+        if (profiled_value := self._profiled_top_value(table_name, column, row_index)) is not None:
+            return profiled_value
         return self._generated_value(table_name, column, row_index)
 
     def _primary_key_value(
@@ -109,9 +111,57 @@ class ValueGenerator:
         token = stream.randint(10_000, 99_999)
         return f"{_safe_name(table_name)}_{column_name}_{row_index + 1}_{token}"
 
+    def _null_probability_for(self, column: ColumnPlan) -> float:
+        if column.profile_hint is None or column.profile_hint.sample_count == 0:
+            return self.null_probability
+        return column.profile_hint.null_rate
+
+    def _profiled_top_value(
+        self,
+        table_name: str,
+        column: ColumnPlan,
+        row_index: int,
+    ) -> str | None:
+        hint = column.profile_hint
+        if hint is None or not hint.top_values:
+            return None
+        if column.type_family not in {TypeFamily.STRING, TypeFamily.ENUM, TypeFamily.UNKNOWN}:
+            return None
+
+        top_value_count = sum(top_value.count for top_value in hint.top_values)
+        if top_value_count <= 0:
+            return None
+
+        coverage = _top_value_coverage(hint.sample_count, hint.null_rate, top_value_count)
+        if hint.distinct_count > len(hint.top_values):
+            stream = self.seed_manager.stream(
+                "profile-top-value-coverage",
+                table_name,
+                column.name,
+                row_index,
+            )
+            if stream.random() > coverage:
+                return None
+
+        stream = self.seed_manager.stream("profile-top-value", table_name, column.name, row_index)
+        selected = stream.randrange(top_value_count)
+        cumulative = 0
+        for top_value in hint.top_values:
+            cumulative += top_value.count
+            if selected < cumulative:
+                return top_value.value
+        return hint.top_values[-1].value
+
     def _uuid(self, table_name: str, column_name: str, row_index: int) -> str:
         stream = self.seed_manager.stream("uuid", table_name, column_name, row_index)
         return str(UUID(int=stream.getrandbits(128), version=4))
+
+
+def _top_value_coverage(sample_count: int, null_rate: float, top_value_count: int) -> float:
+    if sample_count <= 0:
+        return 1.0
+    non_null_sample_count = max(1, round(sample_count * (1 - null_rate)))
+    return min(1.0, top_value_count / non_null_sample_count)
 
 
 def _safe_name(value: str) -> str:

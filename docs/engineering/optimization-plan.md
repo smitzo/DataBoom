@@ -81,7 +81,7 @@ Todo:
 
 - [x] Persist source profile snapshots with freshness timestamps.
 - [x] Add `ColumnProfileHint` model for null rate, distinct count, min/max, top values, and sample count.
-- [ ] Add categorical weighted sampling from top values.
+- [x] Add categorical weighted sampling from top values.
 - [ ] Add numeric range and distribution-aware sampling.
 - [ ] Add datetime range and seasonality hints.
 - [ ] Add string pattern hints for emails, phone numbers, codes, and IDs.
@@ -209,7 +209,7 @@ Focus on profile-driven generation.
 
 1. Persist source profile snapshots. `complete`
 2. Add profile hint models.
-3. Use top values, null rates, and ranges during value generation.
+3. Use top values and null rates during value generation. `in progress`
 4. Add quality report comparing source profile vs generated output.
 
 ### Third Implementation Batch

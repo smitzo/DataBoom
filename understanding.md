@@ -1924,3 +1924,80 @@ That is intentional. First we prove the data reaches the plan correctly. Then we
 5. quality reports comparing generated output back to source hints.
 
 Doing it in this order makes bugs easier to isolate. If generated values look wrong later, we can tell whether the issue is in profiling, planning, or value generation.
+
+## Decision: use profile top values before generic value providers
+
+### Question
+
+How does DataBoom generate data from thin air without just making random junk?
+
+### Answer
+
+The engine does not ask a prompt to invent every row. It builds a generation plan, then each row is produced from deterministic rules:
+
+- schema rules decide which columns are primary keys, foreign keys, defaults, or generated values,
+- relationship strategies decide which parent rows child rows should reference,
+- profile hints describe what the source data looked like,
+- value providers fill in useful fallbacks when no profile exists,
+- seeded random streams make the output repeatable.
+
+That means generated data is random only in a controlled sense. The engine uses randomness as a deterministic sampling tool, not as the architecture.
+
+### Question
+
+Why should top values from a source profile run before the generic domain provider?
+
+### Answer
+
+If a source profile says a `status` column is usually `active` and sometimes `inactive`, the generator should respect that before guessing values like `pending`, `posted`, or `disabled`.
+
+This matters because domain providers are broad assumptions. Source profiles are evidence from the actual database or dataset shape. Evidence should win over assumptions.
+
+The new flow is:
+
+1. reject invalid requests such as foreign-key value generation in the value provider,
+2. apply source null rate for nullable columns,
+3. preserve primary-key strategy,
+4. sample categorical top values from the profile when available,
+5. fall back to domain-specific or generic generated values.
+
+### Question
+
+How does weighted top-value sampling work?
+
+### Answer
+
+Each top value has a count from the source profile. If the source profile says:
+
+- `active`: 80,
+- `inactive`: 20,
+
+then the generator treats the column like an 80/20 weighted choice.
+
+Because it uses the seed manager, the result is repeatable. The same seed, table, column, and row index produce the same value every time.
+
+When the top values do not cover the entire known distribution, the generator estimates coverage from:
+
+- sample count,
+- null rate,
+- total top-value count,
+- distinct count.
+
+If the top values cover only part of the source distribution, some rows intentionally fall back to normal providers. This avoids collapsing a high-cardinality column into only the few values that appeared in the top-value list.
+
+### Question
+
+How does this improve quality?
+
+### Answer
+
+Before this change, a categorical source column could be generated from naming heuristics alone. A `status` column might look plausible, but it was not shaped by the observed source.
+
+After this change, profiled categorical columns can preserve:
+
+- common category names,
+- relative category frequency,
+- source null rate,
+- deterministic repeatability.
+
+This is an important step toward quality reporting. Once generated output is influenced by source profiles, DataBoom can compare generated distributions against those source profiles and explain how close the output is.

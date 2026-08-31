@@ -2,7 +2,15 @@ from datetime import datetime
 
 import pytest
 
-from databoom.generation import ColumnStrategy, ForeignKeySource, SeedManager, ValueGenerator
+from databoom.generation import (
+    ColumnProfileHint,
+    ColumnStrategy,
+    DomainProfile,
+    ForeignKeySource,
+    SeedManager,
+    TopValueHint,
+    ValueGenerator,
+)
 from databoom.generation.plan import ColumnPlan
 from databoom.schema import TypeFamily
 
@@ -13,8 +21,15 @@ def column(
     *,
     strategy: ColumnStrategy = ColumnStrategy.GENERATED,
     nullable: bool = False,
+    profile_hint: ColumnProfileHint | None = None,
 ) -> ColumnPlan:
-    return ColumnPlan(name=name, strategy=strategy, type_family=family, nullable=nullable)
+    return ColumnPlan(
+        name=name,
+        strategy=strategy,
+        type_family=family,
+        nullable=nullable,
+        profile_hint=profile_hint,
+    )
 
 
 def test_value_generator_returns_repeatable_values() -> None:
@@ -79,6 +94,67 @@ def test_value_generator_can_emit_null_for_nullable_columns() -> None:
         value_generator.value_for("public.users", column("name", TypeFamily.STRING), 0)
         is not None
     )
+
+
+def test_value_generator_uses_profile_null_rate_for_nullable_columns() -> None:
+    value_generator = ValueGenerator(SeedManager(42), null_probability=0.0)
+    profile_hint = ColumnProfileHint(
+        table_name="public.users",
+        column_name="nickname",
+        sample_count=100,
+        null_rate=1.0,
+        distinct_count=0,
+    )
+
+    assert (
+        value_generator.value_for(
+            "public.users",
+            column("nickname", TypeFamily.STRING, nullable=True, profile_hint=profile_hint),
+            0,
+        )
+        is None
+    )
+
+
+def test_value_generator_samples_categorical_profile_top_values() -> None:
+    value_generator = ValueGenerator(SeedManager(42))
+    profile_hint = ColumnProfileHint(
+        table_name="public.users",
+        column_name="status",
+        sample_count=100,
+        null_rate=0.0,
+        distinct_count=2,
+        top_values=(
+            TopValueHint(value="active", count=80),
+            TopValueHint(value="inactive", count=20),
+        ),
+    )
+    status_column = column("status", TypeFamily.STRING, profile_hint=profile_hint)
+    values = [
+        value_generator.value_for("public.users", status_column, row_index)
+        for row_index in range(100)
+    ]
+
+    assert set(values) == {"active", "inactive"}
+    assert values.count("active") > values.count("inactive")
+
+
+def test_value_generator_profile_top_values_override_domain_provider() -> None:
+    value_generator = ValueGenerator(SeedManager(42), domain=DomainProfile.FINANCIAL)
+    profile_hint = ColumnProfileHint(
+        table_name="public.transactions",
+        column_name="status",
+        sample_count=10,
+        null_rate=0.0,
+        distinct_count=1,
+        top_values=(TopValueHint(value="settled", count=10),),
+    )
+
+    assert value_generator.value_for(
+        "public.transactions",
+        column("status", TypeFamily.STRING, profile_hint=profile_hint),
+        0,
+    ) == "settled"
 
 
 def test_value_generator_rejects_foreign_key_columns() -> None:
