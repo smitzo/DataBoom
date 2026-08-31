@@ -1782,3 +1782,86 @@ This is a major step from "referentially valid synthetic data" toward "source-sh
 Profile-driven fanout builds a parent-index assignment for the generated child rows in that relationship. That costs some memory proportional to child-row count. For the current local MVP, this is acceptable and keeps the algorithm simple and debuggable.
 
 The balanced strategy remains the lower-memory default when no profile hint is available. A later optimization can store profile assignments as run-length ranges instead of a full parent-index sequence if very large profiled relationships need lower memory.
+
+## Decision: add a one-million-row composite-key benchmark harness
+
+### Question
+
+Why do we need a separate composite-key benchmark after the normal one-million-row benchmark?
+
+### Answer
+
+Single-column integer primary keys are the easiest relational path. DataBoom can compress keys like:
+
+```text
+1, 2, 3, 4, ...
+```
+
+Composite keys are harder because a parent identity is a tuple:
+
+```text
+(tenant_id, account_id)
+```
+
+The engine must remember and replay both values together. A child row is valid only when every referenced column matches the same parent tuple.
+
+For example, this is valid:
+
+```text
+tenant_id = 17
+account_id = 17
+```
+
+if the parent key `(17, 17)` exists.
+
+This is not valid:
+
+```text
+tenant_id = 17
+account_id = 42
+```
+
+unless the parent key `(17, 42)` exists.
+
+That means composite foreign keys test a different part of the engine than simple IDs. They exercise tuple storage, tuple selection, CSV validation, and relationship metrics for multi-column keys.
+
+### What Changed
+
+DataBoom now has `benchmarks/composite_keys_1m.py`.
+
+The benchmark uses five related tables:
+
+- `customer_accounts` with composite primary key `(tenant_id, account_id)`,
+- `orders` with composite foreign key `(tenant_id, account_id)`,
+- `order_items` referencing orders,
+- `shipments` referencing orders,
+- `payments` with composite foreign key `(tenant_id, account_id)`.
+
+The default row counts add up to exactly 1,000,000 records.
+
+### Why This Completes Track A
+
+Track A is about relational engine speed and relationship quality. Before this benchmark, DataBoom had strong coverage for simple-key relationships. The composite benchmark closes the remaining proof gap:
+
+- simple parent-child relationships,
+- large five-table relationships,
+- profile-driven fanout,
+- sequential key compression,
+- composite primary and foreign-key validation.
+
+This does not mean every possible relational schema is solved. It means the Phase A benchmark surface now covers both common simple-key schemas and harder tuple-key schemas.
+
+### Smoke Result From This Commit
+
+I ran the benchmark at `--scale 0.001`, which generated 1,000 records across the same five-table composite-key shape.
+
+Result from this environment:
+
+- total time: 0.645 seconds,
+- export time: 0.541 seconds,
+- validation time: 0.045 seconds,
+- peak memory: 0.814 MB,
+- artifact size: 0.057 MB,
+- validation passed.
+
+This is not the official 1M benchmark number. It proves the composite benchmark path works quickly after implementation.

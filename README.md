@@ -40,6 +40,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - 100k-record Phase 1 benchmark.
 - 500k-record Phase 2 benchmark baseline.
 - 1M-record five-table relational benchmark harness.
+- 1M-record composite-key relational benchmark harness.
 - Next.js and Tailwind frontend workbench.
 
 ## Roadmap Summary
@@ -130,6 +131,18 @@ Run the full 1M relational benchmark:
 
 ```bash
 .venv/bin/python benchmarks/relational_1m.py --overwrite
+```
+
+Smoke-test the 1M composite-key benchmark shape:
+
+```bash
+.venv/bin/python benchmarks/composite_keys_1m.py --scale 0.001 --overwrite
+```
+
+Run the full 1M composite-key benchmark:
+
+```bash
+.venv/bin/python benchmarks/composite_keys_1m.py --overwrite
 ```
 
 Run the API locally:

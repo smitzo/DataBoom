@@ -303,7 +303,7 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
-Current status: Phase 2 is complete for the local full-stack product workflow. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are backend-owned, persisted in API state, testable from the dashboard, refreshable from live PostgreSQL introspection, and profileable for row counts, null rates, distinct counts, ranges, top values, and relationship fanout histograms. Refreshed relational sources store both resource-level metadata and a PostgreSQL DDL snapshot, so generation can run from the source contract instead of a hardcoded demo schema. Cached source profiles can now drive relationship fanout for Table-Boom runs. A 500k benchmark baseline exists, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs execute asynchronously with row-level progress, ETA, throughput, and operation timings. Source-secret management, distributed worker orchestration, production retention, privacy controls, and deployment-grade observability move to later production phases instead of blocking Phase 2.
+Current status: Phase 2 is complete for the local full-stack product workflow. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are backend-owned, persisted in API state, testable from the dashboard, refreshable from live PostgreSQL introspection, and profileable for row counts, null rates, distinct counts, ranges, top values, and relationship fanout histograms. Refreshed relational sources store both resource-level metadata and a PostgreSQL DDL snapshot, so generation can run from the source contract instead of a hardcoded demo schema. Cached source profiles can now drive relationship fanout for Table-Boom runs. A 500k benchmark baseline exists, one-million-row simple and composite-key benchmark harnesses exist, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs execute asynchronously with row-level progress, ETA, throughput, and operation timings. Source-secret management, distributed worker orchestration, production retention, privacy controls, and deployment-grade observability move to later production phases instead of blocking Phase 2.
 
 Technical objectives:
 
@@ -345,6 +345,7 @@ Implemented MVP capabilities:
 - Product run requests can pass a persisted `source_id`, so Table-Boom generation can use refreshed workspace schema contracts.
 - Run builder UI shows selected source context, schema freshness, profiling state, generation progress, validation, and operation timing stages.
 - 500k relational benchmark baseline with export, validation, memory, and artifact-size metrics.
+- One-million-row simple-key and composite-key relational benchmark harnesses.
 - Chunk-aware CSV validation that avoids holding every generated row in memory.
 
 Recommended commits:

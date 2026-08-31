@@ -228,6 +228,30 @@ It also writes:
 artifacts/benchmarks/relational_1m/metrics.json
 ```
 
+Smoke-test the 1M composite-key relational benchmark shape with scaled row counts:
+
+```bash
+.venv/bin/python benchmarks/composite_keys_1m.py --scale 0.001 --overwrite
+```
+
+Run the full 1M composite-key relational benchmark:
+
+```bash
+.venv/bin/python benchmarks/composite_keys_1m.py --overwrite
+```
+
+The benchmark writes generated artifacts under:
+
+```text
+artifacts/benchmarks/composite_keys_1m
+```
+
+It also writes:
+
+```text
+artifacts/benchmarks/composite_keys_1m/metrics.json
+```
+
 Use `--skip-validation` only for export-only experiments. Official benchmark numbers should keep validation enabled.
 
 ## Docker Compose

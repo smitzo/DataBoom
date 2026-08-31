@@ -62,7 +62,7 @@ Todo:
 - [x] Add profile-driven fanout that preserves observed child-count distributions.
 - [x] Optimize parent-key storage for simple sequential primary keys.
 - [x] Add benchmark: 1M records across five related tables.
-- [ ] Add benchmark: 1M records with composite keys.
+- [x] Add benchmark: 1M records with composite keys.
 
 Recommended commit sequence:
 
@@ -71,6 +71,7 @@ Recommended commit sequence:
 3. `backend: profile source relationship cardinality`
 4. `performance: optimize parent key registry`
 5. `performance: add one million row relational benchmark`
+6. `performance: add composite key relational benchmark`
 
 ## Track B: Profile-Driven Value Generation
 
