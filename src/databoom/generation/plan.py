@@ -33,6 +33,7 @@ class ForeignKeySelectionStrategy(StrEnum):
     """How child rows should choose generated parent keys."""
 
     BALANCED_FANOUT = "balanced_fanout"
+    PROFILE_DRIVEN = "profile_driven"
     RANDOM = "random"
 
 
@@ -42,6 +43,38 @@ class PlanModel(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ChildCountFrequency(PlanModel):
+    """How many source parents have a specific child count."""
+
+    child_count: int = Field(ge=0)
+    parent_frequency: int = Field(gt=0)
+
+
+class RelationshipFanoutHint(PlanModel):
+    """Observed fanout distribution for a foreign-key relationship."""
+
+    child_table: str
+    child_columns: tuple[str, ...]
+    parent_table: str
+    parent_columns: tuple[str, ...]
+    child_count_frequencies: tuple[ChildCountFrequency, ...] = ()
+
+    @field_validator("child_table", "parent_table")
+    @classmethod
+    def require_table_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("relationship hint table names cannot be empty")
+        return value
+
+    @field_validator("child_columns", "parent_columns")
+    @classmethod
+    def require_columns(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if not value:
+            raise ValueError("relationship hint columns cannot be empty")
+        return value
+
+
 class ForeignKeySource(PlanModel):
     """Source table and columns for a foreign-key column plan."""
 
@@ -49,6 +82,7 @@ class ForeignKeySource(PlanModel):
     child_columns: tuple[str, ...]
     parent_columns: tuple[str, ...]
     constraint_name: str | None = None
+    fanout_hint: RelationshipFanoutHint | None = None
 
 
 class ColumnPlan(PlanModel):
@@ -95,6 +129,7 @@ class GenerationPlan(PlanModel):
     foreign_key_strategy: ForeignKeySelectionStrategy = (
         ForeignKeySelectionStrategy.BALANCED_FANOUT
     )
+    relationship_hints: tuple[RelationshipFanoutHint, ...] = ()
 
     @field_validator("output_formats")
     @classmethod
@@ -125,6 +160,7 @@ def create_generation_plan(
     foreign_key_strategy: ForeignKeySelectionStrategy = (
         ForeignKeySelectionStrategy.BALANCED_FANOUT
     ),
+    relationship_hints: tuple[RelationshipFanoutHint, ...] = (),
 ) -> GenerationPlan:
     """Create a deterministic generation plan from schema metadata."""
 
@@ -136,7 +172,13 @@ def create_generation_plan(
 
     graph = build_relationship_graph(database)
     table_plans = tuple(
-        _build_table_plan(table, graph.parents_for(table), row_counts, default_row_count)
+        _build_table_plan(
+            table,
+            graph.parents_for(table),
+            row_counts,
+            default_row_count,
+            relationship_hints,
+        )
         for table in graph.dependency_order()
     )
     return GenerationPlan(
@@ -145,6 +187,7 @@ def create_generation_plan(
         output_formats=output_formats,
         tables=table_plans,
         foreign_key_strategy=foreign_key_strategy,
+        relationship_hints=relationship_hints,
     )
 
 
@@ -153,9 +196,13 @@ def _build_table_plan(
     dependencies,
     row_counts: dict[str, int],
     default_row_count: int,
+    relationship_hints: tuple[RelationshipFanoutHint, ...],
 ) -> TablePlan:
     foreign_key_columns = {
-        column_name: edge
+        column_name: (
+            edge,
+            _relationship_hint_for_edge(edge, relationship_hints),
+        )
         for edge in dependencies
         for column_name in edge.child_columns
     }
@@ -188,7 +235,7 @@ def _build_column_plan(
             default=column.default,
         )
     if column.name in foreign_key_columns:
-        edge = foreign_key_columns[column.name]
+        edge, fanout_hint = foreign_key_columns[column.name]
         return ColumnPlan(
             name=column.name,
             strategy=ColumnStrategy.FOREIGN_KEY,
@@ -200,6 +247,7 @@ def _build_column_plan(
                 child_columns=edge.child_columns,
                 parent_columns=edge.parent_columns,
                 constraint_name=edge.constraint_name,
+                fanout_hint=fanout_hint,
             ),
         )
     return ColumnPlan(
@@ -224,3 +272,22 @@ def _validate_row_count_keys(database: DatabaseSchema, row_counts: dict[str, int
     unknown = sorted(key for key in row_counts if key not in qualified and key not in unqualified)
     if unknown:
         raise ValueError("row count references unknown tables: " + ", ".join(unknown))
+
+
+def _relationship_hint_for_edge(
+    edge,
+    relationship_hints: tuple[RelationshipFanoutHint, ...],
+) -> RelationshipFanoutHint | None:
+    for hint in relationship_hints:
+        if (
+            _table_matches(hint.child_table, edge.child_table)
+            and _table_matches(hint.parent_table, edge.parent_table)
+            and hint.child_columns == edge.child_columns
+            and hint.parent_columns == edge.parent_columns
+        ):
+            return hint
+    return None
+
+
+def _table_matches(hint_table: str, plan_table: str) -> bool:
+    return hint_table == plan_table or plan_table.endswith(f".{hint_table}")

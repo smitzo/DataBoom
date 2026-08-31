@@ -81,6 +81,10 @@ class ForeignKeyRegistry:
         tuple[str, str, tuple[str, ...], tuple[str, ...]],
         tuple[int, int],
     ] = field(default_factory=dict)
+    profile_plans: dict[
+        tuple[str, str, tuple[str, ...], tuple[str, ...], int, int],
+        tuple[int, ...],
+    ] = field(default_factory=dict)
 
     def register(self, table: TablePlan, row: GeneratedRow) -> None:
         primary_key_columns = tuple(
@@ -102,6 +106,7 @@ class ForeignKeyRegistry:
         strategy: ForeignKeySelectionStrategy,
         table_name: str,
         row_index: int,
+        child_row_count: int,
     ) -> tuple[Any, ...]:
         key = (source.parent_table, source.parent_columns)
         store = self.keys.get(key)
@@ -119,6 +124,18 @@ class ForeignKeyRegistry:
                 row_index,
             )
             return store.get(stream.randrange(len(store)))
+
+        if strategy == ForeignKeySelectionStrategy.PROFILE_DRIVEN:
+            profile_index = self._profile_index(
+                source,
+                seed_manager=seed_manager,
+                table_name=table_name,
+                parent_count=len(store),
+                child_row_count=child_row_count,
+                row_index=row_index,
+            )
+            if profile_index is not None:
+                return store.get(profile_index)
 
         index = self._balanced_index(
             source,
@@ -161,6 +178,43 @@ class ForeignKeyRegistry:
 
         offset, stride = self.balanced_plans[cache_key]
         return (offset + (row_index * stride)) % parent_count
+
+    def _profile_index(
+        self,
+        source: ForeignKeySource,
+        *,
+        seed_manager: SeedManager,
+        table_name: str,
+        parent_count: int,
+        child_row_count: int,
+        row_index: int,
+    ) -> int | None:
+        if source.fanout_hint is None or not source.fanout_hint.child_count_frequencies:
+            return None
+        if child_row_count <= 0:
+            return None
+
+        cache_key = (
+            table_name,
+            source.parent_table,
+            source.child_columns,
+            source.parent_columns,
+            parent_count,
+            child_row_count,
+        )
+        if cache_key not in self.profile_plans:
+            self.profile_plans[cache_key] = _profile_parent_indexes(
+                source,
+                seed_manager=seed_manager,
+                table_name=table_name,
+                parent_count=parent_count,
+                child_row_count=child_row_count,
+            )
+
+        parent_indexes = self.profile_plans[cache_key]
+        if not parent_indexes or row_index >= len(parent_indexes):
+            return None
+        return parent_indexes[row_index]
 
 
 @dataclass
@@ -224,6 +278,7 @@ class RowGenerator:
                 strategy=self.plan.foreign_key_strategy,
                 table_name=table.table_name,
                 row_index=row_index,
+                child_row_count=table.row_count,
             )
             for child_column, value in zip(source.child_columns, parent_values, strict=True):
                 values[child_column] = value
@@ -258,6 +313,137 @@ def _coprime_stride(parent_count: int, candidate: int) -> int:
         if stride == 0:
             stride = 1
     return stride
+
+
+def _profile_parent_indexes(
+    source: ForeignKeySource,
+    *,
+    seed_manager: SeedManager,
+    table_name: str,
+    parent_count: int,
+    child_row_count: int,
+) -> tuple[int, ...]:
+    frequencies = tuple(
+        (frequency.child_count, frequency.parent_frequency)
+        for frequency in source.fanout_hint.child_count_frequencies
+        if frequency.parent_frequency > 0
+    ) if source.fanout_hint is not None else ()
+    if not frequencies:
+        return ()
+
+    child_count_classes = _scale_frequency_classes(frequencies, parent_count)
+    parent_order = _permuted_indices(
+        parent_count,
+        seed_manager=seed_manager,
+        stream_parts=(
+            "foreign-key-profile-parents",
+            table_name,
+            source.parent_table,
+            ",".join(source.child_columns),
+            ",".join(source.parent_columns),
+        ),
+    )
+    profile_counts_by_parent = [0] * parent_count
+    for position, child_count in enumerate(child_count_classes):
+        profile_counts_by_parent[parent_order[position]] = child_count
+
+    generated_counts_by_parent = _scale_child_counts(
+        profile_counts_by_parent,
+        child_row_count,
+        parent_order,
+    )
+    child_parent_order = _permuted_indices(
+        parent_count,
+        seed_manager=seed_manager,
+        stream_parts=(
+            "foreign-key-profile-children",
+            table_name,
+            source.parent_table,
+            ",".join(source.child_columns),
+            ",".join(source.parent_columns),
+        ),
+    )
+
+    parent_indexes: list[int] = []
+    for parent_index in child_parent_order:
+        parent_indexes.extend([parent_index] * generated_counts_by_parent[parent_index])
+    return tuple(parent_indexes)
+
+
+def _scale_frequency_classes(
+    frequencies: tuple[tuple[int, int], ...],
+    parent_count: int,
+) -> tuple[int, ...]:
+    total_frequency = sum(frequency for _, frequency in frequencies)
+    if total_frequency <= 0 or parent_count <= 0:
+        return ()
+
+    allocations = [
+        [
+            child_count,
+            (parent_count * frequency) // total_frequency,
+            (parent_count * frequency) % total_frequency,
+        ]
+        for child_count, frequency in sorted(frequencies)
+    ]
+    remaining = parent_count - sum(allocation[1] for allocation in allocations)
+    for allocation in sorted(allocations, key=lambda item: (-item[2], item[0]))[:remaining]:
+        allocation[1] += 1
+
+    classes: list[int] = []
+    for child_count, frequency, _ in allocations:
+        classes.extend([child_count] * frequency)
+    return tuple(classes[:parent_count])
+
+
+def _scale_child_counts(
+    profile_counts_by_parent: list[int],
+    child_row_count: int,
+    parent_order: tuple[int, ...],
+) -> list[int]:
+    if child_row_count <= 0:
+        return [0] * len(profile_counts_by_parent)
+
+    profile_child_total = sum(profile_counts_by_parent)
+    if profile_child_total <= 0:
+        counts = [0] * len(profile_counts_by_parent)
+        for offset in range(child_row_count):
+            counts[parent_order[offset % len(parent_order)]] += 1
+        return counts
+
+    scaled = [
+        (child_count * child_row_count) // profile_child_total
+        for child_count in profile_counts_by_parent
+    ]
+    remainders = [
+        (child_count * child_row_count) % profile_child_total
+        for child_count in profile_counts_by_parent
+    ]
+    remaining = child_row_count - sum(scaled)
+    parent_rank = {parent_index: rank for rank, parent_index in enumerate(parent_order)}
+    for parent_index in sorted(
+        range(len(profile_counts_by_parent)),
+        key=lambda index: (-remainders[index], parent_rank[index]),
+    )[:remaining]:
+        scaled[parent_index] += 1
+    return scaled
+
+
+def _permuted_indices(
+    count: int,
+    *,
+    seed_manager: SeedManager,
+    stream_parts: tuple[str, ...],
+) -> tuple[int, ...]:
+    if count <= 0:
+        return ()
+    if count == 1:
+        return (0,)
+
+    stream = seed_manager.stream(*stream_parts)
+    offset = stream.randrange(count)
+    stride = _coprime_stride(count, stream.randrange(1, count))
+    return tuple((offset + (index * stride)) % count for index in range(count))
 
 
 def _is_next_sequential_key(key: tuple[Any, ...], expected_value: int) -> bool:

@@ -9,12 +9,14 @@ from databoom.generation.domains import (
     provider_for,
 )
 from databoom.generation.plan import (
+    ChildCountFrequency,
     ColumnPlan,
     ColumnStrategy,
     ForeignKeySelectionStrategy,
     ForeignKeySource,
     GenerationPlan,
     OutputFormat,
+    RelationshipFanoutHint,
     TablePlan,
     create_generation_plan,
 )
@@ -32,6 +34,7 @@ from databoom.generation.values import GeneratedValue, ValueGenerator
 __all__ = [
     "ColumnPlan",
     "ColumnStrategy",
+    "ChildCountFrequency",
     "DomainProfile",
     "DomainValueProvider",
     "FinancialValueProvider",
@@ -45,6 +48,7 @@ __all__ = [
     "HealthcareValueProvider",
     "OutputFormat",
     "ParentKeyStore",
+    "RelationshipFanoutHint",
     "GeneratedValue",
     "RowGenerationError",
     "RowGenerator",

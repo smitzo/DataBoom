@@ -1,8 +1,10 @@
 import pytest
 
 from databoom.generation import (
+    ChildCountFrequency,
     ForeignKeySelectionStrategy,
     ParentKeyStore,
+    RelationshipFanoutHint,
     RowGenerationError,
     RowGenerator,
     create_generation_plan,
@@ -108,6 +110,70 @@ def test_row_generator_keeps_random_foreign_key_strategy_available() -> None:
     account_ids = {row["id"] for row in tables["public.accounts"]}
 
     assert {row["account_id"] for row in tables["public.users"]} <= account_ids
+
+
+def test_row_generator_uses_profile_driven_foreign_key_fanout() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE accounts (id bigint PRIMARY KEY);
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            account_id bigint NOT NULL REFERENCES accounts(id)
+        );
+        """
+    )
+    hint = RelationshipFanoutHint(
+        child_table="public.users",
+        child_columns=("account_id",),
+        parent_table="public.accounts",
+        parent_columns=("id",),
+        child_count_frequencies=(
+            ChildCountFrequency(child_count=0, parent_frequency=2),
+            ChildCountFrequency(child_count=1, parent_frequency=2),
+            ChildCountFrequency(child_count=4, parent_frequency=1),
+        ),
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"accounts": 5, "users": 10},
+        seed=42,
+        foreign_key_strategy=ForeignKeySelectionStrategy.PROFILE_DRIVEN,
+        relationship_hints=(hint,),
+    )
+
+    tables = rows_by_table(RowGenerator.from_plan(plan).iter_records())
+    fanout = {
+        account_id: sum(1 for row in tables["public.users"] if row["account_id"] == account_id)
+        for account_id in {row["id"] for row in tables["public.accounts"]}
+    }
+
+    assert sorted(fanout.values()) == [0, 0, 2, 2, 6]
+
+
+def test_profile_driven_fanout_falls_back_to_balanced_without_hint() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE accounts (id bigint PRIMARY KEY);
+        CREATE TABLE users (
+            id bigint PRIMARY KEY,
+            account_id bigint NOT NULL REFERENCES accounts(id)
+        );
+        """
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"accounts": 3, "users": 9},
+        seed=42,
+        foreign_key_strategy=ForeignKeySelectionStrategy.PROFILE_DRIVEN,
+    )
+
+    tables = rows_by_table(RowGenerator.from_plan(plan).iter_records())
+    fanout = {
+        account_id: sum(1 for row in tables["public.users"] if row["account_id"] == account_id)
+        for account_id in {row["id"] for row in tables["public.accounts"]}
+    }
+
+    assert fanout == {1: 3, 2: 3, 3: 3}
 
 
 def test_row_generator_is_repeatable_for_same_plan() -> None:
