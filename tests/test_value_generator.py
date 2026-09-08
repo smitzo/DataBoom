@@ -157,6 +157,48 @@ def test_value_generator_profile_top_values_override_domain_provider() -> None:
     ) == "settled"
 
 
+def test_value_generator_uses_profile_integer_numeric_range() -> None:
+    value_generator = ValueGenerator(SeedManager(42))
+    profile_hint = ColumnProfileHint(
+        table_name="public.orders",
+        column_name="quantity",
+        sample_count=100,
+        null_rate=0.0,
+        distinct_count=3,
+        min_value="1",
+        max_value="3",
+    )
+    quantity_column = column("quantity", TypeFamily.NUMERIC, profile_hint=profile_hint)
+    values = [
+        value_generator.value_for("public.orders", quantity_column, row_index)
+        for row_index in range(30)
+    ]
+
+    assert all(isinstance(value, int) for value in values)
+    assert all(1 <= value <= 3 for value in values)
+
+
+def test_value_generator_uses_profile_decimal_range_before_domain_provider() -> None:
+    value_generator = ValueGenerator(SeedManager(42), domain=DomainProfile.FINANCIAL)
+    profile_hint = ColumnProfileHint(
+        table_name="public.transactions",
+        column_name="amount",
+        sample_count=100,
+        null_rate=0.0,
+        distinct_count=80,
+        min_value="5.25",
+        max_value="7.75",
+    )
+    amount_column = column("amount", TypeFamily.NUMERIC, profile_hint=profile_hint)
+    values = [
+        value_generator.value_for("public.transactions", amount_column, row_index)
+        for row_index in range(30)
+    ]
+
+    assert all(isinstance(value, float) for value in values)
+    assert all(5.25 <= value <= 7.75 for value in values)
+
+
 def test_value_generator_rejects_foreign_key_columns() -> None:
     value_generator = ValueGenerator(SeedManager(42))
     account_id = ColumnPlan(

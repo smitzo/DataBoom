@@ -2001,3 +2001,56 @@ After this change, profiled categorical columns can preserve:
 - deterministic repeatability.
 
 This is an important step toward quality reporting. Once generated output is influenced by source profiles, DataBoom can compare generated distributions against those source profiles and explain how close the output is.
+
+## Decision: generate numeric values inside profiled source ranges
+
+### Question
+
+Why use source `min_value` and `max_value` for numeric generation?
+
+### Answer
+
+A generic numeric generator can create technically valid numbers, but the values may be unrealistic for the source column.
+
+For example:
+
+- `age` should not become `843212`,
+- `quantity` should not become `500000`,
+- `amount` should not always use a broad banking fallback range if the source profile shows a narrow product-specific range.
+
+Using the profiled minimum and maximum gives the engine a hard boundary learned from the source. That immediately improves realism without introducing a heavy model-training path.
+
+### Question
+
+How does the numeric range path work?
+
+### Answer
+
+For numeric columns, the value generator now checks the column profile before the domain provider.
+
+If the profile has parseable numeric bounds:
+
+1. parse `min_value` and `max_value` as decimals,
+2. normalize reversed bounds defensively,
+3. return an integer if both bounds are integer-like,
+4. return a rounded float when the bounds are decimal-like,
+5. fall back to the existing provider if bounds are missing or invalid.
+
+This keeps the generator robust. A bad profile snapshot should not crash a full run; it should simply lose that optimization and continue through the deterministic fallback path.
+
+### Question
+
+Is this full distribution matching?
+
+### Answer
+
+No. This is range-aware generation, not histogram-aware generation.
+
+It guarantees generated numeric values stay within observed bounds. It does not yet preserve whether the source column is normally distributed, skewed, clustered around a few values, or seasonal.
+
+That is why the optimization plan now separates:
+
+- numeric range sampling from min/max,
+- deeper numeric distribution-aware sampling.
+
+This keeps the implementation honest and makes future quality work easier to reason about.

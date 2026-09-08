@@ -82,7 +82,8 @@ Todo:
 - [x] Persist source profile snapshots with freshness timestamps.
 - [x] Add `ColumnProfileHint` model for null rate, distinct count, min/max, top values, and sample count.
 - [x] Add categorical weighted sampling from top values.
-- [ ] Add numeric range and distribution-aware sampling.
+- [x] Add numeric range sampling from profile min/max.
+- [ ] Add numeric distribution-aware sampling beyond profile min/max.
 - [ ] Add datetime range and seasonality hints.
 - [ ] Add string pattern hints for emails, phone numbers, codes, and IDs.
 - [ ] Keep deterministic fallback providers when no profile exists.

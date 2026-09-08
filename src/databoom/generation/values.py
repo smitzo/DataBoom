@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
@@ -44,6 +45,10 @@ class ValueGenerator:
 
         if column.strategy == ColumnStrategy.PRIMARY_KEY:
             return self._primary_key_value(table_name, column, row_index)
+        if (
+            profiled_number := self._profiled_numeric_value(table_name, column, row_index)
+        ) is not None:
+            return profiled_number
         if (profiled_value := self._profiled_top_value(table_name, column, row_index)) is not None:
             return profiled_value
         return self._generated_value(table_name, column, row_index)
@@ -152,6 +157,40 @@ class ValueGenerator:
                 return top_value.value
         return hint.top_values[-1].value
 
+    def _profiled_numeric_value(
+        self,
+        table_name: str,
+        column: ColumnPlan,
+        row_index: int,
+    ) -> int | float | None:
+        hint = column.profile_hint
+        if hint is None or column.type_family != TypeFamily.NUMERIC:
+            return None
+        if hint.min_value is None or hint.max_value is None:
+            return None
+
+        bounds = _numeric_bounds(hint.min_value, hint.max_value)
+        if bounds is None:
+            return None
+        minimum, maximum = bounds
+        if minimum == maximum:
+            return _numeric_result(minimum, _decimal_places(minimum, maximum))
+
+        stream = self.seed_manager.stream(
+            "profile-numeric-range",
+            table_name,
+            column.name,
+            row_index,
+        )
+        if _is_integral(minimum) and _is_integral(maximum):
+            return stream.randint(int(minimum), int(maximum))
+
+        try:
+            value = stream.uniform(float(minimum), float(maximum))
+        except OverflowError:
+            return None
+        return round(value, _decimal_places(minimum, maximum))
+
     def _uuid(self, table_name: str, column_name: str, row_index: int) -> str:
         stream = self.seed_manager.stream("uuid", table_name, column_name, row_index)
         return str(UUID(int=stream.getrandbits(128), version=4))
@@ -162,6 +201,40 @@ def _top_value_coverage(sample_count: int, null_rate: float, top_value_count: in
         return 1.0
     non_null_sample_count = max(1, round(sample_count * (1 - null_rate)))
     return min(1.0, top_value_count / non_null_sample_count)
+
+
+def _numeric_bounds(minimum: str, maximum: str) -> tuple[Decimal, Decimal] | None:
+    parsed_minimum = _parse_decimal(minimum)
+    parsed_maximum = _parse_decimal(maximum)
+    if parsed_minimum is None or parsed_maximum is None:
+        return None
+    if parsed_minimum <= parsed_maximum:
+        return parsed_minimum, parsed_maximum
+    return parsed_maximum, parsed_minimum
+
+
+def _parse_decimal(value: str) -> Decimal | None:
+    try:
+        parsed = Decimal(value.strip())
+    except (InvalidOperation, ValueError):
+        return None
+    if not parsed.is_finite():
+        return None
+    return parsed
+
+
+def _numeric_result(value: Decimal, decimal_places: int) -> int | float:
+    if _is_integral(value):
+        return int(value)
+    return round(float(value), decimal_places)
+
+
+def _is_integral(value: Decimal) -> bool:
+    return value == value.to_integral_value()
+
+
+def _decimal_places(*values: Decimal) -> int:
+    return min(6, max(max(0, -value.as_tuple().exponent) for value in values))
 
 
 def _safe_name(value: str) -> str:
