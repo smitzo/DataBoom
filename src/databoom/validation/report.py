@@ -1,4 +1,18 @@
-"""Validation for local generated artifacts."""
+"""Validation for local generated artifacts.
+
+Purpose:
+    Re-read generated artifact files and produce a machine-readable validation
+    report for row counts, required values, primary keys, foreign keys, and fanout.
+
+Data flow:
+    `GenerationPlan` + `ExportManifest` -> CSV artifact reads -> validation issues
+    and relationship metrics -> `validation.json`.
+
+Why this layer exists:
+    Validation intentionally checks the files on disk, not only the in-memory row
+    stream. That catches exporter bugs, partial writes, and artifact path problems
+    that a pure generation-unit test would miss.
+"""
 
 from __future__ import annotations
 
@@ -62,7 +76,11 @@ class RelationshipFanoutMetric:
 
 @dataclass(frozen=True)
 class ValidationReport:
-    """Machine-readable validation result."""
+    """Machine-readable validation result.
+
+    The report is designed for both humans and automation: API responses can show
+    a compact summary while CI or future quality gates can inspect issue codes.
+    """
 
     passed: bool
     issues: tuple[ValidationIssue, ...]
@@ -103,6 +121,8 @@ def validate_export(plan: GenerationPlan, manifest: ExportManifest) -> Validatio
 
         issues.extend(_validate_artifact_paths(plan, artifact))
         if artifact.csv_path is not None and artifact.csv_path.exists():
+            # CSV is the validation source of truth today because it is the common
+            # tabular artifact and can be streamed with low memory.
             table_keys, table_issues = _validate_csv_artifact(
                 table,
                 artifact.csv_path,
@@ -158,6 +178,8 @@ def _validate_csv_artifact(
     *,
     should_keep_primary_keys: bool,
 ) -> tuple[dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]], list[ValidationIssue]]:
+    """Validate one CSV table and return keys needed by later child tables."""
+
     issues: list[ValidationIssue] = []
     required_columns = tuple(
         column.name
@@ -262,6 +284,8 @@ def _relationship_metrics(
         Counter[tuple[str, ...]],
     ],
 ) -> tuple[RelationshipFanoutMetric, ...]:
+    """Summarize generated child distribution for each foreign-key relationship."""
+
     metrics: list[RelationshipFanoutMetric] = []
     for table in plan.tables:
         for source in _foreign_key_sources(table):

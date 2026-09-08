@@ -1,4 +1,17 @@
-"""PostgreSQL source profiling for workspace metadata."""
+"""PostgreSQL source profiling for workspace metadata.
+
+Purpose:
+    Measure source-table statistics that can later guide synthetic generation.
+
+Data flow:
+    live PostgreSQL source -> table/column/relationship stats -> `SourceProfile`
+    snapshot -> state store -> generation-plan hints.
+
+Why this layer exists:
+    Schema tells us what can be generated; profiling tells us what the source looks
+    like. Keeping profiling separate from generation lets DataBoom support other
+    source systems later without rewriting the row engine.
+"""
 
 from __future__ import annotations
 
@@ -76,7 +89,11 @@ class RelationshipProfile:
 
 @dataclass(frozen=True)
 class SourceProfile:
-    """Observed profile statistics for one workspace source."""
+    """Observed profile statistics for one workspace source.
+
+    Profiles are snapshots, not live dependencies. A run can use the latest cached
+    profile even when generation itself only writes local artifacts.
+    """
 
     source_id: str
     generated_at: datetime
@@ -105,7 +122,7 @@ def profile_postgres_source(
     *,
     top_values_limit: int = 5,
 ) -> SourceProfile:
-    """Profile tables and columns from a PostgreSQL workspace source."""
+    """Profile tables, columns, and relationships from a PostgreSQL source."""
 
     engine = create_engine(database_url)
     try:
@@ -279,6 +296,8 @@ def source_profile_from_payload(payload: Mapping[str, Any]) -> SourceProfile:
 
 
 def _profile_table(connection: Any, resource, *, top_values_limit: int) -> TableProfile:
+    """Collect row count and column profiles for one workspace table resource."""
+
     schema_name = resource.schema_name or "public"
     table_name = _qualified_table(schema_name, resource.name)
     row_count = int(connection.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar_one())
@@ -310,6 +329,8 @@ def _profile_column(
     data_type: str,
     top_values_limit: int,
 ) -> ColumnProfile:
+    """Collect null, distinct, min/max, and top-value stats for one column."""
+
     column = _sql_identifier(column_name)
     stats = connection.execute(
         text(
@@ -321,6 +342,8 @@ def _profile_column(
             f"FROM {table_name}"
         )
     ).mappings().one()
+    # Top values are stored as strings because the profile contract must survive
+    # JSON storage and later feed multiple type-specific generators.
     top_values = tuple(
         TopValue(value=str(row["value"]), count=int(row["value_count"]))
         for row in connection.execute(
@@ -349,6 +372,8 @@ def _profile_column(
 
 
 def _profile_relationship(connection: Any, resource, foreign_key) -> RelationshipProfile:
+    """Collect parent-child fanout stats for one foreign-key relationship."""
+
     child_schema = resource.schema_name or "public"
     parent_schema = foreign_key.referred_schema or "public"
     child_table = _qualified_table(child_schema, resource.name)
@@ -378,6 +403,8 @@ def _profile_relationship(connection: Any, resource, foreign_key) -> Relationshi
     max_children = max(grouped_counts) if grouped_counts else 0
     child_count_frequency = Counter(grouped_counts)
     if empty_parent_count:
+        # Empty parents are part of the source distribution. Preserving them lets
+        # profile-driven fanout avoid forcing every parent to have a child row.
         child_count_frequency[0] += empty_parent_count
 
     return RelationshipProfile(

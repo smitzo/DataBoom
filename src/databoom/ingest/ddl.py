@@ -1,4 +1,17 @@
-"""PostgreSQL DDL ingestion."""
+"""PostgreSQL DDL ingestion.
+
+Purpose:
+    Parse PostgreSQL `CREATE TABLE` statements into DataBoom's normalized schema
+    models.
+
+Data flow:
+    raw DDL string -> sqlglot AST -> `DatabaseSchema`/`TableSchema`/`ColumnSchema`
+    models -> generation planner.
+
+Why this layer exists:
+    The generator should not depend on parser-specific AST nodes. DDL ingestion
+    translates external SQL syntax into a stable internal contract.
+"""
 
 from __future__ import annotations
 
@@ -30,6 +43,8 @@ def parse_postgres_ddl(sql: str) -> DatabaseSchema:
 
 
 def _parse_create_table(statement: exp.Create) -> TableSchema:
+    """Parse one `CREATE TABLE` AST node into a table schema."""
+
     schema = statement.this
     if not isinstance(schema, exp.Schema) or not isinstance(schema.this, exp.Table):
         raise ValueError("CREATE TABLE statement does not include a table schema")
@@ -105,6 +120,8 @@ class _InlineConstraints:
 
 
 def _parse_column(column_def: exp.ColumnDef) -> tuple[ColumnSchema, _InlineConstraints]:
+    """Parse one column definition and its inline constraints."""
+
     name = _identifier_name(column_def.this)
     constraints = _InlineConstraints()
 
@@ -132,6 +149,8 @@ def _parse_column(column_def: exp.ColumnDef) -> tuple[ColumnSchema, _InlineConst
 
 
 def _parse_data_type(data_type: exp.DataType) -> PostgresType:
+    """Normalize a SQL type expression into broad generation families."""
+
     is_array = data_type.this == exp.DataType.Type.ARRAY
     effective_type = data_type.expressions[0] if is_array and data_type.expressions else data_type
     type_name = _type_name(effective_type)

@@ -1,4 +1,17 @@
-"""Product catalog definitions for the demo dashboard API."""
+"""Product catalog definitions for the demo dashboard API.
+
+Purpose:
+    Describe which DataBoom product modules exist, what they generate, and which
+    local demo specs power the dashboard workspace.
+
+Data flow:
+    catalog entries -> `/products` API responses -> dashboard product selection ->
+    product generation run.
+
+Why this layer exists:
+    Product metadata should be declarative. The execution layer can then choose the
+    correct engine from `kind` instead of hardcoding product IDs across routes.
+"""
 
 from __future__ import annotations
 
@@ -21,7 +34,12 @@ class ProductPlan:
 
 @dataclass(frozen=True)
 class ProductCatalogEntry:
-    """Runnable product module configuration."""
+    """Runnable product module configuration.
+
+    `kind` is the switch that routes a product into relational, document, graph, or
+    masking execution paths. This keeps use-case examples separate from engine
+    architecture.
+    """
 
     id: str
     name: str

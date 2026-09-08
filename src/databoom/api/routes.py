@@ -1,4 +1,18 @@
-"""HTTP routes for the DataBoom API."""
+"""HTTP routes for the DataBoom API.
+
+Purpose:
+    Expose health, auth, product catalog, workspace source, generation run,
+    preview, and artifact download workflows.
+
+Data flow:
+    HTTP request -> Pydantic request model -> route validation -> service/helper
+    modules -> Pydantic response model.
+
+Why this layer exists:
+    Routes should stay thin. They translate HTTP concerns into backend calls while
+    engine decisions remain in `runs.py`, `generation/`, `profiling/`, and
+    `validation/`.
+"""
 
 from __future__ import annotations
 
@@ -85,6 +99,8 @@ def _require_demo_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = session_credentials,
 ) -> DemoUserResponse:
+    """Resolve the local demo session token into a user response."""
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -248,7 +264,11 @@ def refresh_workspace_source(
     payload: WorkspaceSourceRefreshRequest,
     user: DemoUserResponse = demo_user_dependency,
 ) -> WorkspaceSourceResponse:
-    """Refresh one relational workspace source from live PostgreSQL metadata."""
+    """Refresh one relational workspace source from live PostgreSQL metadata.
+
+    Refresh updates schema/resource metadata only. Profiling is a separate endpoint
+    because it reads table data and can be more expensive.
+    """
 
     source = _state_store(request).get_workspace_source(source_id)
     if source is None:
@@ -292,7 +312,11 @@ def profile_workspace_source(
     payload: WorkspaceSourceProfileRequest,
     user: DemoUserResponse = demo_user_dependency,
 ) -> WorkspaceSourceProfileResponse:
-    """Profile one relational workspace source from live PostgreSQL data."""
+    """Profile one relational workspace source from live PostgreSQL data.
+
+    The resulting snapshot feeds relationship and column hints during later
+    product runs.
+    """
 
     source = _state_store(request).get_workspace_source(source_id)
     if source is None:
@@ -746,6 +770,8 @@ def _validate_source_for_product(
 
 
 def _state_store(request: Request) -> StateStore:
+    """Return the configured persistence boundary from app state."""
+
     return request.app.state.state_store
 
 

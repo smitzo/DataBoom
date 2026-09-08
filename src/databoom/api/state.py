@@ -1,4 +1,18 @@
-"""State storage for API sessions, subscriptions, and generation runs."""
+"""State storage for API sessions, subscriptions, sources, profiles, and runs.
+
+Purpose:
+    Provide a persistence boundary for the API without binding route logic to a
+    specific database implementation.
+
+Data flow:
+    API handlers and async workers -> `StateStore` protocol -> in-memory store for
+    tests/local fallback or SQLAlchemy-backed tables for Dockerized API runs.
+
+Why this layer exists:
+    Generation artifacts live on disk, but the dashboard also needs durable
+    metadata: sessions, subscriptions, workspace sources, source profiles, and run
+    summaries. A protocol keeps that storage replaceable.
+"""
 
 from __future__ import annotations
 
@@ -88,7 +102,11 @@ source_profiles_table = Table(
 
 
 class StateStore(Protocol):
-    """Persistence boundary for API state."""
+    """Persistence boundary for API state.
+
+    The protocol is deliberately small and domain-specific. It avoids leaking
+    SQLAlchemy sessions or table details into route handlers.
+    """
 
     def save_session(self, token: str, user: DemoUserResponse) -> None:
         """Persist an authenticated session."""
@@ -188,11 +206,17 @@ class MemoryStateStore:
 
 
 class SQLAlchemyStateStore:
-    """SQL-backed state store used by the Dockerized API."""
+    """SQL-backed state store used by the Dockerized API.
+
+    Payload columns store Pydantic/API objects as JSON. That keeps the MVP schema
+    compact while the product model is still evolving.
+    """
 
     def __init__(self, database_url: str) -> None:
         self.engine: Engine = create_engine(database_url, pool_pre_ping=True, future=True)
         metadata.create_all(self.engine)
+        # Demo workspace sources are seed data. They are inserted only when missing
+        # so user-refreshed sources are not overwritten on restart.
         self._seed_workspace_sources()
 
     def save_session(self, token: str, user: DemoUserResponse) -> None:

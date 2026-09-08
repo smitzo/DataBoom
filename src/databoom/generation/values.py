@@ -1,4 +1,17 @@
-"""Primitive value generation for planned columns."""
+"""Primitive value generation for planned columns.
+
+Purpose:
+    Turn a `ColumnPlan` plus row index into one deterministic Python value.
+
+Data flow:
+    `ColumnPlan` -> null/profile checks -> primary-key/profile/domain fallback
+    strategy -> primitive value -> exporter serialization.
+
+Why this layer exists:
+    Value generation is intentionally separated from relationship solving. Foreign
+    keys depend on parent rows and are handled in `rows.py`; this module focuses
+    on scalar values that can be derived from the column plan and seed alone.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +32,11 @@ type GeneratedValue = str | int | float | bool | datetime | dict[str, Any] | Non
 
 @dataclass(frozen=True)
 class ValueGenerator:
-    """Generate deterministic primitive values for column plans."""
+    """Generate deterministic primitive values for column plans.
+
+    The generator uses named seed streams instead of shared global randomness. That
+    lets one column's implementation change without reshuffling unrelated columns.
+    """
 
     seed_manager: SeedManager
     domain: DomainProfile = DomainProfile.GENERAL
@@ -32,7 +49,11 @@ class ValueGenerator:
         object.__setattr__(self, "provider", provider_for(self.domain))
 
     def value_for(self, table_name: str, column: ColumnPlan, row_index: int) -> GeneratedValue:
-        """Generate one type-compatible value for a table column and row index."""
+        """Generate one type-compatible value for a table column and row index.
+
+        Source profile evidence runs before domain fallbacks because observed
+        column shape is stronger than a broad industry profile guess.
+        """
 
         if row_index < 0:
             raise ValueError("row index cannot be negative")
@@ -41,11 +62,15 @@ class ValueGenerator:
 
         stream = self.seed_manager.stream(table_name, column.name, row_index)
         if column.nullable and column.strategy != ColumnStrategy.PRIMARY_KEY:
+            # Null handling happens first so later value strategies do not need to
+            # duplicate "should this nullable field be blank?" logic.
             if stream.random() < self._null_probability_for(column):
                 return None
 
         if column.strategy == ColumnStrategy.PRIMARY_KEY:
             return self._primary_key_value(table_name, column, row_index)
+        # Profile hints are source-specific evidence. They intentionally run
+        # before broad domain providers like financial or healthcare defaults.
         if (
             profiled_number := self._profiled_numeric_value(table_name, column, row_index)
         ) is not None:
@@ -132,6 +157,8 @@ class ValueGenerator:
         column: ColumnPlan,
         row_index: int,
     ) -> str | None:
+        """Sample source-observed categorical values by their observed counts."""
+
         hint = column.profile_hint
         if hint is None or not hint.top_values:
             return None
@@ -144,6 +171,9 @@ class ValueGenerator:
 
         coverage = _top_value_coverage(hint.sample_count, hint.null_rate, top_value_count)
         if hint.distinct_count > len(hint.top_values):
+            # Top values often cover only the head of a high-cardinality column.
+            # Falling back outside that coverage avoids collapsing the tail into a
+            # tiny category list.
             stream = self.seed_manager.stream(
                 "profile-top-value-coverage",
                 table_name,
@@ -168,6 +198,8 @@ class ValueGenerator:
         column: ColumnPlan,
         row_index: int,
     ) -> int | float | None:
+        """Generate numeric values inside source-observed min/max bounds."""
+
         hint = column.profile_hint
         if hint is None or column.type_family != TypeFamily.NUMERIC:
             return None
@@ -202,6 +234,8 @@ class ValueGenerator:
         column: ColumnPlan,
         row_index: int,
     ) -> datetime | None:
+        """Generate datetime values inside source-observed min/max bounds."""
+
         hint = column.profile_hint
         if hint is None or column.type_family != TypeFamily.DATETIME:
             return None
@@ -233,6 +267,8 @@ class ValueGenerator:
 
 
 def _top_value_coverage(sample_count: int, null_rate: float, top_value_count: int) -> float:
+    """Estimate how much of the non-null source distribution top values cover."""
+
     if sample_count <= 0:
         return 1.0
     non_null_sample_count = max(1, round(sample_count * (1 - null_rate)))
@@ -240,6 +276,8 @@ def _top_value_coverage(sample_count: int, null_rate: float, top_value_count: in
 
 
 def _numeric_bounds(minimum: str, maximum: str) -> tuple[Decimal, Decimal] | None:
+    """Parse numeric profile bounds, returning normalized min/max order."""
+
     parsed_minimum = _parse_decimal(minimum)
     parsed_maximum = _parse_decimal(maximum)
     if parsed_minimum is None or parsed_maximum is None:
@@ -274,6 +312,8 @@ def _decimal_places(*values: Decimal) -> int:
 
 
 def _datetime_bounds(minimum: str, maximum: str) -> tuple[datetime, datetime] | None:
+    """Parse datetime profile bounds, returning normalized min/max order."""
+
     parsed_minimum = _parse_datetime(minimum)
     parsed_maximum = _parse_datetime(maximum)
     if parsed_minimum is None or parsed_maximum is None:

@@ -1,4 +1,13 @@
-"""Local artifact path helpers."""
+"""Local artifact path helpers.
+
+Purpose:
+    Centralize where generated manifests, exports, validation reports, and run
+    artifacts are written.
+
+Why this layer exists:
+    API, CLI, and async workers should agree on artifact roots instead of each
+    constructing paths independently.
+"""
 
 from __future__ import annotations
 

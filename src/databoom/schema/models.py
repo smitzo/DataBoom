@@ -1,4 +1,17 @@
-"""Normalized database schema models."""
+"""Normalized database schema models.
+
+Purpose:
+    Define the internal schema contract used by planners, generators, profilers,
+    validators, and API responses.
+
+Data flow:
+    DDL parser or live introspection -> schema models -> relationship graph ->
+    generation plan.
+
+Why this layer exists:
+    External sources use different metadata shapes. Normalized frozen models give
+    the engine one stable representation to reason about.
+"""
 
 from __future__ import annotations
 
@@ -22,7 +35,11 @@ class TypeFamily(StrEnum):
 
 
 class EngineModel(BaseModel):
-    """Base model for normalized engine contracts."""
+    """Base model for normalized engine contracts.
+
+    Engine contracts are frozen because schema should not drift while a generation
+    plan is being built or executed.
+    """
 
     model_config = ConfigDict(frozen=True)
 

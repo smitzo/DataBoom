@@ -1,4 +1,18 @@
-"""In-process async run manager for local API generation."""
+"""In-process async run manager for local API generation.
+
+Purpose:
+    Run product generation in background worker threads while the API can return
+    progress, cancellation, retry, and artifact metadata.
+
+Data flow:
+    product-run request -> running placeholder -> worker thread -> progress state
+    updates -> final `GenerationRunResponse` persisted to the state store.
+
+Why this layer exists:
+    The MVP needs long-running local jobs without adding a queue dependency too
+    early. This manager gives us observable async behavior now while keeping the
+    future worker-queue boundary clear.
+"""
 
 from __future__ import annotations
 
@@ -73,7 +87,12 @@ class ProductRunContext:
 
 @dataclass
 class AsyncRunManager:
-    """Track background generation runs for the local API process."""
+    """Track background generation runs for the local API process.
+
+    This manager owns in-memory liveness state only. Durable run history is saved
+    through `StateStore` so the dashboard can still list completed runs after the
+    response object is produced.
+    """
 
     max_workers: int = 2
     executor: ThreadPoolExecutor = field(init=False)
@@ -106,6 +125,8 @@ class AsyncRunManager:
         run_id = uuid4().hex
         artifact_dir = ensure_artifact_root(settings) / "runs" / run_id
         cancel_event = Event()
+        # Capture the profile snapshot at submission time. That makes the run
+        # reproducible even if the user refreshes the source profile later.
         source_profile = state_store.get_source_profile(source.id) if source is not None else None
         placeholder = _running_product_response(
             product=product,
@@ -234,6 +255,8 @@ class AsyncRunManager:
         cancel_event: Event,
         retry_of_run_id: str | None,
     ) -> None:
+        """Worker-thread entrypoint for one product generation run."""
+
         try:
             _raise_if_canceled(cancel_event)
             execute_kwargs = {

@@ -1,4 +1,17 @@
-"""Generation plan contracts and builders."""
+"""Generation plan contracts and builders.
+
+Purpose:
+    Convert normalized source schema metadata into an immutable execution plan.
+
+Data flow:
+    `DatabaseSchema` -> relationship graph -> table dependency order -> `TablePlan`
+    objects -> `ColumnPlan` objects with key/default/profile strategies attached.
+
+Why this layer exists:
+    Generation should not repeatedly inspect raw DDL, SQLAlchemy metadata, or
+    workspace payloads while rows are being written. The planner centralizes those
+    decisions once, so the row engine can stay fast and deterministic.
+"""
 
 from __future__ import annotations
 
@@ -38,7 +51,12 @@ class ForeignKeySelectionStrategy(StrEnum):
 
 
 class PlanModel(BaseModel):
-    """Base class for immutable generation plan models."""
+    """Base class for immutable generation plan models.
+
+    Plans are frozen on purpose. A generation run should be replayable from the
+    same plan and seed, so accidental mutation during row generation is treated as
+    a design bug instead of a convenient shortcut.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -83,7 +101,13 @@ class TopValueHint(PlanModel):
 
 
 class ColumnProfileHint(PlanModel):
-    """Observed source profile for one table column."""
+    """Observed source profile for one table column.
+
+    This is the source-agnostic bridge between profilers and generators. A
+    PostgreSQL profiler, CSV profiler, or later document-source profiler can all
+    emit this contract without forcing `ValueGenerator` to know where the stats
+    came from.
+    """
 
     table_name: str
     column_name: str
@@ -149,7 +173,11 @@ class TablePlan(PlanModel):
 
 
 class GenerationPlan(PlanModel):
-    """Full deterministic generation plan for a database schema."""
+    """Full deterministic generation plan for a database schema.
+
+    The plan is the backend engine's main handoff object. API routes, CLI commands,
+    exporters, validators, and async workers all operate from this same contract.
+    """
 
     seed: int | str
     domain: DomainProfile = DomainProfile.GENERAL
@@ -193,7 +221,12 @@ def create_generation_plan(
     relationship_hints: tuple[RelationshipFanoutHint, ...] = (),
     column_hints: tuple[ColumnProfileHint, ...] = (),
 ) -> GenerationPlan:
-    """Create a deterministic generation plan from schema metadata."""
+    """Create a deterministic generation plan from schema metadata.
+
+    The builder resolves table order, row counts, key strategies, relationship
+    hints, and column profile hints before generation starts. Doing that work here
+    keeps the hot row-writing path free from schema lookups.
+    """
 
     if default_row_count < 0:
         raise ValueError("default row count cannot be negative")
@@ -201,6 +234,8 @@ def create_generation_plan(
     row_counts = row_counts or {}
     _validate_row_count_keys(database, row_counts)
 
+    # The dependency graph gives us parent tables before child tables. That is
+    # required because child foreign keys can only point to keys already generated.
     graph = build_relationship_graph(database)
     table_plans = tuple(
         _build_table_plan(
@@ -232,6 +267,10 @@ def _build_table_plan(
     relationship_hints: tuple[RelationshipFanoutHint, ...],
     column_hints: tuple[ColumnProfileHint, ...],
 ) -> TablePlan:
+    """Build one table plan from schema columns and known parent dependencies."""
+
+    # A lookup avoids scanning all relationship edges for every column. This keeps
+    # plan construction cheap on wide schemas while keeping the row engine simple.
     foreign_key_columns = {
         column_name: (
             edge,
@@ -268,6 +307,8 @@ def _build_column_plan(
     foreign_key_columns,
     column_hints: tuple[ColumnProfileHint, ...],
 ) -> ColumnPlan:
+    """Choose the generation strategy for one column."""
+
     profile_hint = _column_hint_for_column(table, column, column_hints)
     if column.name in primary_key_columns:
         return ColumnPlan(

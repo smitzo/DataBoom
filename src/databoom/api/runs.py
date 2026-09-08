@@ -1,4 +1,18 @@
-"""Generation run execution helpers for the API."""
+"""Generation run execution helpers for the API.
+
+Purpose:
+    Convert API product requests into concrete Table-Boom or Docu-Boom generation
+    runs and API response payloads.
+
+Data flow:
+    request payload -> source/schema/profile resolution -> generation plan or
+    document spec -> artifact export -> validation -> `GenerationRunResponse`.
+
+Why this layer exists:
+    Routes should validate HTTP concerns and delegate execution. This module keeps
+    backend run orchestration reusable by sync routes, async workers, tests, and
+    future CLI/API shared workflows.
+"""
 
 from __future__ import annotations
 
@@ -61,7 +75,11 @@ def execute_generation_run(
     relationship_hints: tuple[RelationshipFanoutHint, ...] = (),
     column_hints: tuple[ColumnProfileHint, ...] = (),
 ) -> GenerationRunResponse:
-    """Execute a synchronous local generation run."""
+    """Execute a synchronous local Table-Boom generation run.
+
+    Stages are timed separately so the dashboard can explain whether time was
+    spent parsing schema, building the plan, exporting files, or validating output.
+    """
 
     created_at = created_at or datetime.now(UTC)
     run_id = run_id or uuid4().hex
@@ -73,6 +91,8 @@ def execute_generation_run(
     timings.append(_completed_timing("parse_schema", parse_started))
 
     plan_started = _started_at()
+    # Relationship hints come from source profiling. When they are present, prefer
+    # profile-driven fanout; otherwise use balanced fanout for stable coverage.
     effective_foreign_key_strategy = foreign_key_strategy or (
         ForeignKeySelectionStrategy.PROFILE_DRIVEN
         if relationship_hints
@@ -132,7 +152,7 @@ def execute_product_generation_run(
     artifact_dir: Path | None = None,
     progress_callback: RunProgressCallback | None = None,
 ) -> GenerationRunResponse:
-    """Execute a catalog-backed generation run for the product kind."""
+    """Execute a catalog-backed generation run for the selected product kind."""
 
     source = _source_for_payload(product, payload, source)
     match product.kind:
@@ -140,6 +160,8 @@ def execute_product_generation_run(
             schema_ddl = _schema_ddl_for_source(source) if source else product.schema_ddl
             if schema_ddl is None:
                 raise ValueError("relational product is missing schema DDL")
+            # Source profiles are optional. If no profile exists, plan creation and
+            # value generation keep deterministic fallback behavior.
             relationship_hints = _relationship_hints_from_source_profile(source_profile)
             column_hints = _column_hints_from_source_profile(source_profile)
             return execute_generation_run(
@@ -530,6 +552,8 @@ def _relationship_hints_from_source_profile(
 def _column_hints_from_source_profile(
     source_profile: SourceProfile | None,
 ) -> tuple[ColumnProfileHint, ...]:
+    """Convert stored source profiles into generation-plan column hints."""
+
     if source_profile is None:
         return ()
 

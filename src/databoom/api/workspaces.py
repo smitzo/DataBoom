@@ -1,4 +1,18 @@
-"""Workspace source catalog for dashboard product workspaces."""
+"""Workspace source catalog for dashboard product workspaces.
+
+Purpose:
+    Represent the databases, collections, and planned resources a user can select
+    before running a product workspace.
+
+Data flow:
+    static/demo source definitions or refreshed live source metadata ->
+    `WorkspaceSource` -> API responses -> dashboard resource rail -> product run.
+
+Why this layer exists:
+    Product selection and source selection are separate concerns. A user may run
+    Table-Boom against multiple PostgreSQL sources; this module describes those
+    sources without coupling them to generation execution.
+"""
 
 from __future__ import annotations
 
@@ -66,7 +80,11 @@ class WorkspaceResource:
 
 @dataclass(frozen=True)
 class WorkspaceSource:
-    """Database or source connection available to one product workspace."""
+    """Database or source connection available to one product workspace.
+
+    Refreshed relational sources may include `schema_ddl`, letting later runs use
+    the live database shape instead of a baked-in demo schema.
+    """
 
     id: str
     product_id: str

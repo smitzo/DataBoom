@@ -1,4 +1,17 @@
-"""Local filesystem exporters for generated rows."""
+"""Local filesystem exporters for generated rows.
+
+Purpose:
+    Stream generated rows into local CSV, JSON, and SQL artifacts.
+
+Data flow:
+    `GenerationPlan` -> `RowGenerator` -> table writers -> artifact files ->
+    `manifest.json` for API/CLI/frontend discovery.
+
+Why this layer exists:
+    Generation should not hold a full dataset in memory before writing output.
+    The exporter writes rows as they are produced, which is the baseline approach
+    for supporting 100k, 500k, and 1M+ local generation runs.
+"""
 
 from __future__ import annotations
 
@@ -54,7 +67,12 @@ ProgressCallback = Callable[[int, str], None]
 
 
 class ArtifactExporter:
-    """Stream a generation plan to local CSV and SQL artifacts."""
+    """Stream a generation plan to local artifact files.
+
+    The exporter owns output formatting only. It does not decide values,
+    relationships, or validation rules; those are handled by the planner, row
+    engine, and validator.
+    """
 
     progress_interval = 1_000
 
@@ -69,6 +87,8 @@ class ArtifactExporter:
         self.progress_callback = progress_callback
 
     def export(self) -> ExportManifest:
+        """Generate all requested artifacts and write a manifest file."""
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         row_generator = RowGenerator.from_plan(self.plan)
@@ -95,6 +115,8 @@ class ArtifactExporter:
         table: TablePlan,
         completed_before_table: int,
     ) -> TableArtifact:
+        """Stream one planned table into the requested file formats."""
+
         csv_writer = None
         json_writer = None
         sql_writer = None
@@ -182,6 +204,8 @@ class _close_writers:
 
 
 class _CsvTableWriter:
+    """CSV writer optimized for previews and bounded flush overhead."""
+
     flush_interval = 1_000
     preview_flush_rows = 20
 
@@ -201,6 +225,8 @@ class _CsvTableWriter:
         self.rows_since_flush += 1
         should_flush_preview = self.rows_written == self.preview_flush_rows
         should_flush_interval = self.rows_since_flush >= self.flush_interval
+        # Flush early after 20 rows so the dashboard can preview data during a run.
+        # After that, flush in batches to avoid paying disk-sync overhead per row.
         if should_flush_preview or should_flush_interval:
             self.handle.flush()
             self.rows_since_flush = 0
@@ -211,6 +237,8 @@ class _CsvTableWriter:
 
 
 class _SqlTableWriter:
+    """Simple SQL insert writer for portable local replay artifacts."""
+
     def __init__(self, path: Path, table: TablePlan) -> None:
         self.path = path
         self.table = table
@@ -230,6 +258,8 @@ class _SqlTableWriter:
 
 
 class _JsonTableWriter:
+    """JSON array writer for small and medium table previews."""
+
     def __init__(self, path: Path) -> None:
         self.path = path
         self.handle = path.open("w", encoding="utf-8")

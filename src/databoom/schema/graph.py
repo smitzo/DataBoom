@@ -1,4 +1,16 @@
-"""Relationship graph utilities for normalized schemas."""
+"""Relationship graph utilities for normalized schemas.
+
+Purpose:
+    Convert table foreign keys into dependency edges and generation order.
+
+Data flow:
+    `DatabaseSchema` -> `RelationshipEdge` tuples -> topological table order ->
+    generation planner.
+
+Why this layer exists:
+    Foreign-key integrity requires parent rows before child rows. The graph makes
+    that ordering explicit and fails early on unsupported cross-table cycles.
+"""
 
 from __future__ import annotations
 
@@ -63,6 +75,8 @@ class RelationshipGraph:
                     ready.append(child_name)
 
         if len(ordered_names) != len(table_by_name):
+            # Cross-table cycles need a more advanced deferred-key strategy. Failing
+            # at planning time is clearer than generating broken foreign keys.
             blocked = sorted(name for name, degree in indegree.items() if degree > 0)
             raise SchemaCycleError(
                 "schema contains cyclic table dependencies: " + ", ".join(blocked)

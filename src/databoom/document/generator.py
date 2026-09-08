@@ -1,4 +1,17 @@
-"""Deterministic NoSQL document generation for Docu-Boom."""
+"""Deterministic NoSQL document generation for Docu-Boom.
+
+Purpose:
+    Generate nested JSON and NDJSON collections from declarative document specs.
+
+Data flow:
+    `DocumentCollectionSpec` -> generated documents -> JSON/NDJSON artifacts ->
+    document manifest and validation summary.
+
+Why this layer exists:
+    Document datasets need nested objects, arrays, and object-id style references.
+    Keeping that separate from the relational row engine prevents table-specific
+    foreign-key assumptions from leaking into Docu-Boom.
+"""
 
 from __future__ import annotations
 
@@ -60,7 +73,11 @@ class DocumentGenerationResult:
 
 
 class DocumentGenerator:
-    """Generate JSON and NDJSON collections from declarative specs."""
+    """Generate JSON and NDJSON collections from declarative specs.
+
+    The generator stays deterministic through `SeedManager`, just like Table-Boom,
+    but it uses document-specific field kinds instead of SQL column families.
+    """
 
     flush_interval = 1_000
     preview_flush_rows = 20
@@ -82,6 +99,8 @@ class DocumentGenerator:
         self.progress_callback = progress_callback
 
     def generate(self) -> DocumentGenerationResult:
+        """Generate all configured collections and write manifest/validation files."""
+
         self.output_dir.mkdir(parents=True, exist_ok=True)
         artifacts: list[DocumentArtifact] = []
         completed_rows = 0
@@ -117,6 +136,8 @@ class DocumentGenerator:
         collection: DocumentCollectionSpec,
         completed_before_collection: int,
     ) -> DocumentArtifact:
+        """Stream one collection to JSON and NDJSON files."""
+
         row_count = self.row_counts.get(collection.name, collection.default_count)
         json_path = self.output_dir / f"{collection.name}.json"
         ndjson_path = self.output_dir / f"{collection.name}.ndjson"
@@ -182,6 +203,8 @@ class DocumentGenerator:
         field: DocumentFieldSpec,
         row_index: int,
     ) -> Any:
+        """Generate one document field value from its declarative field kind."""
+
         stream = self.seed_manager.stream("document", collection_name, field.name, row_index)
         match field.kind:
             case "object_id":
@@ -191,6 +214,8 @@ class DocumentGenerator:
             case "reference":
                 values = self.generated_ids.get(field.target_collection or "", [])
                 if values:
+                    # References prefer already-generated IDs so document exports
+                    # can preserve lightweight relationships without a graph engine.
                     return values[stream.randrange(len(values))]
                 return _object_id(
                     self.seed_manager.child_seed(collection_name, field.name, row_index)

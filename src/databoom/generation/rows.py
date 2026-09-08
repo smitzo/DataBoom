@@ -1,4 +1,18 @@
-"""Relationship-aware row generation."""
+"""Relationship-aware row generation.
+
+Purpose:
+    Execute a `GenerationPlan` and yield rows in dependency order.
+
+Data flow:
+    `GenerationPlan` -> `RowGenerator` -> parent rows registered in
+    `ForeignKeyRegistry` -> child rows choose valid parent keys -> generated row
+    dictionaries -> exporters.
+
+Why this layer exists:
+    Referential integrity is structural, not just another value-generation problem.
+    Keeping foreign-key solving here prevents scalar value providers from needing
+    global knowledge about previously generated tables.
+"""
 
 from __future__ import annotations
 
@@ -34,13 +48,20 @@ class GeneratedRecord:
 
 @dataclass
 class ParentKeyStore:
-    """Store parent keys, compressing the common sequential integer key path."""
+    """Store parent keys, compressing the common sequential integer key path.
+
+    A million-row parent table with `id = 1..N` should not need a million materialized
+    one-item tuples in memory. The compressed path keeps memory bounded for the most
+    common primary-key shape and only expands when a non-sequential key appears.
+    """
 
     values: list[tuple[Any, ...]] = field(default_factory=list)
     sequential_count: int = 0
     compressed_sequential: bool = True
 
     def append(self, key: tuple[Any, ...]) -> None:
+        """Register one generated primary-key tuple."""
+
         if self.compressed_sequential and _is_next_sequential_key(
             key,
             self.sequential_count + 1,
@@ -74,7 +95,12 @@ class ParentKeyStore:
 
 @dataclass
 class ForeignKeyRegistry:
-    """Store generated parent key values for child-table foreign keys."""
+    """Store generated parent key values for child-table foreign keys.
+
+    The registry is intentionally stateful per run. It is the small amount of
+    memory that lets child rows point to already-generated parent rows without
+    reading back exported CSV/JSON files.
+    """
 
     keys: dict[tuple[str, tuple[str, ...]], ParentKeyStore] = field(default_factory=dict)
     balanced_plans: dict[
@@ -87,6 +113,8 @@ class ForeignKeyRegistry:
     ] = field(default_factory=dict)
 
     def register(self, table: TablePlan, row: GeneratedRow) -> None:
+        """Store a table row's primary key when later child tables may need it."""
+
         primary_key_columns = tuple(
             column.name for column in table.columns if column.strategy == ColumnStrategy.PRIMARY_KEY
         )
@@ -108,6 +136,8 @@ class ForeignKeyRegistry:
         row_index: int,
         child_row_count: int,
     ) -> tuple[Any, ...]:
+        """Choose a valid parent key for one child row."""
+
         key = (source.parent_table, source.parent_columns)
         store = self.keys.get(key)
         if store is None or len(store) == 0:
@@ -126,6 +156,8 @@ class ForeignKeyRegistry:
             return store.get(stream.randrange(len(store)))
 
         if strategy == ForeignKeySelectionStrategy.PROFILE_DRIVEN:
+            # Profile-driven fanout is attempted first, but missing or incomplete
+            # profile data falls back to balanced fanout instead of failing the run.
             profile_index = self._profile_index(
                 source,
                 seed_manager=seed_manager,
@@ -219,7 +251,12 @@ class ForeignKeyRegistry:
 
 @dataclass
 class RowGenerator:
-    """Execute a generation plan into deterministic table rows."""
+    """Execute a generation plan into deterministic table rows.
+
+    A `RowGenerator` instance owns the mutable run-local state needed for foreign
+    keys. The `GenerationPlan` remains immutable and can be reused for tests,
+    previews, and repeatable runs.
+    """
 
     plan: GenerationPlan
     seed_manager: SeedManager
@@ -228,6 +265,8 @@ class RowGenerator:
 
     @classmethod
     def from_plan(cls, plan: GenerationPlan) -> RowGenerator:
+        """Construct the default row generator stack for a plan."""
+
         seed_manager = SeedManager(plan.seed)
         return cls(
             plan=plan,
@@ -243,7 +282,7 @@ class RowGenerator:
                 yield GeneratedRecord(table_name=table.table_name, row=row)
 
     def iter_table_rows(self, table: TablePlan) -> Iterator[GeneratedRow]:
-        """Yield generated rows for the next table in dependency order."""
+        """Yield generated rows for one table and register keys as rows stream out."""
 
         for row_index in range(table.row_count):
             row = self._generate_row(table, row_index)
@@ -251,6 +290,8 @@ class RowGenerator:
             yield row
 
     def _generate_row(self, table: TablePlan, row_index: int) -> GeneratedRow:
+        """Generate one row after resolving any foreign-key values it needs."""
+
         row: GeneratedRow = {}
         foreign_key_values = self._foreign_key_values_for_row(table, row_index)
 

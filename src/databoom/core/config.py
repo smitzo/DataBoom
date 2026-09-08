@@ -1,4 +1,16 @@
-"""Runtime configuration for DataBoom."""
+"""Runtime configuration for DataBoom.
+
+Purpose:
+    Load environment-driven settings shared by the CLI, API, and Docker runtime.
+
+Data flow:
+    environment variables or `.env` -> `Settings` -> app factory, CLI commands,
+    artifact helpers, and state-store creation.
+
+Why this layer exists:
+    Runtime choices should be configured at the boundary of the process, not
+    hardcoded inside generation or API modules.
+"""
 
 from __future__ import annotations
 

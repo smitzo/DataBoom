@@ -1,4 +1,17 @@
-"""API response models."""
+"""API request and response models.
+
+Purpose:
+    Define the JSON contracts shared by the FastAPI backend and frontend.
+
+Data flow:
+    route payloads -> Pydantic validation -> backend service objects -> response
+    models serialized back to clients.
+
+Why this layer exists:
+    Keeping request/response shapes centralized prevents route handlers from
+    returning ad hoc dictionaries and makes API behavior easier to typecheck, test,
+    and document.
+"""
 
 from __future__ import annotations
 
@@ -110,7 +123,12 @@ class ProductPlanResponse(BaseModel):
 
 
 class ProductResponse(BaseModel):
-    """DataBoom product module exposed to the frontend."""
+    """DataBoom product module exposed to the frontend.
+
+    Products are capability surfaces, not use-case-specific brands. Banking or
+    healthcare examples should appear as use cases, demos, or profiles under these
+    product modules.
+    """
 
     model_config = ConfigDict(extra="forbid")
 

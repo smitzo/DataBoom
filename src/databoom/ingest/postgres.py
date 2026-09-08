@@ -1,4 +1,17 @@
-"""Live PostgreSQL schema introspection."""
+"""Live PostgreSQL schema introspection.
+
+Purpose:
+    Read schema metadata from a running PostgreSQL database and normalize it into
+    DataBoom engine models.
+
+Data flow:
+    database URL or SQLAlchemy connectable -> inspector metadata ->
+    `DatabaseSchema` -> workspace source refresh and generation planning.
+
+Why this layer exists:
+    Live metadata and DDL parsing are separate input paths, but both must produce
+    the same internal schema contract so the rest of the engine stays source-agnostic.
+"""
 
 from __future__ import annotations
 
@@ -53,6 +66,8 @@ def inspect_postgres_schema(
 
 
 def _inspect_table(inspector: Any, schema_name: str, table_name: str) -> TableSchema:
+    """Normalize one inspected PostgreSQL table."""
+
     return TableSchema(
         schema_name=schema_name,
         name=table_name,
@@ -115,6 +130,8 @@ def _unique_constraint_from_metadata(metadata: Mapping[str, Any]) -> UniqueConst
 
 
 def _postgres_type_from_metadata(sqlalchemy_type: Any) -> PostgresType:
+    """Convert SQLAlchemy type metadata into DataBoom's type-family contract."""
+
     raw = _compiled_type(sqlalchemy_type)
     is_array = raw.endswith("[]")
     type_name = raw.removesuffix("[]").split("(", 1)[0].strip().upper()

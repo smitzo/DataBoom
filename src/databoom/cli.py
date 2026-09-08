@@ -1,4 +1,17 @@
-"""Command-line entry point for DataBoom."""
+"""Command-line entry point for DataBoom.
+
+Purpose:
+    Provide local developer/operator commands for planning, generating, and
+    validating datasets without the web dashboard.
+
+Data flow:
+    CLI options -> DDL ingestion -> generation plan -> exporter/validator ->
+    terminal summary and artifact files.
+
+Why this layer exists:
+    The CLI exercises the same backend engine as the API. That makes local testing,
+    benchmarking, and debugging possible without a running frontend.
+"""
 
 from __future__ import annotations
 
@@ -105,6 +118,8 @@ def generate(
 ) -> None:
     """Generate local synthetic data artifacts from PostgreSQL DDL."""
 
+    # CLI generation intentionally reuses the same planner/exporter/validator path
+    # as API runs so command-line smoke tests catch real backend regressions.
     generation_plan = _build_generation_plan(
         schema_path,
         row_counts=_parse_row_counts(rows),
