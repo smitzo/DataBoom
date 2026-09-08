@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from databoom import __version__
 from databoom.api.async_jobs import AsyncRunManager
+from databoom.api.auth import ensure_seed_user
 from databoom.api.routes import router
 from databoom.api.state import StateStore, create_state_store
 from databoom.core.config import Settings, get_settings
@@ -42,6 +43,7 @@ def create_app(settings: Settings | None = None, state_store: StateStore | None 
     # dependency injection can replace them in tests.
     app.state.settings = active_settings
     app.state.state_store = state_store or create_state_store(active_settings)
+    ensure_seed_user(app.state.state_store, active_settings)
     app.state.async_run_manager = AsyncRunManager()
     app.router.on_shutdown.append(app.state.async_run_manager.shutdown)
     app.add_middleware(

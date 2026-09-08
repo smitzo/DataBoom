@@ -23,13 +23,19 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from databoom import __version__
 from databoom.api.async_jobs import RunControlError, RunNotFoundError
+from databoom.api.auth import (
+    build_user_record,
+    new_session_token,
+    user_response_from_record,
+    verify_password,
+)
 from databoom.api.models import (
+    AppUserResponse,
     CollectionArtifactResponse,
-    DemoUserResponse,
     DocumentPreviewResponse,
     GenerationRunRequest,
     GenerationRunResponse,
@@ -39,6 +45,7 @@ from databoom.api.models import (
     ProductPlanResponse,
     ProductResponse,
     ProductRunRequest,
+    RegisterRequest,
     RunArtifactListResponse,
     SubscriptionRequest,
     SubscriptionResponse,
@@ -90,16 +97,12 @@ protected_route = Depends(require_api_key)
 session_scheme = HTTPBearer(auto_error=False)
 session_credentials = Depends(session_scheme)
 
-DEMO_EMAIL = "demo"
-DEMO_PASSWORD = "demo"
-DEMO_TOKEN = "demo-session-token"
 
-
-def _require_demo_user(
+def _require_app_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = session_credentials,
-) -> DemoUserResponse:
-    """Resolve the local demo session token into a user response."""
+) -> AppUserResponse:
+    """Resolve the bearer session token into an authenticated user."""
 
     if credentials is None:
         raise HTTPException(
@@ -116,7 +119,7 @@ def _require_demo_user(
     return user
 
 
-demo_user_dependency = Depends(_require_demo_user)
+app_user_dependency = Depends(_require_app_user)
 
 
 @router.get("/health", response_model=HealthResponse, tags=["system"])
@@ -140,21 +143,54 @@ def ready(request: Request) -> HealthResponse:
     return health(request)
 
 
+@router.post("/auth/register", response_model=LoginResponse, status_code=201, tags=["auth"])
+def register(request: Request, payload: RegisterRequest) -> LoginResponse:
+    """Register a product workspace user and return a session token."""
+
+    settings: Settings = request.app.state.settings
+    if not settings.allow_registration:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="registration is disabled for this deployment",
+        )
+
+    store = _state_store(request)
+    if store.get_user_by_login_id(payload.login_id) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="login id already exists")
+    if store.get_user_by_email(payload.email) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="email already exists")
+
+    user_record = build_user_record(
+        login_id=payload.login_id,
+        email=payload.email,
+        name=payload.name,
+        password=payload.password,
+    )
+    try:
+        store.save_user(user_record)
+    except IntegrityError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="user already exists",
+        ) from error
+
+    return _create_session_response(request, user_response_from_record(user_record))
+
+
 @router.post("/auth/login", response_model=LoginResponse, tags=["auth"])
 def login(request: Request, payload: LoginRequest) -> LoginResponse:
-    """Authenticate the built-in demo user."""
+    """Authenticate an application user."""
 
-    if payload.email != DEMO_EMAIL or payload.password != DEMO_PASSWORD:
+    user_record = _state_store(request).get_user_by_login_id(payload.login_id)
+    if user_record is None or not verify_password(payload.password, user_record.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 
-    user = DemoUserResponse(email=DEMO_EMAIL, name="Demo Operator")
-    _state_store(request).save_session(DEMO_TOKEN, user)
-    return LoginResponse(token=DEMO_TOKEN, user=user)
+    return _create_session_response(request, user_response_from_record(user_record))
 
 
-@router.get("/me", response_model=DemoUserResponse, tags=["auth"])
-def me(user: DemoUserResponse = demo_user_dependency) -> DemoUserResponse:
-    """Return the authenticated demo user."""
+@router.get("/me", response_model=AppUserResponse, tags=["auth"])
+def me(user: AppUserResponse = app_user_dependency) -> AppUserResponse:
+    """Return the authenticated application user."""
 
     return user
 
@@ -203,7 +239,7 @@ def workspace_sources(request: Request) -> tuple[WorkspaceSourceResponse, ...]:
 def save_workspace_source(
     request: Request,
     payload: WorkspaceSourceRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> WorkspaceSourceResponse:
     """Create or replace a dashboard workspace source."""
 
@@ -225,7 +261,7 @@ def save_workspace_source(
 )
 def test_workspace_connection(
     payload: WorkspaceConnectionTestRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> WorkspaceConnectionTestResponse:
     """Test a live PostgreSQL connection before source refresh or creation."""
 
@@ -262,7 +298,7 @@ def refresh_workspace_source(
     request: Request,
     source_id: str,
     payload: WorkspaceSourceRefreshRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> WorkspaceSourceResponse:
     """Refresh one relational workspace source from live PostgreSQL metadata.
 
@@ -310,7 +346,7 @@ def profile_workspace_source(
     request: Request,
     source_id: str,
     payload: WorkspaceSourceProfileRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> WorkspaceSourceProfileResponse:
     """Profile one relational workspace source from live PostgreSQL data.
 
@@ -351,7 +387,7 @@ def profile_workspace_source(
 def workspace_source_profile_snapshot(
     request: Request,
     source_id: str,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> WorkspaceSourceProfileResponse:
     """Return the latest persisted source profile snapshot."""
 
@@ -396,9 +432,9 @@ def product_workspace_sources(
 )
 def list_subscriptions(
     request: Request,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> tuple[SubscriptionResponse, ...]:
-    """Return demo subscriptions for the authenticated user."""
+    """Return subscriptions for the authenticated user."""
 
     return _state_store(request).list_subscriptions(user.email)
 
@@ -412,9 +448,9 @@ def list_subscriptions(
 def subscribe(
     request: Request,
     payload: SubscriptionRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> SubscriptionResponse:
-    """Subscribe the demo user to one DataBoom product."""
+    """Subscribe the authenticated user to one DataBoom product."""
 
     try:
         product = get_product(payload.product_id)
@@ -449,7 +485,7 @@ def create_product_run(
     request: Request,
     product_id: str,
     payload: ProductRunRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> GenerationRunResponse:
     """Run the generator with a subscribed product's schema and defaults."""
 
@@ -495,7 +531,7 @@ def create_async_product_run(
     request: Request,
     product_id: str,
     payload: ProductRunRequest,
-    user: DemoUserResponse = demo_user_dependency,
+    user: AppUserResponse = app_user_dependency,
 ) -> GenerationRunResponse:
     """Start a catalog-backed generation run in the background."""
 
@@ -736,6 +772,12 @@ def _get_existing_run(request: Request, run_id: str) -> GenerationRunResponse:
     if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run not found")
     return run
+
+
+def _create_session_response(request: Request, user: AppUserResponse) -> LoginResponse:
+    token = new_session_token()
+    _state_store(request).save_session(token, user)
+    return LoginResponse(token=token, user=user)
 
 
 def _get_product_or_404(product_id: str) -> ProductCatalogEntry:

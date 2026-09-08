@@ -37,7 +37,12 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
-from databoom.api.models import DemoUserResponse, GenerationRunResponse, SubscriptionResponse
+from databoom.api.models import (
+    AppUserResponse,
+    GenerationRunResponse,
+    SubscriptionResponse,
+    UserRecord,
+)
 from databoom.api.workspaces import (
     WorkspaceSource,
     default_workspace_sources,
@@ -60,6 +65,18 @@ sessions_table = Table(
     metadata,
     Column("token", String(255), primary_key=True),
     Column("payload", JSON, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
+users_table = Table(
+    "databoom_users",
+    metadata,
+    Column("user_id", String(120), primary_key=True),
+    Column("login_id", String(120), nullable=False, unique=True, index=True),
+    Column("email", String(320), nullable=False, unique=True, index=True),
+    Column("name", String(120), nullable=False),
+    Column("password_hash", String(255), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
@@ -108,10 +125,19 @@ class StateStore(Protocol):
     SQLAlchemy sessions or table details into route handlers.
     """
 
-    def save_session(self, token: str, user: DemoUserResponse) -> None:
+    def save_user(self, user: UserRecord) -> None:
+        """Persist an application user."""
+
+    def get_user_by_login_id(self, login_id: str) -> UserRecord | None:
+        """Return a user by login ID."""
+
+    def get_user_by_email(self, email: str) -> UserRecord | None:
+        """Return a user by email."""
+
+    def save_session(self, token: str, user: AppUserResponse) -> None:
         """Persist an authenticated session."""
 
-    def get_session(self, token: str) -> DemoUserResponse | None:
+    def get_session(self, token: str) -> AppUserResponse | None:
         """Return a session user by token."""
 
     def save_subscription(self, subscription: SubscriptionResponse) -> None:
@@ -152,7 +178,9 @@ class MemoryStateStore:
     """In-process state store for tests and fallback local development."""
 
     def __init__(self) -> None:
-        self._sessions: dict[str, DemoUserResponse] = {}
+        self._users_by_login_id: dict[str, UserRecord] = {}
+        self._users_by_email: dict[str, UserRecord] = {}
+        self._sessions: dict[str, AppUserResponse] = {}
         self._subscriptions: dict[str, dict[str, SubscriptionResponse]] = {}
         self._runs: dict[str, GenerationRunResponse] = {}
         self._workspace_sources: dict[str, WorkspaceSource] = {
@@ -160,10 +188,20 @@ class MemoryStateStore:
         }
         self._source_profiles: dict[str, SourceProfile] = {}
 
-    def save_session(self, token: str, user: DemoUserResponse) -> None:
+    def save_user(self, user: UserRecord) -> None:
+        self._users_by_login_id[user.login_id] = user
+        self._users_by_email[user.email] = user
+
+    def get_user_by_login_id(self, login_id: str) -> UserRecord | None:
+        return self._users_by_login_id.get(login_id)
+
+    def get_user_by_email(self, email: str) -> UserRecord | None:
+        return self._users_by_email.get(email)
+
+    def save_session(self, token: str, user: AppUserResponse) -> None:
         self._sessions[token] = user
 
-    def get_session(self, token: str) -> DemoUserResponse | None:
+    def get_session(self, token: str) -> AppUserResponse | None:
         return self._sessions.get(token)
 
     def save_subscription(self, subscription: SubscriptionResponse) -> None:
@@ -219,7 +257,51 @@ class SQLAlchemyStateStore:
         # so user-refreshed sources are not overwritten on restart.
         self._seed_workspace_sources()
 
-    def save_session(self, token: str, user: DemoUserResponse) -> None:
+    def save_user(self, user: UserRecord) -> None:
+        with self.engine.begin() as connection:
+            connection.execute(
+                insert(users_table).values(
+                    user_id=user.user_id,
+                    login_id=user.login_id,
+                    email=user.email,
+                    name=user.name,
+                    password_hash=user.password_hash,
+                    created_at=user.created_at,
+                    updated_at=user.updated_at,
+                )
+            )
+
+    def get_user_by_login_id(self, login_id: str) -> UserRecord | None:
+        with self.engine.begin() as connection:
+            row = connection.execute(
+                select(
+                    users_table.c.user_id,
+                    users_table.c.login_id,
+                    users_table.c.email,
+                    users_table.c.name,
+                    users_table.c.password_hash,
+                    users_table.c.created_at,
+                    users_table.c.updated_at,
+                ).where(users_table.c.login_id == login_id)
+            ).one_or_none()
+        return _parse_user_record(row) if row is not None else None
+
+    def get_user_by_email(self, email: str) -> UserRecord | None:
+        with self.engine.begin() as connection:
+            row = connection.execute(
+                select(
+                    users_table.c.user_id,
+                    users_table.c.login_id,
+                    users_table.c.email,
+                    users_table.c.name,
+                    users_table.c.password_hash,
+                    users_table.c.created_at,
+                    users_table.c.updated_at,
+                ).where(users_table.c.email == email)
+            ).one_or_none()
+        return _parse_user_record(row) if row is not None else None
+
+    def save_session(self, token: str, user: AppUserResponse) -> None:
         payload = user.model_dump(mode="json")
         with self.engine.begin() as connection:
             connection.execute(delete(sessions_table).where(sessions_table.c.token == token))
@@ -231,12 +313,12 @@ class SQLAlchemyStateStore:
                 )
             )
 
-    def get_session(self, token: str) -> DemoUserResponse | None:
+    def get_session(self, token: str) -> AppUserResponse | None:
         with self.engine.begin() as connection:
             payload = connection.execute(
                 select(sessions_table.c.payload).where(sessions_table.c.token == token)
             ).scalar_one_or_none()
-        return DemoUserResponse.model_validate(payload) if payload else None
+        return AppUserResponse.model_validate(payload) if payload else None
 
     def save_subscription(self, subscription: SubscriptionResponse) -> None:
         payload = subscription.model_dump(mode="json")
@@ -406,3 +488,15 @@ def _parse_subscriptions(payloads: Iterable[object]) -> Iterable[SubscriptionRes
 def _parse_runs(payloads: Iterable[object]) -> Iterable[GenerationRunResponse]:
     for payload in payloads:
         yield GenerationRunResponse.model_validate(payload)
+
+
+def _parse_user_record(row) -> UserRecord:
+    return UserRecord(
+        user_id=row.user_id,
+        login_id=row.login_id,
+        email=row.email,
+        name=row.name,
+        password_hash=row.password_hash,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )

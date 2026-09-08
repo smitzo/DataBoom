@@ -402,16 +402,46 @@ def test_planned_product_cannot_generate(tmp_path: Path) -> None:
     assert "not runnable yet" in response.json()["detail"]
 
 
-def test_demo_login_rejects_invalid_password(tmp_path: Path) -> None:
+def test_login_rejects_invalid_password(tmp_path: Path) -> None:
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
     client = TestClient(create_app(settings=settings))
 
-    response = client.post("/auth/login", json={"email": "demo", "password": "wrong"})
+    response = client.post(
+        "/auth/login",
+        json={"login_id": "operator", "password": "wrong"},
+    )
 
     assert response.status_code == 401
 
 
-def test_sql_state_store_persists_demo_flow_across_app_instances(tmp_path: Path) -> None:
+def test_registration_rejects_duplicate_login_id(tmp_path: Path) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+
+    response = client.post(
+        "/auth/register",
+        json={
+            "login_id": "team-alpha",
+            "email": "team-alpha@databoom.local",
+            "name": "Team Alpha",
+            "password": "strong-password",
+        },
+    )
+    duplicate = client.post(
+        "/auth/register",
+        json={
+            "login_id": "team-alpha",
+            "email": "another-team@databoom.local",
+            "name": "Another Team",
+            "password": "strong-password",
+        },
+    )
+
+    assert response.status_code == 201, response.text
+    assert duplicate.status_code == 409
+
+
+def test_sql_state_store_persists_app_flow_across_app_instances(tmp_path: Path) -> None:
     database_url = f"sqlite+pysqlite:///{tmp_path / 'state.db'}"
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
 
@@ -466,7 +496,10 @@ def test_sql_state_store_persists_demo_flow_across_app_instances(tmp_path: Path)
 
 
 def _login(client: TestClient) -> str:
-    response = client.post("/auth/login", json={"email": "demo", "password": "demo"})
+    response = client.post(
+        "/auth/login",
+        json={"login_id": "operator", "password": "databoom-local"},
+    )
     assert response.status_code == 200
     return str(response.json()["token"])
 

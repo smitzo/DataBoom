@@ -48,6 +48,50 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("DATABOOM_API_KEY", "API_KEY"),
     )
+    seed_login_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_SEED_LOGIN_ID", "SEED_LOGIN_ID"),
+    )
+    seed_email: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_SEED_EMAIL", "SEED_EMAIL"),
+    )
+    seed_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_SEED_NAME", "SEED_NAME"),
+    )
+    seed_password: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_SEED_PASSWORD", "SEED_PASSWORD"),
+    )
+    allow_registration: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("DATABOOM_ALLOW_REGISTRATION", "ALLOW_REGISTRATION"),
+    )
+    supabase_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_SUPABASE_URL", "SUPABASE_URL"),
+    )
+    supabase_anon_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY"),
+    )
+    llm_platform_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABOOM_LLM_PLATFORM_API_KEY", "OPENAI_API_KEY"),
+    )
+    llm_default_model: str = Field(
+        default="gpt-4.1-mini",
+        validation_alias=AliasChoices("DATABOOM_LLM_DEFAULT_MODEL", "LLM_DEFAULT_MODEL"),
+    )
+    llm_request_token_limit: int = Field(
+        default=4_000,
+        ge=256,
+        validation_alias=AliasChoices(
+            "DATABOOM_LLM_REQUEST_TOKEN_LIMIT",
+            "LLM_REQUEST_TOKEN_LIMIT",
+        ),
+    )
     log_level: str = Field(
         default="INFO",
         validation_alias=AliasChoices("DATABOOM_LOG_LEVEL", "LOG_LEVEL"),
@@ -73,6 +117,24 @@ class Settings(BaseSettings):
     @classmethod
     def empty_api_key_is_unset(cls, value: object) -> object:
         """Treat empty environment values as disabled API-key authentication."""
+
+        if value == "":
+            return None
+        return value
+
+    @field_validator(
+        "seed_login_id",
+        "seed_email",
+        "seed_name",
+        "seed_password",
+        "supabase_url",
+        "supabase_anon_key",
+        "llm_platform_api_key",
+        mode="before",
+    )
+    @classmethod
+    def empty_optional_settings_are_unset(cls, value: object) -> object:
+        """Treat empty deployment environment values as unset."""
 
         if value == "":
             return None

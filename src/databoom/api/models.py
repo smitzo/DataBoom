@@ -84,31 +84,91 @@ class WorkspaceSourceStatus(StrEnum):
     PLANNED = "planned"
 
 
-class LoginRequest(BaseModel):
-    """Demo login request."""
+class RegisterRequest(BaseModel):
+    """Create an application user for product workspaces."""
 
     model_config = ConfigDict(extra="forbid")
 
-    email: str = Field(min_length=1)
+    login_id: str = Field(min_length=3, max_length=80)
+    email: str = Field(min_length=3, max_length=320)
+    name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=8, max_length=256)
+
+    @field_validator("login_id")
+    @classmethod
+    def validate_login_id(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not normalized:
+            raise ValueError("login id cannot be empty")
+        if not all(character.isalnum() or character in {"_", "-", "."} for character in normalized):
+            raise ValueError(
+                "login id can contain letters, numbers, dots, hyphens, and underscores"
+            )
+        return normalized
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
+            raise ValueError("valid email is required")
+        return normalized
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("name cannot be empty")
+        return normalized
+
+
+class LoginRequest(BaseModel):
+    """Application login request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    login_id: str = Field(min_length=1)
     password: str = Field(min_length=1)
 
+    @field_validator("login_id")
+    @classmethod
+    def normalize_login_id(cls, value: str) -> str:
+        return value.strip().lower()
 
-class DemoUserResponse(BaseModel):
-    """Authenticated demo user returned by the local API."""
+
+class AppUserResponse(BaseModel):
+    """Authenticated user returned by the API."""
 
     model_config = ConfigDict(extra="forbid")
 
+    user_id: str
+    login_id: str
     email: str
     name: str
 
 
+class UserRecord(BaseModel):
+    """Internal persisted user record with password hash."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: str
+    login_id: str
+    email: str
+    name: str
+    password_hash: str
+    created_at: datetime
+    updated_at: datetime
+
+
 class LoginResponse(BaseModel):
-    """Demo login response."""
+    """Application login or registration response."""
 
     model_config = ConfigDict(extra="forbid")
 
     token: str
-    user: DemoUserResponse
+    user: AppUserResponse
 
 
 class ProductPlanResponse(BaseModel):
