@@ -40,6 +40,8 @@ from databoom.api.models import (
     GenerationRunRequest,
     GenerationRunResponse,
     HealthResponse,
+    LLMProviderPolicyRequest,
+    LLMProviderPolicyResponse,
     LoginRequest,
     LoginResponse,
     ProductPlanResponse,
@@ -85,6 +87,7 @@ from databoom.api.workspaces import (
 )
 from databoom.core.config import Settings
 from databoom.ingest.postgres import load_postgres_schema
+from databoom.llm import resolve_llm_provider_policy
 from databoom.profiling import (
     ConnectionTest,
     SourceProfile,
@@ -193,6 +196,32 @@ def me(user: AppUserResponse = app_user_dependency) -> AppUserResponse:
     """Return the authenticated application user."""
 
     return user
+
+
+@router.get("/llm/policy", response_model=LLMProviderPolicyResponse, tags=["llm"])
+def llm_policy(
+    request: Request,
+    user: AppUserResponse = app_user_dependency,
+) -> LLMProviderPolicyResponse:
+    """Return deployment-level LLM availability for the authenticated user."""
+
+    policy = resolve_llm_provider_policy(request.app.state.settings)
+    return _llm_policy_response(policy)
+
+
+@router.post("/llm/policy", response_model=LLMProviderPolicyResponse, tags=["llm"])
+def resolve_llm_policy(
+    request: Request,
+    payload: LLMProviderPolicyRequest,
+    user: AppUserResponse = app_user_dependency,
+) -> LLMProviderPolicyResponse:
+    """Resolve request-level LLM policy for a user-supplied API key."""
+
+    policy = resolve_llm_provider_policy(
+        request.app.state.settings,
+        user_api_key=payload.user_api_key,
+    )
+    return _llm_policy_response(policy)
 
 
 @router.get("/products", response_model=tuple[ProductResponse, ...], tags=["products"])
@@ -778,6 +807,18 @@ def _create_session_response(request: Request, user: AppUserResponse) -> LoginRe
     token = new_session_token()
     _state_store(request).save_session(token, user)
     return LoginResponse(token=token, user=user)
+
+
+def _llm_policy_response(policy) -> LLMProviderPolicyResponse:
+    return LLMProviderPolicyResponse(
+        active_mode=policy.active_mode,
+        default_model=policy.default_model,
+        token_limit=policy.token_limit,
+        llm_enabled=policy.llm_enabled,
+        platform_key_configured=policy.platform_key_configured,
+        user_key_supplied=policy.user_key_supplied,
+        deterministic_fallback_available=policy.deterministic_fallback_available,
+    )
 
 
 def _get_product_or_404(product_id: str) -> ProductCatalogEntry:

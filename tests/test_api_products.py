@@ -441,6 +441,46 @@ def test_registration_rejects_duplicate_login_id(tmp_path: Path) -> None:
     assert duplicate.status_code == 409
 
 
+def test_llm_policy_prefers_user_key_over_platform_key(tmp_path: Path) -> None:
+    settings = Settings(
+        ENV="test",
+        ARTIFACT_ROOT=tmp_path / "artifacts",
+        DATABOOM_LLM_PLATFORM_API_KEY="platform-key",
+    )
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    platform_policy = client.get("/llm/policy", headers=_auth_headers(token))
+    user_policy = client.post(
+        "/llm/policy",
+        headers=_auth_headers(token),
+        json={"user_api_key": "user-key"},
+    )
+
+    assert platform_policy.status_code == 200, platform_policy.text
+    assert platform_policy.json()["active_mode"] == "platform_key"
+    assert platform_policy.json()["platform_key_configured"] is True
+    assert platform_policy.json()["llm_enabled"] is True
+    assert user_policy.status_code == 200, user_policy.text
+    assert user_policy.json()["active_mode"] == "user_key"
+    assert user_policy.json()["user_key_supplied"] is True
+    assert "user-key" not in user_policy.text
+
+
+def test_llm_policy_falls_back_without_keys(tmp_path: Path) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    response = client.get("/llm/policy", headers=_auth_headers(token))
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["active_mode"] == "deterministic_fallback"
+    assert payload["llm_enabled"] is False
+    assert payload["deterministic_fallback_available"] is True
+
+
 def test_sql_state_store_persists_app_flow_across_app_instances(tmp_path: Path) -> None:
     database_url = f"sqlite+pysqlite:///{tmp_path / 'state.db'}"
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")

@@ -19,9 +19,10 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from databoom.generation import DomainProfile, OutputFormat
+from databoom.llm.provider import LLMProviderMode
 
 
 class HealthResponse(BaseModel):
@@ -169,6 +170,28 @@ class LoginResponse(BaseModel):
 
     token: str
     user: AppUserResponse
+
+
+class LLMProviderPolicyRequest(BaseModel):
+    """Resolve LLM provider policy for a request without persisting secrets."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_api_key: SecretStr | None = None
+
+
+class LLMProviderPolicyResponse(BaseModel):
+    """Safe LLM provider policy returned to authenticated clients."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    active_mode: LLMProviderMode
+    default_model: str
+    token_limit: int
+    llm_enabled: bool
+    platform_key_configured: bool
+    user_key_supplied: bool
+    deterministic_fallback_available: bool
 
 
 class ProductPlanResponse(BaseModel):
