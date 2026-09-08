@@ -87,8 +87,8 @@ Todo:
 - [x] Add datetime range sampling from profile min/max.
 - [ ] Add datetime seasonality hints from temporal buckets.
 - [ ] Add string pattern hints for emails, phone numbers, codes, and IDs.
-- [ ] Keep deterministic fallback providers when no profile exists.
-- [ ] Add tests comparing generated output against profile hints.
+- [x] Keep deterministic fallback providers when no profile exists.
+- [x] Add tests comparing generated output against profile hints.
 
 Recommended commit sequence:
 
