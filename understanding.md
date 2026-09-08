@@ -2054,3 +2054,50 @@ That is why the optimization plan now separates:
 - deeper numeric distribution-aware sampling.
 
 This keeps the implementation honest and makes future quality work easier to reason about.
+
+## Decision: generate datetime values inside profiled source ranges
+
+### Question
+
+Why handle datetime ranges separately from generic datetime generation?
+
+### Answer
+
+Generic datetime generation can create valid timestamps, but they may land in the wrong business period.
+
+If a source table contains activity from January 2024 through March 2024, generating timestamps in a fixed default year makes the data look less like the source. Profiled min/max datetime hints give the engine the observed time window.
+
+### Question
+
+How does the datetime range path work?
+
+### Answer
+
+For datetime columns, the generator now:
+
+1. reads `min_value` and `max_value` from the column profile,
+2. parses common database timestamp strings,
+3. normalizes naive timestamps to UTC,
+4. samples a deterministic offset inside the observed range,
+5. falls back to the generic datetime provider if the profile is missing or invalid.
+
+The parser accepts ISO-style timestamps, `Z` UTC suffixes, date-only values, and common hour-only timezone offsets returned by database text casts.
+
+### Question
+
+Does this preserve seasonality?
+
+### Answer
+
+Not yet.
+
+Min/max only tells us the outer time window. It does not tell us whether the source has weekday spikes, month-end load, holiday seasonality, or time-of-day clustering.
+
+To support seasonality properly, the profiler needs temporal buckets, such as:
+
+- counts by hour of day,
+- counts by day of week,
+- counts by month,
+- counts by business event period.
+
+That is why datetime range sampling is complete now, while datetime seasonality remains a separate optimization task.

@@ -199,6 +199,29 @@ def test_value_generator_uses_profile_decimal_range_before_domain_provider() -> 
     assert all(5.25 <= value <= 7.75 for value in values)
 
 
+def test_value_generator_uses_profile_datetime_range() -> None:
+    value_generator = ValueGenerator(SeedManager(42))
+    profile_hint = ColumnProfileHint(
+        table_name="public.events",
+        column_name="seen_at",
+        sample_count=100,
+        null_rate=0.0,
+        distinct_count=100,
+        min_value="2024-01-01T00:00:00Z",
+        max_value="2024-01-03T00:00:00Z",
+    )
+    seen_at_column = column("seen_at", TypeFamily.DATETIME, profile_hint=profile_hint)
+    values = [
+        value_generator.value_for("public.events", seen_at_column, row_index)
+        for row_index in range(30)
+    ]
+    minimum = datetime.fromisoformat("2024-01-01T00:00:00+00:00")
+    maximum = datetime.fromisoformat("2024-01-03T00:00:00+00:00")
+
+    assert all(isinstance(value, datetime) for value in values)
+    assert all(minimum <= value <= maximum for value in values)
+
+
 def test_value_generator_rejects_foreign_key_columns() -> None:
     value_generator = ValueGenerator(SeedManager(42))
     account_id = ColumnPlan(

@@ -84,7 +84,8 @@ Todo:
 - [x] Add categorical weighted sampling from top values.
 - [x] Add numeric range sampling from profile min/max.
 - [ ] Add numeric distribution-aware sampling beyond profile min/max.
-- [ ] Add datetime range and seasonality hints.
+- [x] Add datetime range sampling from profile min/max.
+- [ ] Add datetime seasonality hints from temporal buckets.
 - [ ] Add string pattern hints for emails, phone numbers, codes, and IDs.
 - [ ] Keep deterministic fallback providers when no profile exists.
 - [ ] Add tests comparing generated output against profile hints.

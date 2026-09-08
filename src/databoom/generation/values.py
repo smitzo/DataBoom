@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
@@ -49,6 +50,10 @@ class ValueGenerator:
             profiled_number := self._profiled_numeric_value(table_name, column, row_index)
         ) is not None:
             return profiled_number
+        if (
+            profiled_datetime := self._profiled_datetime_value(table_name, column, row_index)
+        ) is not None:
+            return profiled_datetime
         if (profiled_value := self._profiled_top_value(table_name, column, row_index)) is not None:
             return profiled_value
         return self._generated_value(table_name, column, row_index)
@@ -191,6 +196,37 @@ class ValueGenerator:
             return None
         return round(value, _decimal_places(minimum, maximum))
 
+    def _profiled_datetime_value(
+        self,
+        table_name: str,
+        column: ColumnPlan,
+        row_index: int,
+    ) -> datetime | None:
+        hint = column.profile_hint
+        if hint is None or column.type_family != TypeFamily.DATETIME:
+            return None
+        if hint.min_value is None or hint.max_value is None:
+            return None
+
+        bounds = _datetime_bounds(hint.min_value, hint.max_value)
+        if bounds is None:
+            return None
+        minimum, maximum = bounds
+        if minimum == maximum:
+            return minimum
+
+        total_seconds = (maximum - minimum).total_seconds()
+        if total_seconds <= 0:
+            return minimum
+
+        stream = self.seed_manager.stream(
+            "profile-datetime-range",
+            table_name,
+            column.name,
+            row_index,
+        )
+        return minimum + timedelta(seconds=stream.uniform(0, total_seconds))
+
     def _uuid(self, table_name: str, column_name: str, row_index: int) -> str:
         stream = self.seed_manager.stream("uuid", table_name, column_name, row_index)
         return str(UUID(int=stream.getrandbits(128), version=4))
@@ -235,6 +271,41 @@ def _is_integral(value: Decimal) -> bool:
 
 def _decimal_places(*values: Decimal) -> int:
     return min(6, max(max(0, -value.as_tuple().exponent) for value in values))
+
+
+def _datetime_bounds(minimum: str, maximum: str) -> tuple[datetime, datetime] | None:
+    parsed_minimum = _parse_datetime(minimum)
+    parsed_maximum = _parse_datetime(maximum)
+    if parsed_minimum is None or parsed_maximum is None:
+        return None
+    if parsed_minimum <= parsed_maximum:
+        return parsed_minimum, parsed_maximum
+    return parsed_maximum, parsed_minimum
+
+
+def _parse_datetime(value: str) -> datetime | None:
+    normalized = _normalize_datetime_text(value)
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        try:
+            parsed_date = date.fromisoformat(normalized)
+        except ValueError:
+            return None
+        return datetime.combine(parsed_date, time.min, tzinfo=UTC)
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _normalize_datetime_text(value: str) -> str:
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+    if "T" in normalized or " " in normalized:
+        normalized = re.sub(r"([+-]\d{2})$", r"\1:00", normalized)
+    return normalized
 
 
 def _safe_name(value: str) -> str:
