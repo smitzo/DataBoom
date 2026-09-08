@@ -1,0 +1,314 @@
+# Low-Level System Design
+
+This document explains how the DataBoom backend processes a request from input to generated output. It is intentionally implementation-oriented: use it when you want to understand which Python module owns which decision, how data moves, and where to extend the engine.
+
+## Backend Package Map
+
+```mermaid
+flowchart TD
+    CLI[databoom.cli] --> Ingest[databoom.ingest]
+    API[databoom.api.routes] --> Runs[databoom.api.runs]
+    API --> Async[databoom.api.async_jobs]
+    API --> State[databoom.api.state]
+    API --> Workspaces[databoom.api.workspaces]
+
+    Workspaces --> IngestPostgres[databoom.ingest.postgres]
+    Workspaces --> Profiling[databoom.profiling.postgres]
+    Runs --> IngestDDL[databoom.ingest.ddl]
+    Runs --> Planning[databoom.generation.plan]
+    Runs --> Document[databoom.document.generator]
+
+    IngestDDL --> Schema[databoom.schema.models]
+    IngestPostgres --> Schema
+    Schema --> Graph[databoom.schema.graph]
+    Graph --> Planning
+
+    Planning --> Rows[databoom.generation.rows]
+    Rows --> Values[databoom.generation.values]
+    Rows --> Seed[databoom.generation.seed]
+    Values --> Domains[databoom.generation.domains]
+
+    Rows --> Export[databoom.export.local]
+    Export --> Validation[databoom.validation.report]
+    Profiling --> State
+    State --> Runs
+```
+
+## Core Contracts
+
+| Contract | Module | Purpose |
+| --- | --- | --- |
+| `DatabaseSchema` | `databoom.schema.models` | Normalized database shape after DDL parsing or live introspection. |
+| `RelationshipGraph` | `databoom.schema.graph` | Parent-child dependency ordering for relational generation. |
+| `GenerationPlan` | `databoom.generation.plan` | Immutable execution plan for a relational run. |
+| `ColumnProfileHint` | `databoom.generation.plan` | Source-profile statistics attached to individual generated columns. |
+| `RowGenerator` | `databoom.generation.rows` | Streams rows table by table while preserving key relationships. |
+| `ValueGenerator` | `databoom.generation.values` | Generates scalar values from type, profile, domain, and seed rules. |
+| `ExportManifest` | `databoom.export.local` | Lists generated artifact paths and row counts. |
+| `ValidationReport` | `databoom.validation.report` | Machine-readable integrity and artifact validation result. |
+| `DocumentCollectionSpec` | `databoom.document.models` | Declarative Docu-Boom collection and field definition. |
+| `SourceProfile` | `databoom.profiling.postgres` | Cached source statistics used to shape future generation. |
+| `StateStore` | `databoom.api.state` | Persistence boundary for sessions, subscriptions, sources, profiles, and runs. |
+
+## Table-Boom Execution
+
+```mermaid
+sequenceDiagram
+    participant Client as CLI or API
+    participant Ingest as DDL/Live Schema Ingest
+    participant Schema as Normalized Schema
+    participant Graph as Relationship Graph
+    participant Plan as GenerationPlan
+    participant Rows as RowGenerator
+    participant Values as ValueGenerator
+    participant Export as ArtifactExporter
+    participant Validate as Validator
+    participant Disk as Local Disk
+
+    Client->>Ingest: schema DDL or refreshed source DDL
+    Ingest->>Schema: DatabaseSchema
+    Schema->>Graph: build foreign-key edges
+    Graph->>Plan: dependency-ordered tables
+    Client->>Plan: row counts, seed, output formats, profile hints
+    Plan->>Rows: immutable plan
+    Rows->>Values: scalar column values
+    Rows->>Rows: register parent keys
+    Rows->>Rows: resolve child foreign keys
+    Rows->>Export: stream row dictionaries
+    Export->>Disk: CSV, JSON, SQL, manifest
+    Validate->>Disk: read CSV artifacts
+    Validate->>Disk: write validation.json
+```
+
+### Table-Boom Step Details
+
+1. Input arrives through CLI or API.
+2. DDL is parsed by `databoom.ingest.ddl`, or live PostgreSQL metadata is read by `databoom.ingest.postgres`.
+3. Both input paths produce the same `DatabaseSchema` contract.
+4. `databoom.schema.graph` builds parent-child edges from foreign keys.
+5. `databoom.generation.plan.create_generation_plan` converts schema into an immutable `GenerationPlan`.
+6. `RowGenerator.from_plan` creates run-local mutable state: seed manager, value generator, and foreign-key registry.
+7. Tables stream in dependency order so parent keys exist before child rows need them.
+8. `ArtifactExporter` writes output files row by row instead of holding the full dataset in memory.
+9. `validate_export` re-reads exported CSV files and verifies row counts, required values, primary keys, foreign keys, and fanout metrics.
+
+## Profile-Driven Value Flow
+
+```mermaid
+flowchart LR
+    SourceDB[(Source PostgreSQL)] --> Profiler[profile_postgres_source]
+    Profiler --> SourceProfile[SourceProfile snapshot]
+    SourceProfile --> StateStore[StateStore]
+    StateStore --> ProductRun[Product run with source_id]
+    ProductRun --> HintBuilder[_column_hints_from_source_profile]
+    HintBuilder --> ColumnHints[ColumnProfileHint]
+    ColumnHints --> Plan[GenerationPlan]
+    Plan --> ValueGenerator[ValueGenerator]
+
+    ValueGenerator --> Nulls[Null-rate handling]
+    ValueGenerator --> Categories[Weighted top values]
+    ValueGenerator --> Numeric[Numeric min/max ranges]
+    ValueGenerator --> Datetime[Datetime min/max ranges]
+    ValueGenerator --> Fallback[Domain and generic fallback]
+```
+
+Profile evidence wins over generic fallback behavior because observed source shape is stronger than broad domain assumptions. The fallback path still exists so a missing, stale, or incomplete profile does not block a run.
+
+### Value Resolution Order
+
+```mermaid
+flowchart TD
+    Start[ColumnPlan + row index] --> FK{Foreign key?}
+    FK -->|yes| Error[Reject: relationship solver owns FK values]
+    FK -->|no| Nullable{Nullable?}
+    Nullable -->|yes| NullRoll[Apply profile null rate or default null probability]
+    Nullable -->|no| PK{Primary key?}
+    NullRoll --> NullHit{Null selected?}
+    NullHit -->|yes| NoneValue[Return None]
+    NullHit -->|no| PK
+    PK -->|yes| Primary[Generate stable primary key]
+    PK -->|no| Numeric{Profile numeric range?}
+    Numeric -->|yes| ProfileNumber[Generate inside min/max]
+    Numeric -->|no| Datetime{Profile datetime range?}
+    Datetime -->|yes| ProfileDatetime[Generate inside min/max]
+    Datetime -->|no| TopValues{Profile top values?}
+    TopValues -->|yes| ProfileCategory[Weighted category sample]
+    TopValues -->|no| Domain[Domain provider]
+    Domain --> Generic[Generic fallback]
+```
+
+## Relationship Solving
+
+```mermaid
+flowchart TD
+    ParentTable[Parent table rows] --> Registry[ForeignKeyRegistry]
+    Registry --> Store{Sequential integer PK?}
+    Store -->|yes| Compressed[ParentKeyStore compressed count]
+    Store -->|no| Materialized[Materialized key tuples]
+
+    ChildRow[Child row needs FK] --> Strategy{FK strategy}
+    Strategy --> Random[Random parent]
+    Strategy --> Balanced[Balanced fanout]
+    Strategy --> Profile[Profile-driven fanout]
+    Profile --> HasHint{Fanout hint available?}
+    HasHint -->|yes| ProfileChoice[Choose parent index from observed distribution]
+    HasHint -->|no| Balanced
+    Random --> ValidKey[Return valid parent key]
+    Balanced --> ValidKey
+    ProfileChoice --> ValidKey
+```
+
+The compressed parent-key path is important for scale. A common table with `id = 1..N` does not require storing one million one-item tuples. The store materializes only when the key shape stops being a simple sequential integer.
+
+## Docu-Boom Execution
+
+```mermaid
+sequenceDiagram
+    participant API as API Product Run
+    participant Spec as DocumentCollectionSpec
+    participant Generator as DocumentGenerator
+    participant Seed as SeedManager
+    participant Disk as Local Disk
+
+    API->>Spec: resolve catalog or source collection specs
+    API->>Generator: collections, row counts, seed, output dir
+    Generator->>Seed: field-level deterministic streams
+    Generator->>Generator: generate object IDs
+    Generator->>Generator: resolve references from generated IDs
+    Generator->>Disk: write collection.json
+    Generator->>Disk: write collection.ndjson
+    Generator->>Disk: write manifest.json and validation.json
+```
+
+Docu-Boom is separate from Table-Boom because document data has nested objects, arrays, and object-id references. It should not inherit table-specific assumptions like SQL primary keys or foreign-key constraints.
+
+## API Async Run Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Dashboard
+    participant Routes as FastAPI Routes
+    participant Async as AsyncRunManager
+    participant State as StateStore
+    participant Runs as api.runs
+    participant Disk as Local Artifacts
+
+    UI->>Routes: POST /products/{product_id}/runs/async
+    Routes->>State: verify session and subscription
+    Routes->>Async: submit product run
+    Async->>State: load source profile snapshot
+    Async->>State: save running placeholder
+    Async-->>Routes: running response
+    Routes-->>UI: run_id, ETA, progress fields
+    Async->>Runs: execute_product_generation_run in worker thread
+    Runs->>Disk: stream artifacts
+    Runs->>Async: progress_callback(generated_rows, resource)
+    UI->>Routes: GET /runs/{run_id}
+    Routes->>Async: current in-memory progress
+    Runs->>Disk: manifest.json and validation.json
+    Async->>State: save completed run
+```
+
+The async manager is in-process by design for the local MVP. It gives useful progress and cancellation behavior without introducing a queue too early. A future worker queue can replace `AsyncRunManager` behind the same route contract.
+
+## State And Artifact Ownership
+
+```mermaid
+flowchart LR
+    StateStore[StateStore] --> Sessions[Demo sessions]
+    StateStore --> Subscriptions[Subscriptions]
+    StateStore --> Sources[Workspace sources]
+    StateStore --> Profiles[Source profiles]
+    StateStore --> Runs[Run metadata]
+
+    ArtifactRoot[Artifact root] --> RunDir[runs/run_id]
+    RunDir --> Manifest[manifest.json]
+    RunDir --> Validation[validation.json]
+    RunDir --> CSV[table.csv]
+    RunDir --> JSON[table.json or collection.json]
+    RunDir --> SQL[table.sql]
+    RunDir --> NDJSON[collection.ndjson]
+```
+
+State and artifacts are intentionally separate:
+
+- StateStore stores metadata needed to list and resume dashboard context.
+- Local disk stores generated data artifacts.
+- API artifact routes resolve paths from run metadata and manifests.
+- Validation reads artifact files so it catches exporter or partial-write issues.
+
+## File Output Rules
+
+| Output | Writer | Current Use |
+| --- | --- | --- |
+| CSV | `_CsvTableWriter` | Main relational validation and table preview format. |
+| JSON | `_JsonTableWriter` and document writer | Relational JSON exports and document collection arrays. |
+| SQL | `_SqlTableWriter` | Portable local replay inserts. |
+| NDJSON | `DocumentGenerator` | Streaming-friendly document preview/export format. |
+| Manifest | `ArtifactExporter` and `DocumentGenerator` | Artifact discovery by API/frontend/CLI. |
+| Validation | `validate_export` and document summary | Integrity status and machine-readable issues. |
+
+## Error Boundaries
+
+| Boundary | Failure Example | Behavior |
+| --- | --- | --- |
+| DDL ingestion | No `CREATE TABLE` statements | Raise `ValueError` before planning. |
+| Relationship graph | Cross-table cycle | Raise `SchemaCycleError` before generation. |
+| Row generation | Child table has no parent keys | Raise `RowGenerationError`. |
+| Source connection | Bad PostgreSQL URL or credentials | API returns `400` with connection error. |
+| Source profile | SQL profiling query fails | API returns `400`; existing cached profile remains untouched. |
+| Artifact validation | Missing CSV or bad FK | `ValidationReport.passed = false` with issue codes. |
+| Async cancellation | User cancels running run | Cooperative cancellation updates run state to `canceled`. |
+
+## Extension Points
+
+### Add A New Relational Source
+
+1. Implement a source introspector that produces `DatabaseSchema`.
+2. Implement a profiler that can produce `SourceProfile` or equivalent hints.
+3. Convert profile output into `RelationshipFanoutHint` and `ColumnProfileHint`.
+4. Reuse `create_generation_plan`, `RowGenerator`, `ArtifactExporter`, and `validate_export`.
+
+### Add A New Value Behavior
+
+1. Add the required profile field or plan hint.
+2. Attach the hint in `databoom.generation.plan`.
+3. Consume it in `ValueGenerator` before broad domain fallbacks.
+4. Add unit tests for `ValueGenerator`.
+5. Add integration tests proving planner-to-row-generation flow.
+
+### Add Graph-Boom
+
+Graph-Boom should introduce graph-specific contracts instead of forcing graphs through table plans:
+
+- node specs,
+- edge specs,
+- label/property models,
+- cardinality/fanout rules,
+- graph-specific artifact writers,
+- graph-specific validation.
+
+Shared reusable pieces should include seed management, state storage, API run metadata, artifact-root conventions, and progress reporting.
+
+### Add Masker-Boom
+
+Masker-Boom should be a transformation pipeline, not a generator-only pipeline:
+
+- source reader,
+- classifier,
+- masking policy,
+- deterministic tokenization or replacement,
+- audit report,
+- export writer.
+
+It can reuse workspace sources, state storage, artifact roots, async run metadata, and validation-report patterns.
+
+## Why This Design Is Production-Oriented
+
+- Engine contracts are immutable where possible, so planning and execution are reproducible.
+- Source profiling is a snapshot, so generation does not depend on live production data during export.
+- Rows stream to disk, so large runs do not require holding the whole dataset in memory.
+- Validation checks files on disk, so artifact-level problems are visible.
+- Async execution is behind a manager boundary, so a worker queue can replace it later.
+- Product kind selects the engine path, so product names do not leak into core algorithms.
+- Profile hints are source-agnostic, so future sources can improve output without rewriting generators.

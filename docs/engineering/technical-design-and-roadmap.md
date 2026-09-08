@@ -1,6 +1,6 @@
 # Technical Design and Roadmap
 
-For system-level diagrams, API flow, frontend route architecture, deployment topology, and engine extensibility, see [Architecture](architecture.md).
+For system-level diagrams, API flow, frontend route architecture, deployment topology, and engine extensibility, see [Architecture](architecture.md). For backend module ownership, execution sequences, and artifact-processing details, see [Low-Level System Design](low-level-system-design.md).
 
 ## Stack
 

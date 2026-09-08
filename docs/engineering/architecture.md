@@ -2,6 +2,8 @@
 
 DataBoom is designed as a product platform, not a single hard-coded generator. The extension point is the data surface: relational tables, document collections, graph nodes/edges, and masking policies.
 
+For module-level backend ownership, method responsibilities, runtime state, and artifact-processing details, see [Low-Level System Design](low-level-system-design.md).
+
 ## System Context
 
 ```mermaid

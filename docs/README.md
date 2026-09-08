@@ -12,6 +12,7 @@ The docs are split by concern so product scope, engineering design, and local op
 ## Engineering
 
 - [Architecture](engineering/architecture.md): system diagrams, engine extensibility, API flow, frontend route structure, and deployment topology.
+- [Low-Level System Design](engineering/low-level-system-design.md): backend module ownership, data flow, execution sequences, artifact output, validation, and extension points.
 - [Technical Design and Roadmap](engineering/technical-design-and-roadmap.md): five-phase technical plan, objectives, and commit sequence.
 - [Engineering Standards](engineering/engineering-standards.md): reusable backend/frontend code rules and product-kind rendering rules.
 - [Frontend Development Plan](engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.

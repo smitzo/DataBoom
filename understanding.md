@@ -2101,3 +2101,54 @@ To support seasonality properly, the profiler needs temporal buckets, such as:
 - counts by business event period.
 
 That is why datetime range sampling is complete now, while datetime seasonality remains a separate optimization task.
+
+## Decision: document backend data flow at code and system-design levels
+
+### Question
+
+Why add both Python docstrings/comments and a low-level system design document?
+
+### Answer
+
+They solve different learning problems.
+
+Python docstrings and comments help while reading code. They explain:
+
+- why a module exists,
+- what data enters and leaves it,
+- why a class owns a specific responsibility,
+- why non-obvious choices were made, such as profile hints running before generic value fallbacks or CSV validation reading files from disk.
+
+The low-level system design document helps before reading code. It explains the whole backend flow end to end:
+
+- API or CLI input,
+- schema ingestion,
+- relationship graph creation,
+- generation planning,
+- row generation,
+- source-profile hint usage,
+- artifact export,
+- validation,
+- async progress,
+- state and artifact ownership.
+
+Keeping both levels is useful for an enterprise-grade project. Code comments are close to implementation, while design docs give the mental model needed to understand the architecture.
+
+### Question
+
+Why not just add comments everywhere?
+
+### Answer
+
+Too many comments make code harder to maintain. Comments should explain purpose and reasoning, not repeat obvious syntax.
+
+For example, a comment like "increment row count" is noise. But a comment explaining why CSV flushes after 20 rows is valuable, because it connects backend behavior to live dashboard previews.
+
+The approach used here is:
+
+1. module docstrings explain file purpose and data flow,
+2. class and method docstrings explain responsibility,
+3. comments explain non-obvious decisions and tradeoffs,
+4. the low-level design doc explains how all backend modules work together.
+
+That gives beginners a clear learning path without burying production code under repetitive notes.
