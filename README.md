@@ -323,6 +323,7 @@ docker compose --profile tools run --rm app
 - `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
 - `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
 - `docs/operations/phase1-usage.md`: current backend setup, CLI, benchmark, and Docker usage.
+- `docs/operations/phase2-closeout.md`: full-stack Phase 2 completion checklist, local login, reviewer smoke tests, and Phase 3 handoff.
 - `docs/operations/deployment.md`: Render, Supabase, Vercel, and LLM key policy deployment guide.
 - `AGENTS.md`: operating rules for coding agents working in this repo.
 - `understanding.md`: explanation log for significant decisions.
