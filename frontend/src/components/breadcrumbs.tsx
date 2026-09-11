@@ -11,6 +11,7 @@ const routeLabels: Record<string, string> = {
   demos: "Demos",
   login: "Login",
   products: "Products",
+  register: "Register",
   roadmap: "Roadmap",
   runs: "Runs",
   settings: "Settings",

@@ -115,7 +115,7 @@ export default function ContactPage() {
               <ContactRoute
                 icon={Database}
                 title="Use the active workspace"
-                detail="Log in with demo/demo, subscribe to Table-Boom or Docu-Boom, generate a run, preview output, and download artifacts."
+                detail="Register or sign in, subscribe to Table-Boom or Docu-Boom, generate a run, preview output, and download artifacts."
                 href="/dashboard"
               />
               <ContactRoute

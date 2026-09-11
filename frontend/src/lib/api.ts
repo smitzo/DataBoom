@@ -8,14 +8,26 @@ export type ApiHealth = {
   artifact_root: string;
 };
 
-export type DemoUser = {
+export type AppUser = {
+  user_id: string;
+  login_id: string;
   email: string;
   name: string;
 };
 
 export type LoginResponse = {
   token: string;
-  user: DemoUser;
+  user: AppUser;
+};
+
+export type LlmPolicy = {
+  active_mode: "user_key" | "platform_key" | "deterministic_fallback";
+  default_model: string;
+  token_limit: number;
+  llm_enabled: boolean;
+  platform_key_configured: boolean;
+  user_key_supplied: boolean;
+  deterministic_fallback_available: boolean;
 };
 
 export type ProductPlan = {
@@ -223,15 +235,42 @@ export type DocumentPreview = {
 
 let cachedApiBaseUrl: string | null = null;
 
-export async function login(email: string, password: string) {
+export async function register(payload: {
+  login_id: string;
+  email: string;
+  name: string;
+  password: string;
+}) {
+  return apiRequest<LoginResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function login(loginId: string, password: string) {
   return apiRequest<LoginResponse>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ login_id: loginId, password }),
   });
 }
 
 export async function getMe(token: string) {
-  return apiRequest<DemoUser>("/me", {}, token);
+  return apiRequest<AppUser>("/me", {}, token);
+}
+
+export async function getLlmPolicy(token: string) {
+  return apiRequest<LlmPolicy>("/llm/policy", {}, token);
+}
+
+export async function resolveLlmPolicy(token: string, userApiKey?: string) {
+  return apiRequest<LlmPolicy>(
+    "/llm/policy",
+    {
+      method: "POST",
+      body: JSON.stringify({ user_api_key: userApiKey || null }),
+    },
+    token,
+  );
 }
 
 export async function getProducts() {

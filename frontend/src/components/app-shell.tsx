@@ -27,9 +27,9 @@ const navItems = [
   },
   { href: "/runs", label: "Runs", description: "History and artifacts", icon: BarChart3 },
   {
-    href: "/settings/subscriptions",
-    label: "Subscriptions",
-    description: "Product access",
+    href: "/settings",
+    label: "Settings",
+    description: "Account and providers",
     icon: Settings,
   },
 ];
@@ -153,7 +153,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
             <div className="flex items-center gap-2">
               <span className="hidden h-10 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-xs font-semibold uppercase text-emerald-100 md:inline-flex">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Demo workspace
+                Workspace
               </span>
               <span className="hidden rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-zinc-200 xl:inline-flex">
                 {session.user.name}

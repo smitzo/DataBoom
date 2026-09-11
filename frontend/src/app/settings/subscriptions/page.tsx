@@ -49,7 +49,7 @@ function SubscriptionSettingsContent({ session }: { session: Session }) {
       <PageHeader
         eyebrow="Settings"
         title="My subscriptions"
-        description="Manage which DataBoom product modules are active for your local workspace."
+        description="Manage which DataBoom product modules are active for your workspace."
       />
 
       {error ? (
@@ -71,8 +71,8 @@ function SubscriptionSettingsContent({ session }: { session: Session }) {
         />
         <StatTile
           label="Billing mode"
-          value="Demo"
-          hint="Local in-memory state"
+          value="Workspace"
+          hint="Product access"
         />
       </div>
 

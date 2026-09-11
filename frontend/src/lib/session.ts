@@ -1,13 +1,13 @@
 "use client";
 
-import type { DemoUser } from "@/lib/api";
+import type { AppUser } from "@/lib/api";
 
 export type Session = {
   token: string;
-  user: DemoUser;
+  user: AppUser;
 };
 
-const SESSION_KEY = "databoom_demo_session";
+const SESSION_KEY = "databoom_session";
 
 export function loadSession() {
   if (typeof window === "undefined") {
