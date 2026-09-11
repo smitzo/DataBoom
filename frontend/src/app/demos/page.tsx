@@ -1,6 +1,5 @@
-import { ArtifactPanel, DemoDataset, ValidationMetric } from "@/components/cards";
 import { PublicShell, Section } from "@/components/layout";
-import { demos, validationMetrics } from "@/data/workbench";
+import { demoWorkspaces } from "@/data/demo-workspaces";
 
 const useCases = [
   {
@@ -20,17 +19,63 @@ const useCases = [
 export default function DemosPage() {
   return (
     <PublicShell>
+      <section className="border-b border-[color:var(--border)] bg-[var(--section-bg)]">
+        <div className="mx-auto max-w-[1760px] px-5 py-16 sm:px-8 lg:px-12 xl:px-16">
+          <div className="grid gap-8 xl:grid-cols-[0.72fr_1fr] xl:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase text-emerald-300">Demo workspaces</p>
+              <h1 className="mt-5 max-w-4xl text-4xl font-medium leading-tight text-[color:var(--text-primary)] lg:text-6xl">
+                Open a product dashboard without connecting a real database.
+              </h1>
+            </div>
+            <p className="max-w-3xl text-base leading-7 text-[color:var(--text-muted)]">
+              Each demo shows the same workspace shape as the app: source explorer, data preview,
+              run builder, validation summary, and export controls. Choose the data surface first,
+              then inspect the generated sample.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <Section
-        id="demo-data"
-        eyebrow="Demos"
-        title="Use cases are profiles, not separate products."
-        subtitle="The checked-in samples show how sensitive-domain style records can be represented without turning banking, healthcare, or commerce into separate products."
+        id="demo-workspaces"
+        eyebrow="Choose"
+        title="Pick the product workspace you want to inspect."
+        subtitle="Table-Boom and Docu-Boom show active full-stack flows. Graph-Boom and Masker-Boom stay visible as roadmap surfaces."
       >
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr_0.9fr]">
-          {demos.map((demo) => (
-            <DemoDataset key={demo.name} demo={demo} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          {demoWorkspaces.map((workspace) => (
+            <a
+              key={workspace.id}
+              className="group rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]"
+              href={`/demos/${workspace.id}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase text-emerald-300">
+                    {workspace.module}
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold text-[color:var(--text-primary)]">
+                    {workspace.name}
+                  </h2>
+                </div>
+                <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase text-cyan-200">
+                  {workspace.kind === "planned" ? "Roadmap" : "Open demo"}
+                </span>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-[color:var(--text-muted)]">
+                {workspace.description}
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <DemoStat label="Rows" value={String(workspace.rows)} />
+                <DemoStat
+                  label={workspace.kind === "document" ? "Collections" : "Tables"}
+                  value={String(workspace.resources.length)}
+                />
+                <DemoStat label="Artifacts" value={String(workspace.artifacts)} />
+              </div>
+            </a>
           ))}
-          <ArtifactPanel />
         </div>
       </Section>
 
@@ -57,18 +102,15 @@ export default function DemosPage() {
         </div>
       </Section>
 
-      <Section
-        id="validation"
-        eyebrow="Validation"
-        title="Demo output should always be measurable."
-        subtitle="The current baseline tracks record count, runtime, memory, and validation status so performance work is grounded in evidence."
-      >
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {validationMetrics.map((metric) => (
-            <ValidationMetric key={metric.label} metric={metric} />
-          ))}
-        </div>
-      </Section>
     </PublicShell>
+  );
+}
+
+function DemoStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-3">
+      <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">{value}</p>
+    </div>
   );
 }
