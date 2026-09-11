@@ -23,7 +23,7 @@ export default function DemosPage() {
         <div className="mx-auto max-w-[1760px] px-5 py-16 sm:px-8 lg:px-12 xl:px-16">
           <div className="grid gap-8 xl:grid-cols-[0.72fr_1fr] xl:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase text-emerald-300">Demo workspaces</p>
+              <p className="text-sm font-semibold uppercase text-[color:var(--accent-emerald)]">Demo workspaces</p>
               <h1 className="mt-5 max-w-4xl text-4xl font-medium leading-tight text-[color:var(--text-primary)] lg:text-6xl">
                 Open a product dashboard without connecting a real database.
               </h1>
@@ -52,14 +52,14 @@ export default function DemosPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold uppercase text-emerald-300">
+                  <p className="text-sm font-semibold uppercase text-[color:var(--accent-emerald)]">
                     {workspace.module}
                   </p>
                   <h2 className="mt-3 text-2xl font-semibold text-[color:var(--text-primary)]">
                     {workspace.name}
                   </h2>
                 </div>
-                <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase text-cyan-200">
+                <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase text-[color:var(--accent-cyan)]">
                   {workspace.kind === "planned" ? "Roadmap" : "Open demo"}
                 </span>
               </div>

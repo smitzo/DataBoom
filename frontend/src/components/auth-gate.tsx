@@ -36,10 +36,12 @@ export function AuthGate({ children }: { children: (session: Session) => ReactNo
 
   if (isChecking || !session) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-black text-zinc-100">
-        <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.04] px-5 py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-cyan-200" />
-          <span className="text-sm font-semibold text-zinc-300">Opening DataBoom console</span>
+      <main className="flex min-h-screen items-center justify-center bg-[var(--page-bg)] text-[color:var(--text-primary)]">
+        <div className="flex items-center gap-3 rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-5 py-4 shadow-[0_18px_50px_var(--shadow-soft)]">
+          <Loader2 className="h-5 w-5 animate-spin text-[color:var(--accent-cyan)]" />
+          <span className="text-sm font-semibold text-[color:var(--text-secondary)]">
+            Opening DataBoom console
+          </span>
         </div>
       </main>
     );

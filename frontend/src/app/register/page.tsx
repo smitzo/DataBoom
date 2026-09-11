@@ -46,22 +46,18 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#03050c] text-zinc-100">
+    <main className="min-h-screen bg-[var(--page-bg)] text-[color:var(--text-primary)]">
       <div className="mx-auto flex min-h-screen max-w-6xl items-center px-6 py-10 sm:px-10">
-        <section className="grid w-full gap-10 rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.35)] lg:grid-cols-[0.85fr_1.15fr] lg:p-10">
+        <section className="grid w-full gap-10 rounded-2xl border border-[color:var(--border)] bg-[var(--section-bg)] p-6 shadow-[0_30px_90px_var(--shadow-soft)] lg:grid-cols-[0.85fr_1.15fr] lg:p-10">
           <div>
-            <BrandLogo
-              size="lg"
-              sublabel="Account setup"
-              className="[--text-primary:#ffffff] [--text-faint:#71717a]"
-            />
-            <p className="mt-12 text-sm font-semibold uppercase tracking-[0.24em] text-emerald-200">
+            <BrandLogo size="lg" sublabel="Account setup" />
+            <p className="mt-12 text-sm font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-emerald)]">
               Create workspace
             </p>
-            <h1 className="mt-4 text-4xl font-semibold leading-tight text-white">
+            <h1 className="mt-4 text-4xl font-semibold leading-tight text-[color:var(--text-primary)]">
               Start with a login ID, then choose your data products.
             </h1>
-            <p className="mt-5 text-base leading-7 text-zinc-400">
+            <p className="mt-5 text-base leading-7 text-[color:var(--text-muted)]">
               Registration creates the application session. Product subscriptions,
               sources, runs, and LLM settings are managed inside the dashboard.
             </p>
@@ -70,20 +66,20 @@ export default function RegisterPage() {
           <form className="space-y-4" onSubmit={submit}>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="text-sm font-semibold text-zinc-300">Login ID</span>
+                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Login ID</span>
                 <input
                   autoComplete="username"
-                  className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-black/35 px-4 text-sm text-white outline-none transition focus:border-cyan-300/60"
+                  className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
                   placeholder="team-alpha"
                   value={loginId}
                   onChange={(event) => setLoginId(event.target.value)}
                 />
               </label>
               <label className="block">
-                <span className="text-sm font-semibold text-zinc-300">Name</span>
+                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Name</span>
                 <input
                   autoComplete="name"
-                  className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-black/35 px-4 text-sm text-white outline-none transition focus:border-cyan-300/60"
+                  className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
                   placeholder="Team Alpha"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -92,10 +88,10 @@ export default function RegisterPage() {
             </div>
 
             <label className="block">
-              <span className="text-sm font-semibold text-zinc-300">Email</span>
+              <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Email</span>
               <input
                 autoComplete="email"
-                className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-black/35 px-4 text-sm text-white outline-none transition focus:border-cyan-300/60"
+                className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
                 placeholder="you@company.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -103,10 +99,10 @@ export default function RegisterPage() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-semibold text-zinc-300">Password</span>
+              <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Password</span>
               <input
                 autoComplete="new-password"
-                className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-black/35 px-4 text-sm text-white outline-none transition focus:border-cyan-300/60"
+                className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition focus:border-cyan-300/60"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -114,7 +110,7 @@ export default function RegisterPage() {
             </label>
 
             {error ? (
-              <p className="rounded-lg border border-red-300/25 bg-red-300/10 px-4 py-3 text-sm text-red-100">
+              <p className="rounded-lg border border-[color:var(--danger-border)] bg-[var(--danger-bg)] px-4 py-3 text-sm text-[color:var(--danger-text)]">
                 {error}
               </p>
             ) : null}
@@ -128,9 +124,12 @@ export default function RegisterPage() {
               <ArrowRight className="h-4 w-4" />
             </button>
 
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-[color:var(--text-muted)]">
               Already have access?{" "}
-              <Link className="font-semibold text-cyan-200 hover:text-white" href="/login">
+              <Link
+                className="font-semibold text-[color:var(--accent-cyan)] hover:text-[color:var(--text-primary)]"
+                href="/login"
+              >
                 Sign in
               </Link>
             </p>

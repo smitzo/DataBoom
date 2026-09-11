@@ -48,7 +48,7 @@ export function FormatRow({
   return (
     <div className={className}>
       <div className="flex items-center gap-3">
-        <Icon className="h-4 w-4 text-amber-200" />
+        <Icon className="h-4 w-4 text-[color:var(--accent-amber)]" />
         <span className={textClassName}>{format.name}</span>
       </div>
       <span className={stateClassName}>{format.state}</span>
@@ -67,7 +67,7 @@ export function ProfileCard({ profile }: { profile: ProfileConfig }) {
         <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--surface-strong)]">
           <Icon className="h-5 w-5" />
         </span>
-        {profile.selected ? <BadgeCheck className="h-5 w-5 text-emerald-300" /> : null}
+        {profile.selected ? <BadgeCheck className="h-5 w-5 text-[color:var(--accent-emerald)]" /> : null}
       </div>
       <p className="mt-6 text-xl font-semibold text-[color:var(--text-primary)]">{profile.name}</p>
       <p className="mt-1 text-sm font-medium text-current">{profile.role}</p>
@@ -91,7 +91,7 @@ export function PipelineCard({ step }: { step: PipelineStepConfig }) {
 
   return (
     <div className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]">
-      <Icon className="h-5 w-5 text-indigo-300" />
+      <Icon className="h-5 w-5 text-indigo-500" />
       <p className="mt-5 font-semibold text-[color:var(--text-primary)]">{step.label}</p>
       <p className="mt-2 text-sm text-[color:var(--text-muted)]">{step.detail}</p>
     </div>
@@ -105,12 +105,12 @@ export function ValidationMetric({ metric }: { metric: ValidationMetricConfig })
     <div className="rounded-xl border border-[color:var(--border)] bg-[var(--surface)] p-5 transition duration-300 hover:-translate-y-1 hover:bg-[var(--surface-strong)]">
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-[color:var(--text-muted)]">{metric.label}</p>
-        <Icon className={metric.success ? "h-5 w-5 text-emerald-300" : "h-5 w-5 text-[color:var(--text-faint)]"} />
+        <Icon className={metric.success ? "h-5 w-5 text-[color:var(--accent-emerald)]" : "h-5 w-5 text-[color:var(--text-faint)]"} />
       </div>
       <p
         className={
           metric.success
-            ? "mt-5 text-2xl font-semibold text-emerald-300"
+            ? "mt-5 text-2xl font-semibold text-[color:var(--accent-emerald)]"
             : "mt-5 text-2xl font-semibold text-[color:var(--text-primary)]"
         }
       >
@@ -128,7 +128,7 @@ export function DemoDataset({ demo }: { demo: DemoDatasetConfig }) {
           <p className="text-lg font-semibold text-[color:var(--text-primary)]">{demo.name}</p>
           <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">{demo.tables}</p>
         </div>
-        <BadgeCheck className="h-5 w-5 text-emerald-300" />
+        <BadgeCheck className="h-5 w-5 text-[color:var(--accent-emerald)]" />
       </div>
       <p className="mt-8 text-sm font-semibold text-[color:var(--text-secondary)]">{demo.rows}</p>
     </div>

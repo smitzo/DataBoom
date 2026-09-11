@@ -39,43 +39,39 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#03050c] text-zinc-100">
+    <main className="min-h-screen bg-[var(--page-bg)] text-[color:var(--text-primary)]">
       <div className="grid min-h-screen lg:grid-cols-[0.9fr_1.1fr]">
         <section className="flex items-center px-6 py-10 sm:px-10 lg:px-16">
           <div className="w-full max-w-md">
-            <BrandLogo
-              size="lg"
-              sublabel="Secure workspace"
-              className="[--text-primary:#ffffff] [--text-faint:#71717a]"
-            />
+            <BrandLogo size="lg" sublabel="Secure workspace" />
 
-            <p className="mt-12 text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">
+            <p className="mt-12 text-sm font-semibold uppercase tracking-[0.24em] text-[color:var(--accent-cyan)]">
               Product access
             </p>
-            <h1 className="mt-4 text-4xl font-semibold leading-tight text-white sm:text-5xl">
+            <h1 className="mt-4 text-4xl font-semibold leading-tight text-[color:var(--text-primary)] sm:text-5xl">
               Sign in to your synthetic data workspace.
             </h1>
-            <p className="mt-5 text-base leading-7 text-zinc-400">
+            <p className="mt-5 text-base leading-7 text-[color:var(--text-muted)]">
               Use your login ID to manage workspaces, generate datasets, inspect previews,
               and export artifacts from active DataBoom products.
             </p>
 
             <form className="mt-10 space-y-4" onSubmit={submit}>
               <label className="block">
-                <span className="text-sm font-semibold text-zinc-300">Login ID</span>
+                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Login ID</span>
                 <input
                   autoComplete="username"
-                  className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300/60"
+                  className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
                   placeholder="operator"
                   value={loginId}
                   onChange={(event) => setLoginId(event.target.value)}
                 />
               </label>
               <label className="block">
-                <span className="text-sm font-semibold text-zinc-300">Password</span>
+                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Password</span>
                 <input
                   autoComplete="current-password"
-                  className="mt-2 h-12 w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition focus:border-cyan-300/60"
+                  className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition focus:border-cyan-300/60"
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -83,7 +79,7 @@ export default function LoginPage() {
               </label>
 
               {error ? (
-                <p className="rounded-lg border border-red-300/25 bg-red-300/10 px-4 py-3 text-sm text-red-100">
+                <p className="rounded-lg border border-[color:var(--danger-border)] bg-[var(--danger-bg)] px-4 py-3 text-sm text-[color:var(--danger-text)]">
                   {error}
                 </p>
               ) : null}
@@ -102,23 +98,26 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <p className="mt-6 text-sm text-zinc-500">
+            <p className="mt-6 text-sm text-[color:var(--text-muted)]">
               New workspace?{" "}
-              <Link className="font-semibold text-cyan-200 hover:text-white" href="/register">
+              <Link
+                className="font-semibold text-[color:var(--accent-cyan)] hover:text-[color:var(--text-primary)]"
+                href="/register"
+              >
                 Create an account
               </Link>
             </p>
           </div>
         </section>
 
-        <section className="hidden border-l border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgba(45,212,191,0.16),transparent_34%),linear-gradient(135deg,#07101d,#03050c)] px-10 py-12 lg:block">
-          <div className="flex h-full flex-col justify-between rounded-xl border border-white/10 bg-black/35 p-8 shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+        <section className="hero-shell hidden border-l border-[color:var(--border)] px-10 py-12 lg:block">
+          <div className="flex h-full flex-col justify-between rounded-xl border border-[color:var(--hero-border)] bg-[var(--hero-surface)] p-8 shadow-[0_30px_90px_var(--shadow-soft)]">
             <div>
-              <div className="inline-flex h-11 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-xs font-semibold uppercase text-emerald-100">
+              <div className="inline-flex h-11 items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-4 text-xs font-semibold uppercase text-[color:var(--accent-emerald)]">
                 <ShieldCheck className="h-4 w-4" />
                 Engine-first platform
               </div>
-              <h2 className="mt-10 max-w-2xl text-4xl font-semibold leading-tight text-white">
+              <h2 className="mt-10 max-w-2xl text-4xl font-semibold leading-tight text-[color:var(--hero-text-primary)]">
                 Your data surface, run history, source connectors, and exports in one control plane.
               </h2>
             </div>
@@ -129,9 +128,12 @@ export default function LoginPage() {
                 ["Generate", "Run Table-Boom or Docu-Boom with repeatable seeds."],
                 ["Control", "Use platform LLM keys, your own key, or deterministic fallback."],
               ].map(([title, detail]) => (
-                <div key={title} className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-sm font-semibold text-white">{title}</p>
-                  <p className="mt-1 text-sm leading-6 text-zinc-500">{detail}</p>
+                <div
+                  key={title}
+                  className="rounded-lg border border-[color:var(--hero-border)] bg-[var(--hero-surface)] p-4"
+                >
+                  <p className="text-sm font-semibold text-[color:var(--hero-text-primary)]">{title}</p>
+                  <p className="mt-1 text-sm leading-6 text-[color:var(--hero-text-muted)]">{detail}</p>
                 </div>
               ))}
             </div>

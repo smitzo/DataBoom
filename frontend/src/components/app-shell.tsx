@@ -45,7 +45,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
   };
 
   return (
-    <main className="min-h-screen bg-[#050714] text-zinc-100">
+    <main className="console-theme min-h-screen bg-[var(--page-bg)] text-[color:var(--text-primary)]">
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden border-r border-white/10 bg-[#080b16]/95 py-5 shadow-[18px_0_60px_rgba(0,0,0,0.22)] transition-[width,padding] duration-300 lg:block ${
           isNavCollapsed ? "w-20 px-3" : "w-64 px-4"

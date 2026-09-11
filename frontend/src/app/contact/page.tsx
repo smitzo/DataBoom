@@ -27,7 +27,7 @@ const formFields = [
 export default function ContactPage() {
   return (
     <PublicShell>
-      <section className="border-b border-[color:var(--border)] bg-[#030405]">
+      <section className="border-b border-[color:var(--border)] bg-[var(--section-contrast-bg)]">
         <div className="mx-auto max-w-[1120px] px-5 py-20 sm:px-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">
@@ -99,7 +99,7 @@ export default function ContactPage() {
 
             <aside className="space-y-5">
               <article className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-6">
-                <MessageSquare className="h-5 w-5 text-cyan-200" />
+                <MessageSquare className="h-5 w-5 text-[color:var(--accent-cyan)]" />
                 <h2 className="mt-5 text-xl font-semibold text-[color:var(--text-primary)]">
                   What to include
                 </h2>
@@ -178,7 +178,7 @@ function ContactRoute({
       href={href}
       className="block rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5 transition hover:bg-[var(--surface-strong)]"
     >
-      <Icon className="h-5 w-5 text-emerald-300" />
+      <Icon className="h-5 w-5 text-[color:var(--accent-emerald)]" />
       <h3 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">{title}</h3>
       <p className="mt-3 text-sm leading-7 text-[color:var(--text-muted)]">{detail}</p>
     </a>

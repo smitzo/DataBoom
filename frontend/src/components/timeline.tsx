@@ -23,11 +23,11 @@ export type TimelineItem = {
 const statusCopy: Record<TimelineStatus, { label: string; className: string }> = {
   achieved: {
     label: "Achieved",
-    className: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
+    className: "border-emerald-300/30 bg-emerald-300/10 text-[color:var(--accent-emerald)]",
   },
   next: {
     label: "Next",
-    className: "border-sky-300/30 bg-sky-300/10 text-sky-200",
+    className: "border-sky-300/30 bg-sky-300/10 text-[color:var(--accent-sky)]",
   },
   planned: {
     label: "Planned",

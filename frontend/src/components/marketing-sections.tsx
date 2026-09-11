@@ -48,8 +48,8 @@ const productGroups = [
     name: "Table-Boom",
     eyebrow: "Relational engine",
     status: "Live in workspace",
-    statusClass: "border-emerald-300/30 bg-emerald-300/10 text-emerald-200",
-    tone: "text-emerald-300 border-emerald-300/25 bg-emerald-300/10",
+    statusClass: "border-emerald-300/30 bg-emerald-300/10 text-[color:var(--accent-emerald)]",
+    tone: "text-[color:var(--accent-emerald)] border-emerald-300/25 bg-emerald-300/10",
     border: "border-emerald-300/25",
     bar: "from-emerald-300 via-cyan-300 to-transparent",
     glow: "bg-emerald-300/10",
@@ -71,8 +71,8 @@ const productGroups = [
     name: "Docu-Boom",
     eyebrow: "Document engine",
     status: "Live in workspace",
-    statusClass: "border-cyan-300/30 bg-cyan-300/10 text-cyan-200",
-    tone: "text-cyan-300 border-cyan-300/25 bg-cyan-300/10",
+    statusClass: "border-cyan-300/30 bg-cyan-300/10 text-[color:var(--accent-cyan)]",
+    tone: "text-[color:var(--accent-cyan)] border-cyan-300/25 bg-cyan-300/10",
     border: "border-cyan-300/25",
     bar: "from-cyan-300 via-sky-300 to-transparent",
     glow: "bg-cyan-300/10",
@@ -94,8 +94,8 @@ const productGroups = [
     name: "Graph-Boom",
     eyebrow: "Graph roadmap",
     status: "Roadmap",
-    statusClass: "border-sky-300/30 bg-sky-300/10 text-sky-200",
-    tone: "text-sky-300 border-sky-300/25 bg-sky-300/10",
+    statusClass: "border-sky-300/30 bg-sky-300/10 text-[color:var(--accent-sky)]",
+    tone: "text-[color:var(--accent-sky)] border-sky-300/25 bg-sky-300/10",
     border: "border-sky-300/25",
     bar: "from-sky-300 via-indigo-300 to-transparent",
     glow: "bg-sky-300/10",
@@ -115,8 +115,8 @@ const productGroups = [
     name: "Masker-Boom",
     eyebrow: "Masking roadmap",
     status: "Roadmap",
-    statusClass: "border-amber-300/30 bg-amber-300/10 text-amber-200",
-    tone: "text-amber-300 border-amber-300/25 bg-amber-300/10",
+    statusClass: "border-amber-300/30 bg-amber-300/10 text-[color:var(--accent-amber)]",
+    tone: "text-[color:var(--accent-amber)] border-amber-300/25 bg-amber-300/10",
     border: "border-amber-300/25",
     bar: "from-amber-300 via-emerald-300 to-transparent",
     glow: "bg-amber-300/10",
@@ -203,7 +203,7 @@ export function MarketingStory() {
 
 function WhatIsDataBoom() {
   return (
-    <section id="what-is-databoom" className="border-b border-[color:var(--border)] bg-[#030405]">
+    <section id="what-is-databoom" className="border-b border-[color:var(--border)] bg-[var(--section-contrast-bg)]">
       <div className="mx-auto max-w-[1180px] px-5 py-24 sm:px-8">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">
@@ -252,7 +252,7 @@ function ProblemFix() {
         </div>
 
         <div className="mt-24 text-center">
-          <p className="text-xs font-semibold uppercase text-emerald-300">The fix</p>
+          <p className="text-xs font-semibold uppercase text-[color:var(--accent-emerald)]">The fix</p>
           <h2 className="mt-5 text-4xl font-medium leading-tight text-[color:var(--text-primary)] lg:text-6xl">
             DataBoom makes generation a controlled run.
           </h2>
@@ -270,7 +270,7 @@ function ProblemFix() {
 
 function ProductSystem() {
   return (
-    <section id="product-system" className="border-b border-[color:var(--border)] bg-[#030405]">
+    <section id="product-system" className="border-b border-[color:var(--border)] bg-[var(--section-contrast-bg)]">
       <div className="mx-auto max-w-[1240px] px-5 py-24 sm:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">
@@ -375,7 +375,7 @@ function SignalCard({
   const toneClass =
     tone === "danger"
       ? "border-red-400/20 bg-red-400/5 text-red-300"
-      : "border-emerald-300/20 bg-emerald-300/5 text-emerald-300";
+      : "border-emerald-300/20 bg-emerald-300/5 text-[color:var(--accent-emerald)]";
 
   return (
     <article className={`rounded-lg border p-6 ${toneClass}`}>
@@ -448,9 +448,9 @@ function ProductModuleCard({
           {group.items.map((item) => (
             <div
               key={item}
-              className="flex items-center gap-3 rounded-lg border border-[color:var(--border)] bg-black/20 px-3 py-3"
+              className="flex items-center gap-3 rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-3 py-3"
             >
-              <Check className="h-4 w-4 shrink-0 text-cyan-300" />
+              <Check className="h-4 w-4 shrink-0 text-[color:var(--accent-cyan)]" />
               <span className="text-sm font-medium text-[color:var(--text-secondary)]">
                 {item}
               </span>
@@ -483,7 +483,7 @@ function IconCard({
 
   return (
     <article className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-6">
-      <Icon className="h-5 w-5 text-emerald-300" />
+      <Icon className="h-5 w-5 text-[color:var(--accent-emerald)]" />
       <h3 className="mt-5 text-lg font-semibold text-[color:var(--text-primary)]">
         {item.title}
       </h3>

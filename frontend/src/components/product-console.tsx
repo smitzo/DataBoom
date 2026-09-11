@@ -24,10 +24,10 @@ export function StatTile({
   hint: string;
 }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
-      <p className="text-xs font-semibold uppercase text-zinc-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold text-white">{value}</p>
-      <p className="mt-2 text-sm text-zinc-500">{hint}</p>
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-5">
+      <p className="text-xs font-semibold uppercase text-[color:var(--text-faint)]">{label}</p>
+      <p className="mt-3 text-2xl font-semibold text-[color:var(--text-primary)]">{value}</p>
+      <p className="mt-2 text-sm text-[color:var(--text-muted)]">{hint}</p>
     </div>
   );
 }
@@ -37,24 +37,24 @@ export function GenerationAnimation({ active }: { active: boolean }) {
     <div className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-5">
       <div className="flex items-center gap-3">
         {active ? (
-          <Loader2 className="h-5 w-5 animate-spin text-cyan-200" />
+          <Loader2 className="h-5 w-5 animate-spin text-[color:var(--accent-cyan)]" />
         ) : (
-          <CheckCircle2 className="h-5 w-5 text-emerald-200" />
+          <CheckCircle2 className="h-5 w-5 text-[color:var(--accent-emerald)]" />
         )}
-        <p className="font-semibold text-white">
+        <p className="font-semibold text-[color:var(--text-primary)]">
           {active ? "Generating data..." : "Generator ready"}
         </p>
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-4">
         {["Parse schema", "Plan graph", "Write artifacts", "Validate rows"].map((step, index) => (
-          <div key={step} className="rounded-md border border-white/10 bg-black/25 p-3">
+          <div key={step} className="rounded-md border border-[color:var(--border)] bg-[var(--surface-muted)] p-3">
             <div
               className={`h-1 rounded-full ${
                 active ? "animate-pulse bg-cyan-300" : "bg-emerald-300"
               }`}
               style={{ animationDelay: `${index * 130}ms` }}
             />
-            <p className="mt-3 text-xs font-semibold uppercase text-zinc-400">{step}</p>
+            <p className="mt-3 text-xs font-semibold uppercase text-[color:var(--text-faint)]">{step}</p>
           </div>
         ))}
       </div>
@@ -90,14 +90,14 @@ function ArtifactButton({ artifact }: { artifact: RunArtifact }) {
 
   return (
     <a
-      className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/[0.03] px-4 py-3 text-sm transition hover:border-emerald-300/35 hover:bg-emerald-300/10"
+      className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm transition hover:border-emerald-300/35 hover:bg-emerald-300/10"
       href={href}
     >
       <span className="flex min-w-0 items-center gap-3">
-        <Icon className="h-4 w-4 shrink-0 text-emerald-200" />
-        <span className="truncate text-zinc-300">{artifact.relative_path}</span>
+        <Icon className="h-4 w-4 shrink-0 text-[color:var(--accent-emerald)]" />
+        <span className="truncate text-[color:var(--text-secondary)]">{artifact.relative_path}</span>
       </span>
-      <span className="inline-flex shrink-0 items-center gap-2 text-xs font-semibold uppercase text-emerald-200">
+      <span className="inline-flex shrink-0 items-center gap-2 text-xs font-semibold uppercase text-[color:var(--accent-emerald)]">
         {formatBytes(artifact.size_bytes)}
         <Download className="h-3.5 w-3.5" />
       </span>
@@ -113,8 +113,11 @@ export function PreviewTable({
   defaultOpen?: boolean;
 }) {
   return (
-    <details className="rounded-lg border border-white/10 bg-white/[0.03] p-4" open={defaultOpen}>
-      <summary className="cursor-pointer text-sm font-semibold text-white">
+    <details
+      className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-4"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer text-sm font-semibold text-[color:var(--text-primary)]">
         {preview.table_name} · top {preview.rows.length} rows
       </summary>
       <div className="mt-4 overflow-x-auto">
@@ -124,7 +127,7 @@ export function PreviewTable({
               {preview.columns.map((column) => (
                 <th
                   key={column}
-                  className="border-b border-white/10 px-3 py-2 text-xs font-semibold uppercase text-zinc-500"
+                  className="border-b border-[color:var(--border)] px-3 py-2 text-xs font-semibold uppercase text-[color:var(--text-faint)]"
                 >
                   {column}
                 </th>
@@ -133,9 +136,12 @@ export function PreviewTable({
           </thead>
           <tbody>
             {preview.rows.map((row, index) => (
-              <tr key={index}>
+              <tr key={index} className="even:bg-[var(--surface-muted)]">
                 {preview.columns.map((column) => (
-                  <td key={column} className="max-w-64 truncate border-b border-white/5 px-3 py-2">
+                  <td
+                    key={column}
+                    className="max-w-64 truncate border-b border-[color:var(--border)] px-3 py-2 text-[color:var(--text-secondary)]"
+                  >
                     {row[column] ?? ""}
                   </td>
                 ))}
@@ -150,10 +156,10 @@ export function PreviewTable({
 
 export function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-8 text-center">
-      <Activity className="mx-auto h-8 w-8 text-zinc-600" />
-      <p className="mt-4 font-semibold text-white">{title}</p>
-      <p className="mt-2 text-sm text-zinc-500">{detail}</p>
+    <div className="rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] p-8 text-center">
+      <Activity className="mx-auto h-8 w-8 text-[color:var(--text-faint)]" />
+      <p className="mt-4 font-semibold text-[color:var(--text-primary)]">{title}</p>
+      <p className="mt-2 text-sm text-[color:var(--text-muted)]">{detail}</p>
     </div>
   );
 }

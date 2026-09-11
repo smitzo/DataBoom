@@ -13,30 +13,113 @@
   --text-secondary: #d4d4d8;
   --text-muted: #a1a1aa;
   --text-faint: #71717a;
+  --brand-accent: #34d399;
+  --accent-emerald: #6ee7b7;
+  --accent-cyan: #67e8f9;
+  --accent-sky: #7dd3fc;
+  --accent-amber: #fde68a;
   --accent-soft: rgba(45, 212, 191, 0.12);
+  --danger-bg: rgba(248, 113, 113, 0.1);
+  --danger-border: rgba(252, 165, 165, 0.28);
+  --danger-text: #fecaca;
   --shadow-soft: rgba(0, 0, 0, 0.32);
+  --header-shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+  --section-contrast-bg: #030405;
+  --hero-text-primary: #fafafa;
+  --hero-text-secondary: #d4d4d8;
+  --hero-text-muted: #a1a1aa;
+  --hero-border: rgba(255, 255, 255, 0.12);
+  --hero-surface: rgba(255, 255, 255, 0.04);
+  --hero-bg:
+    radial-gradient(circle at 82% 36%, rgba(14, 165, 233, 0.2), transparent 32%),
+    radial-gradient(circle at 42% 12%, rgba(45, 212, 191, 0.1), transparent 28%),
+    linear-gradient(105deg, #030712 0%, #070816 48%, #08131f 100%);
+  --hero-overlay:
+    linear-gradient(90deg, rgba(5, 7, 20, 0.5), rgba(5, 7, 20, 0.22) 48%, rgba(8, 19, 31, 0.18));
+  --hero-right-glow:
+    radial-gradient(circle at 54% 36%, rgba(14, 165, 233, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 58%, rgba(45, 212, 191, 0.08), transparent 32%);
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --page-bg: #f8fafc;
+  --page-bg: #f6f8fb;
   --section-bg: #ffffff;
-  --header-bg: rgba(255, 255, 255, 0.88);
-  --surface: rgba(15, 23, 42, 0.035);
-  --surface-strong: rgba(15, 23, 42, 0.065);
-  --surface-muted: rgba(15, 23, 42, 0.025);
+  --header-bg: rgba(255, 255, 255, 0.96);
+  --surface: rgba(15, 23, 42, 0.045);
+  --surface-strong: rgba(15, 23, 42, 0.075);
+  --surface-muted: rgba(15, 23, 42, 0.032);
   --border: rgba(15, 23, 42, 0.12);
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
+  --text-primary: #0b1220;
+  --text-secondary: #26344c;
+  --text-muted: #52627a;
+  --text-faint: #7a879a;
+  --brand-accent: #009e73;
+  --accent-emerald: #047857;
+  --accent-cyan: #047b91;
+  --accent-sky: #0369a1;
+  --accent-amber: #92400e;
   --accent-soft: rgba(13, 148, 136, 0.1);
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --danger-border: rgba(220, 38, 38, 0.22);
+  --danger-text: #b91c1c;
   --shadow-soft: rgba(15, 23, 42, 0.09);
+  --header-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+  --section-contrast-bg: #f2f6fb;
+  --hero-text-primary: #07111f;
+  --hero-text-secondary: #26344c;
+  --hero-text-muted: #52627a;
+  --hero-border: rgba(15, 23, 42, 0.12);
+  --hero-surface: rgba(255, 255, 255, 0.72);
+  --hero-bg:
+    radial-gradient(circle at 78% 24%, rgba(14, 165, 233, 0.14), transparent 30%),
+    radial-gradient(circle at 22% 26%, rgba(16, 185, 129, 0.13), transparent 32%),
+    linear-gradient(110deg, #f8fbff 0%, #eef7f8 48%, #e8f2fb 100%);
+  --hero-overlay:
+    linear-gradient(90deg, rgba(248, 251, 255, 0.76), rgba(248, 251, 255, 0.34) 52%, rgba(232, 242, 251, 0.28));
+  --hero-right-glow:
+    radial-gradient(circle at 54% 36%, rgba(14, 165, 233, 0.13), transparent 34%),
+    radial-gradient(circle at 82% 58%, rgba(16, 185, 129, 0.12), transparent 32%);
 }
 
 body {
   background: var(--page-bg);
   color: var(--text-primary);
+}
+
+.hero-shell {
+  background: var(--hero-bg);
+}
+
+.hero-overlay {
+  background: var(--hero-overlay);
+}
+
+.hero-right-glow {
+  background: var(--hero-right-glow);
+}
+
+.console-theme {
+  --page-bg: #050714;
+  --section-bg: #080b16;
+  --header-bg: rgba(5, 7, 20, 0.86);
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-strong: rgba(255, 255, 255, 0.075);
+  --surface-muted: rgba(255, 255, 255, 0.035);
+  --border: rgba(255, 255, 255, 0.1);
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-faint: #71717a;
+  --brand-accent: #34d399;
+  --accent-emerald: #6ee7b7;
+  --accent-cyan: #67e8f9;
+  --accent-sky: #7dd3fc;
+  --accent-amber: #fde68a;
+  --danger-bg: rgba(248, 113, 113, 0.1);
+  --danger-border: rgba(252, 165, 165, 0.28);
+  --danger-text: #fecaca;
+  --shadow-soft: rgba(0, 0, 0, 0.32);
 }
 
 html {

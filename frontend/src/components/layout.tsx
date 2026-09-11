@@ -26,7 +26,7 @@ export function Announcement() {
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--header-bg)] shadow-[0_18px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--header-bg)] shadow-[var(--header-shadow)] backdrop-blur-xl">
       <div className="mx-auto flex h-28 max-w-[1760px] items-center justify-between gap-6 px-5 sm:px-8 lg:px-12 xl:px-16">
         <BrandLogo size="lg" sublabel="Synthetic data engine" />
 

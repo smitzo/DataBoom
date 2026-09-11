@@ -59,7 +59,7 @@ const companyFacts = [
 export default function AboutPage() {
   return (
     <PublicShell>
-      <section className="border-b border-[color:var(--border)] bg-[#030405]">
+      <section className="border-b border-[color:var(--border)] bg-[var(--section-contrast-bg)]">
         <div className="mx-auto max-w-[1120px] px-5 py-20 sm:px-8">
           <a
             href="/"
@@ -93,7 +93,7 @@ export default function AboutPage() {
             </h2>
             <article className="mt-6 rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-8">
               <div className="flex flex-col gap-6 md:flex-row md:items-start">
-                <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-emerald-300/25 bg-emerald-300/10 text-emerald-300">
+                <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-emerald-300/25 bg-emerald-300/10 text-[color:var(--accent-emerald)]">
                   <Database className="h-7 w-7" />
                 </span>
                 <div>
@@ -222,7 +222,7 @@ export default function AboutPage() {
 function MiniCard({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
     <article className="rounded-lg border border-[color:var(--border)] bg-[var(--surface)] p-5">
-      <Icon className="h-5 w-5 text-cyan-300" />
+      <Icon className="h-5 w-5 text-[color:var(--accent-cyan)]" />
       <p className="mt-5 text-base font-semibold text-[color:var(--text-primary)]">{label}</p>
     </article>
   );

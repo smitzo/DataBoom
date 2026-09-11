@@ -1,0 +1,23 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="DataBoom mark">
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="#07111F"/>
+  <rect x="8" y="8" width="112" height="112" rx="24" stroke="url(#border)" stroke-width="4"/>
+  <path d="M37 41C37 33.82 49.09 28 64 28C78.91 28 91 33.82 91 41C91 48.18 78.91 54 64 54C49.09 54 37 48.18 37 41Z" stroke="#7EF7D4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M37 41V67C37 74.18 49.09 80 64 80C78.91 80 91 74.18 91 67V41" stroke="#7EF7D4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M37 55C37 62.18 49.09 68 64 68C78.91 68 91 62.18 91 55" stroke="#22D3EE" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M37 68V82C37 89.18 49.09 95 64 95C78.91 95 91 89.18 91 82V68" stroke="#7EF7D4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M92 25L96 35L106 39L96 43L92 53L88 43L78 39L88 35L92 25Z" fill="#A7F3D0"/>
+  <path d="M99 17L101 22L106 24L101 26L99 31L97 26L92 24L97 22L99 17Z" fill="#67E8F9"/>
+  <rect x="33" y="104" width="62" height="5" rx="2.5" fill="url(#bar)"/>
+  <defs>
+    <linearGradient id="border" x1="16" y1="16" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="0.52" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="33" y1="106.5" x2="95" y2="106.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="0.5" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+</svg>

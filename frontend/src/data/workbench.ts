@@ -90,9 +90,9 @@ export const navItems = [
 ];
 
 export const heroMetrics = [
-  { label: "Generation", value: "Schema-aware", tone: "text-emerald-300" },
-  { label: "Integrity", value: "Key-safe", tone: "text-sky-300" },
-  { label: "Delivery", value: "CSV JSON SQL", tone: "text-amber-200" },
+  { label: "Generation", value: "Schema-aware", tone: "text-[color:var(--accent-emerald)]" },
+  { label: "Integrity", value: "Key-safe", tone: "text-[color:var(--accent-sky)]" },
+  { label: "Delivery", value: "CSV JSON SQL", tone: "text-[color:var(--accent-amber)]" },
 ];
 
 export const profiles: ProfileConfig[] = [
@@ -103,7 +103,7 @@ export const profiles: ProfileConfig[] = [
     tags: ["tables", "foreign keys"],
     icon: Database,
     selected: true,
-    tone: "border-emerald-300/40 text-emerald-200",
+    tone: "border-emerald-300/40 text-[color:var(--accent-emerald)]",
   },
   {
     name: "Docu-Boom",
@@ -112,7 +112,7 @@ export const profiles: ProfileConfig[] = [
     tags: ["json", "ndjson"],
     icon: FileJson,
     selected: false,
-    tone: "border-rose-300/40 text-rose-200",
+    tone: "border-rose-300/40 text-rose-500",
   },
   {
     name: "Graph-Boom",
@@ -121,7 +121,7 @@ export const profiles: ProfileConfig[] = [
     tags: ["nodes", "edges"],
     icon: GitBranch,
     selected: false,
-    tone: "border-sky-300/40 text-sky-200",
+    tone: "border-sky-300/40 text-[color:var(--accent-sky)]",
   },
   {
     name: "Masker-Boom",
@@ -130,7 +130,7 @@ export const profiles: ProfileConfig[] = [
     tags: ["masking", "privacy"],
     icon: ShieldCheck,
     selected: false,
-    tone: "border-amber-300/40 text-amber-200",
+    tone: "border-amber-300/40 text-[color:var(--accent-amber)]",
   },
 ];
 
@@ -151,7 +151,7 @@ export const productCatalog: ProductCatalogItem[] = [
     ],
     useCases: ["fintech ledgers", "healthcare records", "commerce orders", "SaaS audit data"],
     icon: Database,
-    accent: "from-emerald-300/25 via-cyan-300/10 to-transparent text-emerald-200 border-emerald-300/35",
+    accent: "from-emerald-300/25 via-cyan-300/10 to-transparent text-[color:var(--accent-emerald)] border-emerald-300/35",
   },
   {
     name: "Docu-Boom",
@@ -169,7 +169,7 @@ export const productCatalog: ProductCatalogItem[] = [
     ],
     useCases: ["customer profiles", "catalog documents", "order events", "activity logs"],
     icon: FileJson,
-    accent: "from-cyan-300/25 via-sky-300/10 to-transparent text-cyan-200 border-cyan-300/35",
+    accent: "from-cyan-300/25 via-sky-300/10 to-transparent text-[color:var(--accent-cyan)] border-cyan-300/35",
   },
   {
     name: "Graph-Boom",
@@ -187,7 +187,7 @@ export const productCatalog: ProductCatalogItem[] = [
     ],
     useCases: ["fraud networks", "recommendations", "knowledge graphs", "ownership maps"],
     icon: GitBranch,
-    accent: "from-indigo-300/25 via-sky-300/10 to-transparent text-indigo-200 border-indigo-300/35",
+    accent: "from-indigo-300/25 via-sky-300/10 to-transparent text-indigo-500 border-indigo-300/35",
   },
   {
     name: "Masker-Boom",
@@ -205,7 +205,7 @@ export const productCatalog: ProductCatalogItem[] = [
     ],
     useCases: ["PII redaction", "tokenized joins", "medical datasets", "customer support data"],
     icon: ShieldCheck,
-    accent: "from-amber-300/25 via-emerald-300/10 to-transparent text-amber-200 border-amber-300/35",
+    accent: "from-amber-300/25 via-emerald-300/10 to-transparent text-[color:var(--accent-amber)] border-amber-300/35",
   },
 ];
 

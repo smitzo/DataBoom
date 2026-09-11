@@ -24,7 +24,7 @@ function ProductCatalogCard({ product }: { product: ProductCatalogItem }) {
       <div className="relative z-10">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-current/25 bg-black/20 text-current shadow-[0_0_24px_rgba(34,211,238,0.12)]">
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-current/25 bg-[var(--surface-muted)] text-current shadow-[0_0_24px_rgba(34,211,238,0.12)]">
               <Icon className="h-7 w-7" />
             </span>
             <div>
@@ -71,8 +71,8 @@ function ProductStatus({ active }: { active: boolean }) {
     <span
       className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold uppercase ${
         active
-          ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-300"
-          : "border-sky-300/35 bg-sky-300/10 text-sky-300"
+          ? "border-emerald-300/35 bg-emerald-300/10 text-[color:var(--accent-emerald)]"
+          : "border-sky-300/35 bg-sky-300/10 text-[color:var(--accent-sky)]"
       }`}
     >
       <Icon className="h-4 w-4" />
