@@ -8,6 +8,7 @@ import {
   ChevronDown,
   CircleAlert,
   Clock3,
+  Filter,
   Database,
   Download,
   Eye,
@@ -24,6 +25,7 @@ import {
   Rows3,
   Search,
   Send,
+  Share2,
   Sparkles,
   Table2,
 } from "lucide-react";
@@ -85,7 +87,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [selectedConnectionId, setSelectedConnectionId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState<string | null>(null);
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("catalog");
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("product");
   const [viewFormat, setViewFormat] = useState<ViewFormat>("table");
   const [downloadFormats, setDownloadFormats] = useState<ViewFormat[]>(["csv"]);
   const [prompt, setPrompt] = useState("Generate realistic data for the selected product");
@@ -281,8 +283,8 @@ export function DataWorkspace({ session }: { session: Session }) {
     [selectedDocumentPreview, selectedTablePreview],
   );
   const workspaceGridClass = isWorkspaceRailCollapsed
-    ? "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[9.5rem_minmax(0,1fr)_21rem]"
-    : "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[15rem_minmax(0,1fr)_21rem]";
+    ? "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[8rem_minmax(0,1fr)_22rem]"
+    : "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[18rem_minmax(0,1fr)_22rem]";
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -578,7 +580,7 @@ export function DataWorkspace({ session }: { session: Session }) {
     );
   }
 
-  if (workspaceMode === "catalog") {
+  if (workspaceMode === "catalog" || !selectedProduct) {
     return (
       <ProductWorkspacePicker
         error={error}
@@ -592,7 +594,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   }
 
   return (
-    <section className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+    <section className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-cyan-300/10 bg-[#050917] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
       <div className={workspaceGridClass}>
         <WorkspaceSidebar
           activeKind={activeKind}
@@ -604,6 +606,7 @@ export function DataWorkspace({ session }: { session: Session }) {
           isTestingConnection={isTestingConnection}
           onToggleCollapse={() => setIsWorkspaceRailCollapsed((current) => !current)}
           product={selectedProduct}
+          products={products}
           resourceNames={resourceNames}
           selectedConnection={selectedConnection}
           selectedConnectionId={selectedConnectionId}
@@ -615,6 +618,7 @@ export function DataWorkspace({ session }: { session: Session }) {
           sourceRefreshMessage={sourceRefreshMessage}
           sourceSchemaNames={sourceSchemaNames}
           onBackToProducts={() => setWorkspaceMode("catalog")}
+          onChooseProduct={chooseProduct}
           onProfileSource={profileSelectedSource}
           onRefreshSource={refreshSelectedSource}
           onSaveSource={saveSelectedSource}
@@ -627,7 +631,7 @@ export function DataWorkspace({ session }: { session: Session }) {
           onTestConnection={testSelectedSourceConnection}
         />
 
-        <main className="min-w-0 border-y border-white/10 bg-zinc-100 text-zinc-950 xl:border-x xl:border-y-0">
+        <main className="min-w-0 border-y border-cyan-300/10 bg-[#080d1b] text-zinc-100 xl:border-x xl:border-y-0">
           <WorkspaceOverview
             connection={selectedConnection}
             product={selectedProduct}
@@ -653,7 +657,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             </div>
           ) : null}
 
-          <div className="workspace-scrollbar h-[calc(100vh-18rem)] min-h-[34rem] overflow-auto bg-zinc-50">
+          <div className="workspace-scrollbar-dark h-[calc(100vh-19.5rem)] min-h-[34rem] overflow-auto bg-[#080d1b]">
             <DataSurface
               activeKind={activeKind}
               documentPreview={selectedDocumentPreview}
@@ -667,6 +671,7 @@ export function DataWorkspace({ session }: { session: Session }) {
         </main>
 
         <AgentPanel
+          artifacts={artifacts}
           insight={insight}
           onGenerate={generate}
           onPromptChange={setPrompt}
@@ -813,6 +818,7 @@ function WorkspaceSidebar({
   isTestingConnection,
   onToggleCollapse,
   product,
+  products,
   resourceNames,
   selectedConnection,
   selectedConnectionId,
@@ -824,6 +830,7 @@ function WorkspaceSidebar({
   sourceRefreshMessage,
   sourceSchemaNames,
   onBackToProducts,
+  onChooseProduct,
   onProfileSource,
   onRefreshSource,
   onSaveSource,
@@ -844,6 +851,7 @@ function WorkspaceSidebar({
   isTestingConnection: boolean;
   onToggleCollapse: () => void;
   product: Product | null;
+  products: Product[];
   resourceNames: string[];
   selectedConnection: WorkspaceSource | null;
   selectedConnectionId: string;
@@ -855,6 +863,7 @@ function WorkspaceSidebar({
   sourceRefreshMessage: string | null;
   sourceSchemaNames: string;
   onBackToProducts: () => void;
+  onChooseProduct: (product: Product) => void;
   onProfileSource: () => void;
   onRefreshSource: () => void;
   onSaveSource: () => void;
@@ -872,8 +881,8 @@ function WorkspaceSidebar({
 
   if (collapsed) {
     return (
-      <aside className="bg-[#080b14] text-zinc-100">
-        <div className="grid gap-2 border-b border-white/10 px-2 py-3">
+      <aside className="bg-[#060a16] text-zinc-100">
+        <div className="grid gap-2 border-b border-cyan-300/10 px-2 py-3">
           <button
             aria-label="Expand workspace rail"
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
@@ -885,7 +894,7 @@ function WorkspaceSidebar({
           <button
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-zinc-400 transition hover:border-white/20 hover:text-white"
             onClick={onBackToProducts}
-            title="Back to products"
+            title="Product catalog"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -927,12 +936,14 @@ function WorkspaceSidebar({
   }
 
   return (
-    <aside className="bg-[#080b14] text-zinc-100">
-      <div className="border-b border-white/10 px-4 py-4">
+    <aside className="bg-[#060a16] text-zinc-100">
+      <div className="border-b border-cyan-300/10 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase text-zinc-500">Workspace</p>
-            <p className="mt-1 text-sm font-semibold text-white">{product?.name ?? kindLabel(activeKind)}</p>
+            <p className="text-xs font-semibold uppercase text-zinc-500">Explorer</p>
+            <p className="mt-1 text-sm font-semibold text-white">
+              {product?.name ?? kindLabel(activeKind)}
+            </p>
           </div>
           <button
             aria-label="Collapse workspace rail"
@@ -945,19 +956,52 @@ function WorkspaceSidebar({
         </div>
       </div>
 
-      <div className="space-y-5 p-3">
-        <details className="group rounded-xl border border-white/10 bg-white/[0.025] p-3" open>
+      <div className="space-y-5 p-4">
+        <section className="rounded-xl border border-cyan-300/10 bg-white/[0.035] p-3">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+            Product workspace
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
+              <ProductIcon className="h-5 w-5" />
+            </span>
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">Product</span>
+              <select
+                className="h-11 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-sm font-semibold text-zinc-100 outline-none transition focus:border-cyan-300/40"
+                onChange={(event) => {
+                  const nextProduct = products.find((item) => item.id === event.target.value);
+                  if (nextProduct) {
+                    onChooseProduct(nextProduct);
+                  }
+                }}
+                value={product?.id ?? ""}
+              >
+                {products.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-zinc-500">
+            {product?.module ?? kindLabel(activeKind)}
+          </p>
+        </section>
+
+        <details className="group rounded-xl border border-cyan-300/10 bg-white/[0.025] p-3" open>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
-                <ProductIcon className="h-4 w-4" />
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-emerald-300/25 bg-emerald-300/10 text-emerald-100">
+                <Database className="h-4 w-4" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold text-white">
-                  {product?.name ?? "Product"}
+                  Source setup
                 </span>
                 <span className="mt-1 block truncate text-xs text-zinc-500">
-                  {product?.module ?? kindLabel(activeKind)}
+                  {selectedConnection?.engine ?? fallbackEngine(activeKind)}
                 </span>
               </span>
             </span>
@@ -967,7 +1011,7 @@ function WorkspaceSidebar({
           <div className="mt-4 space-y-3">
             <label className="block">
               <span className="text-[0.68rem] font-semibold uppercase text-zinc-600">
-                Connected database
+                Database
               </span>
               <select
                 className="mt-2 h-10 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-sm font-semibold text-zinc-100 outline-none transition focus:border-cyan-300/40"
@@ -981,8 +1025,17 @@ function WorkspaceSidebar({
                 ))}
               </select>
             </label>
-            <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-              <p className="truncate text-xs font-semibold text-zinc-300">
+            <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/10 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-100">
+                  <span className="h-2 w-2 rounded-full bg-emerald-300" />
+                  Connected
+                </span>
+                <span className="text-[0.68rem] font-semibold uppercase text-emerald-200/70">
+                  View details
+                </span>
+              </div>
+              <p className="truncate text-xs font-semibold text-zinc-200">
                 {selectedConnection?.engine ?? "Engine"} · {selectedConnection?.host ?? "not connected"}
               </p>
               <p className="mt-2 max-h-10 overflow-hidden text-xs leading-5 text-zinc-500">
@@ -1065,17 +1118,10 @@ function WorkspaceSidebar({
                 </div>
               </details>
             ) : null}
-            <button
-              className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-xs font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100"
-              onClick={onBackToProducts}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Products
-            </button>
           </div>
         </details>
 
-        <details className="group" open>
+        <details className="group rounded-xl border border-white/10 bg-white/[0.02] p-3" open>
           <summary className="flex cursor-pointer list-none items-center justify-between px-1">
             <span className="text-xs font-semibold uppercase text-zinc-600">{resourceLabel}</span>
             <span className="inline-flex items-center gap-2 text-xs text-zinc-600">
@@ -1083,19 +1129,24 @@ function WorkspaceSidebar({
               <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
             </span>
           </summary>
-          <div className="workspace-scrollbar-dark mt-3 max-h-[35vh] space-y-1.5 overflow-auto pr-1">
+          <div className="workspace-scrollbar-dark mt-3 max-h-[39vh] space-y-1.5 overflow-auto pr-1">
             {resourceNames.map((tableName) => (
               <button
                 key={tableName}
-                className={`flex h-10 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sm transition ${
+                className={`flex h-11 w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm transition ${
                   selectedResource === tableName
                     ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
                     : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
                 }`}
                 onClick={() => onSelectResource(tableName)}
               >
-                <ResourceIcon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{shortTableName(tableName)}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <ResourceIcon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{shortTableName(tableName)}</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-white/[0.06] px-2 py-0.5 text-[0.68rem] font-semibold text-zinc-500">
+                  {resourceRowCount(selectedConnection, tableName)}
+                </span>
               </button>
             ))}
           </div>
@@ -1181,36 +1232,40 @@ function WorkspaceOverview({
   const schemaLabels = connection ? sourceSchemaLabels(connection) : [];
 
   return (
-    <section className="border-b border-zinc-200 bg-white">
-      <div className="grid gap-4 px-5 py-4 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center">
+    <section className="border-b border-cyan-300/10 bg-[#080d1b]">
+      <div className="grid gap-4 px-5 py-5 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold text-zinc-950">
-            {product?.name ?? "DataBoom workspace"}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500">
-            <span className="truncate">
-              {connection?.name ?? "No database selected"}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
+              {product ? <Database className="h-5 w-5" /> : <Rows3 className="h-5 w-5" />}
             </span>
-            <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
-            <span className="truncate">
-              {connection?.engine ?? kindLabel(product?.kind ?? "relational")}
-            </span>
-            <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
-            <span className="truncate">{connection?.host ?? "local workspace"}</span>
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-semibold text-white">
+                {product?.name ?? "DataBoom workspace"}
+              </h1>
+              <p className="mt-1 truncate text-sm text-zinc-500">
+                {connection?.engine ?? kindLabel(product?.kind ?? "relational")} ·{" "}
+                {connection?.name ?? "No database selected"}
+              </p>
+            </div>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-zinc-400">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500">
             <span className="truncate">
-              Schema {schemaLabels.length ? schemaLabels.join(", ") : "not refreshed"}
+              {connection?.host ?? "local workspace"}
             </span>
-            <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
+            <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
+            <span className="truncate">
+              {schemaLabels.length ? schemaLabels.join(", ") : "schema pending"}
+            </span>
+            <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
             <span>
               {connection?.refreshed_at
-                ? `Refreshed ${formatDateTime(connection.refreshed_at)}`
+                ? `Last sync ${formatDateTime(connection.refreshed_at)}`
                 : "Awaiting schema refresh"}
             </span>
             {sourceProfile ? (
               <>
-                <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:block" />
+                <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
                 <span>{formatNumber(sourceProfile.total_rows)} source rows profiled</span>
               </>
             ) : null}
@@ -1222,9 +1277,9 @@ function WorkspaceOverview({
                 <span className="truncate">
                   Latest run · {run.run_id} · {runState}
                 </span>
-                <span>{progress}%</span>
+                <span className="text-cyan-200">{progress}%</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
                   style={{ width: `${progress}%` }}
@@ -1271,12 +1326,12 @@ function OverviewMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+    <div className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase text-zinc-500">{label}</p>
-        <Icon className="h-4 w-4 text-cyan-700" />
+        <p className="text-[0.68rem] font-semibold uppercase text-zinc-500">{label}</p>
+        <Icon className="h-4 w-4 text-cyan-300" />
       </div>
-      <p className="mt-1 text-xl font-semibold text-zinc-950">{value}</p>
+      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
     </div>
   );
 }
@@ -1307,35 +1362,66 @@ function WorkspaceToolbar({
     run?.collections.find((item) => item.collection_name === selectedResource);
   const selectedView = viewOptions(activeKind).find((option) => option.id === viewFormat);
 
+  const tabs = ["Preview", "Columns", "Profile", "Lineage", "Queries", "History", "Settings"];
+
   return (
-    <header className="flex min-h-14 flex-col gap-3 border-b border-zinc-200 bg-zinc-50 px-5 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="truncate text-lg font-semibold text-zinc-950">
-            {selectedResource ? shortTableName(selectedResource) : "Data workspace"}
-          </h1>
-          <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
-            {resource ? `${resource.row_count} records` : "No run"}
-          </span>
+    <header className="border-b border-cyan-300/10 bg-[#080d1b]">
+      <div className="flex min-h-16 flex-col gap-3 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="truncate text-lg font-semibold text-white">
+              {selectedResource ? shortTableName(selectedResource) : "Data workspace"}
+            </h2>
+            <span className="rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 text-xs font-semibold text-zinc-400">
+              {resource ? `${resource.row_count} records` : "No run"}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-xs text-zinc-500">
+            {run ? run.run_id : "Select a source, then generate a run"}
+          </p>
         </div>
-        <p className="mt-1 truncate text-xs text-zinc-500">
-          {run ? run.run_id : "DataBoom Workspace"}
-        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <ViewFormatMenu
+            activeKind={activeKind}
+            selectedFormat={selectedView?.id ?? viewOptions(activeKind)[0]?.id ?? "table"}
+            onSelect={onViewFormatChange}
+          />
+          <DownloadFormatMenu
+            activeKind={activeKind}
+            artifacts={artifacts}
+            selectedFormats={downloadFormats}
+            onSelectedFormatsChange={onDownloadFormatsChange}
+            product={product}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <ViewFormatMenu
-          activeKind={activeKind}
-          selectedFormat={selectedView?.id ?? viewOptions(activeKind)[0]?.id ?? "table"}
-          onSelect={onViewFormatChange}
-        />
-        <DownloadFormatMenu
-          activeKind={activeKind}
-          artifacts={artifacts}
-          selectedFormats={downloadFormats}
-          onSelectedFormatsChange={onDownloadFormatsChange}
-          product={product}
-        />
+      <div className="flex flex-col gap-3 border-t border-white/5 px-5 py-3 xl:flex-row xl:items-center xl:justify-between">
+        <nav className="workspace-scrollbar-dark flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              className={`h-9 shrink-0 rounded-lg px-4 text-sm font-semibold transition ${
+                tab === "Preview"
+                  ? "bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/25"
+                  : "text-zinc-500 hover:bg-white/[0.045] hover:text-zinc-200"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </nav>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
+            <Filter className="h-4 w-4" />
+            Filter
+          </button>
+          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
+            <Share2 className="h-4 w-4" />
+            Share
+          </button>
+        </div>
       </div>
     </header>
   );
@@ -1356,7 +1442,7 @@ function ViewFormatMenu({
 
   return (
     <details className="group relative">
-      <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border border-teal-600 bg-teal-600 px-3 text-sm font-semibold text-white transition hover:bg-teal-700">
+      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-300/12 px-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/45 hover:bg-cyan-300/18">
         <Eye className="h-4 w-4" />
         <span className="hidden sm:inline">View</span>
         <span className="inline-flex items-center gap-1 border-l border-white/20 pl-2">
@@ -1365,7 +1451,7 @@ function ViewFormatMenu({
         </span>
         <ChevronDown className="h-3.5 w-3.5 opacity-80" />
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-zinc-200 bg-white p-2 shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+      <div className="absolute right-0 z-30 mt-2 w-64 rounded-xl border border-cyan-300/10 bg-[#0b1020] p-2 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
         {options.map((option) => {
           const Icon = option.icon;
           const active = option.id === selectedFormat;
@@ -1373,7 +1459,7 @@ function ViewFormatMenu({
             <button
               key={option.id}
               className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition ${
-                active ? "bg-cyan-50 text-cyan-800" : "text-zinc-700 hover:bg-zinc-50"
+                active ? "bg-cyan-300/10 text-cyan-100" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
               }`}
               onClick={(event) => {
                 event.currentTarget.closest("details")?.removeAttribute("open");
@@ -1425,17 +1511,17 @@ function DownloadFormatMenu({
 
   return (
     <details className="group relative">
-      <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:border-cyan-500 hover:text-cyan-700">
+      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-200 transition hover:border-cyan-300/35 hover:text-cyan-100">
         <Download className="h-4 w-4" />
         Download
-        <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[0.68rem] text-cyan-700">
+        <span className="rounded-full bg-cyan-300/10 px-2 py-0.5 text-[0.68rem] text-cyan-100">
           {selectedCount}
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+        <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-zinc-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+      <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-cyan-300/10 bg-[#0b1020] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
         <div className="mb-3">
-          <p className="text-sm font-semibold text-zinc-950">
+          <p className="text-sm font-semibold text-white">
             {product?.name ?? "Product"} exports
           </p>
           <p className="mt-1 text-xs leading-5 text-zinc-500">
@@ -1452,14 +1538,14 @@ function DownloadFormatMenu({
               <button
                 key={option.id}
                 className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition ${
-                  checked ? "bg-cyan-50 text-cyan-800" : "text-zinc-700 hover:bg-zinc-50"
+                  checked ? "bg-cyan-300/10 text-cyan-100" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
                 }`}
                 onClick={() => toggle(option.id)}
               >
                 <span className="flex min-w-0 items-center gap-3">
                   <span
                     className={`grid h-5 w-5 place-items-center rounded border ${
-                      checked ? "border-cyan-500 bg-cyan-500 text-white" : "border-zinc-300"
+                      checked ? "border-cyan-400 bg-cyan-400 text-slate-950" : "border-zinc-700"
                     }`}
                   >
                     {checked ? <Check className="h-3.5 w-3.5" /> : null}
@@ -1478,7 +1564,7 @@ function DownloadFormatMenu({
         </div>
 
         <button
-          className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-45"
+          className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-cyan-300 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-45"
           disabled={!hasSelectedArtifacts}
           onClick={() => downloadSelectedArtifacts(artifacts, selectedFormats)}
         >
@@ -1602,8 +1688,8 @@ function DataTable({
     return (
       <div className="grid h-full place-items-center px-6 text-center">
         <div>
-          <Rows3 className="mx-auto h-10 w-10 text-zinc-300" />
-          <p className="mt-4 text-lg font-semibold text-zinc-950">
+          <Rows3 className="mx-auto h-10 w-10 text-zinc-600" />
+          <p className="mt-4 text-lg font-semibold text-white">
             {selectedResource ? shortTableName(selectedResource) : "No table selected"}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
@@ -1617,20 +1703,20 @@ function DataTable({
   }
 
   return (
-    <div className="flex h-full min-w-0 flex-col bg-zinc-50">
-      <div className="flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex h-full min-w-0 flex-col bg-[#080d1b]">
+      <div className="flex flex-col gap-3 border-b border-white/10 bg-[#0a1020] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500">
+          <span className="rounded-md border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-semibold text-zinc-400">
             {filteredRows.length} preview rows
           </span>
-          <button className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-600 transition hover:border-cyan-400 hover:text-cyan-700">
+          <button className="rounded-md border border-white/10 bg-white/[0.035] px-2.5 py-1 text-xs font-semibold text-zinc-400 transition hover:border-cyan-300/35 hover:text-cyan-100">
             Columns
           </button>
         </div>
-        <label className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-500 focus-within:border-cyan-500 lg:w-64">
+        <label className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 text-sm text-zinc-500 focus-within:border-cyan-300/45 lg:w-72">
           <Search className="h-4 w-4 shrink-0" />
           <input
-            className="min-w-0 flex-1 bg-transparent text-sm text-zinc-800 outline-none placeholder:text-zinc-400"
+            className="min-w-0 flex-1 bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-600"
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search preview rows..."
             value={query}
@@ -1638,19 +1724,19 @@ function DataTable({
         </label>
       </div>
 
-      <div className="workspace-scrollbar min-h-0 flex-1 overflow-auto bg-white">
+      <div className="workspace-scrollbar-dark min-h-0 flex-1 overflow-auto bg-[#080d1b]">
         <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-zinc-50 shadow-[0_1px_0_rgba(228,228,231,1)]">
+          <thead className="sticky top-0 z-10 bg-[#101727] shadow-[0_1px_0_rgba(255,255,255,0.08)]">
             <tr>
-              <th className="w-14 border-b border-r border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-400">
+              <th className="w-14 border-b border-r border-white/10 px-3 py-3 text-xs font-semibold text-zinc-500">
                 #
               </th>
               {preview.columns.map((column) => (
                 <th
                   key={column}
-                  className="min-w-40 border-b border-r border-zinc-200 px-3 py-2 align-bottom"
+                  className="min-w-44 border-b border-r border-white/10 px-3 py-3 align-bottom"
                 >
-                  <span className="block text-sm font-semibold text-zinc-950">{column}</span>
+                  <span className="block text-sm font-semibold text-zinc-100">{column}</span>
                   <span className="mt-1 block text-[0.68rem] font-semibold uppercase text-zinc-400">
                     {inferColumnType(column, preview.rows)}
                   </span>
@@ -1661,19 +1747,25 @@ function DataTable({
           <tbody>
             {visibleRows.map((row, rowIndex) => {
               const rowNumber = startIndex + rowIndex + 1;
-              const rowTone = rowNumber % 2 === 0 ? "bg-zinc-50" : "bg-white";
+              const rowTone = rowNumber % 2 === 0 ? "bg-white/[0.035]" : "bg-transparent";
               return (
-                <tr key={`${rowNumber}-${rowIndex}`} className={`${rowTone} hover:bg-cyan-50/80`}>
-                  <td className="border-b border-r border-zinc-100 px-3 py-2 text-xs font-semibold text-zinc-400">
+                <tr key={`${rowNumber}-${rowIndex}`} className={`${rowTone} hover:bg-cyan-300/[0.08]`}>
+                  <td className="border-b border-r border-white/[0.06] px-3 py-3 text-xs font-semibold text-zinc-500">
                     {rowNumber}
                   </td>
                   {preview.columns.map((column) => (
                     <td
                       key={column}
-                      className="max-w-72 truncate border-b border-r border-zinc-100 px-3 py-2 text-zinc-700"
+                      className="max-w-72 truncate border-b border-r border-white/[0.06] px-3 py-3 text-zinc-300"
                       title={row[column] ?? ""}
                     >
-                      {row[column] ?? ""}
+                      {column === "status" ? (
+                        <span className={`rounded-md px-2 py-1 text-xs font-semibold ${statusBadgeClass(row[column] ?? "")}`}>
+                          {row[column] ?? ""}
+                        </span>
+                      ) : (
+                        row[column] ?? ""
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -1683,11 +1775,11 @@ function DataTable({
         </table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-zinc-200 bg-white px-4 py-3 text-xs font-semibold text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-white/10 bg-[#0a1020] px-4 py-3 text-xs font-semibold text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <span>Rows per page</span>
           <select
-            className="h-8 rounded-md border border-zinc-200 bg-zinc-50 px-2 text-xs font-semibold text-zinc-700 outline-none focus:border-cyan-500"
+            className="h-8 rounded-md border border-white/10 bg-[#080d1b] px-2 text-xs font-semibold text-zinc-200 outline-none focus:border-cyan-300/45"
             onChange={(event) => {
               setPageSize(Number(event.target.value));
               setPage(1);
@@ -1703,7 +1795,7 @@ function DataTable({
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            className="h-8 rounded-md border border-zinc-200 px-2.5 text-zinc-600 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-md border border-white/10 px-2.5 text-zinc-400 transition hover:border-cyan-300/35 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={activePage <= 1}
             onClick={() => setPage((current) => Math.max(1, current - 1))}
           >
@@ -1719,8 +1811,8 @@ function DataTable({
                 key={item}
                 className={`grid h-8 min-w-8 place-items-center rounded-md border px-2 transition ${
                   item === activePage
-                    ? "border-cyan-500 bg-cyan-50 text-cyan-700"
-                    : "border-zinc-200 text-zinc-600 hover:border-cyan-400 hover:text-cyan-700"
+                    ? "border-cyan-300/45 bg-cyan-300/10 text-cyan-100"
+                    : "border-white/10 text-zinc-400 hover:border-cyan-300/35 hover:text-cyan-100"
                 }`}
                 onClick={() => setPage(item)}
               >
@@ -1729,7 +1821,7 @@ function DataTable({
             ),
           )}
           <button
-            className="h-8 rounded-md border border-zinc-200 px-2.5 text-zinc-600 transition hover:border-cyan-400 hover:text-cyan-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-md border border-white/10 px-2.5 text-zinc-400 transition hover:border-cyan-300/35 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={activePage >= pageCount}
             onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
           >
@@ -1760,8 +1852,8 @@ function TextPreview({
     return (
       <div className="grid h-full place-items-center px-6 text-center">
         <div>
-          <FileText className="mx-auto h-10 w-10 text-zinc-300" />
-          <p className="mt-4 text-lg font-semibold text-zinc-950">
+          <FileText className="mx-auto h-10 w-10 text-zinc-600" />
+          <p className="mt-4 text-lg font-semibold text-white">
             {selectedResource ? shortTableName(selectedResource) : title}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
@@ -1803,8 +1895,8 @@ function DocumentList({
     return (
       <div className="grid h-full place-items-center px-6 text-center">
         <div>
-          <Rows3 className="mx-auto h-10 w-10 text-zinc-300" />
-          <p className="mt-4 text-lg font-semibold text-zinc-950">
+          <Rows3 className="mx-auto h-10 w-10 text-zinc-600" />
+          <p className="mt-4 text-lg font-semibold text-white">
             {selectedResource ?? "No collection selected"}
           </p>
           <p className="mt-2 text-sm text-zinc-500">
@@ -1820,12 +1912,12 @@ function DocumentList({
   return (
     <div className="grid gap-4 p-5 xl:grid-cols-2">
       {preview.documents.map((document, index) => (
-        <article key={index} className="rounded-md border border-zinc-200 bg-zinc-50">
-          <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2">
-            <p className="text-xs font-semibold uppercase text-zinc-400">Document {index + 1}</p>
+        <article key={index} className="rounded-xl border border-white/10 bg-white/[0.035]">
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+            <p className="text-xs font-semibold uppercase text-zinc-500">Document {index + 1}</p>
             <p className="text-xs font-semibold text-zinc-500">{preview.collection_name}</p>
           </div>
-          <pre className="workspace-scrollbar max-h-96 overflow-auto p-4 text-xs leading-5 text-zinc-800">
+          <pre className="workspace-scrollbar-dark max-h-96 overflow-auto p-4 text-xs leading-5 text-zinc-200">
             {JSON.stringify(document, null, 2)}
           </pre>
         </article>
@@ -1838,8 +1930,8 @@ function PlannedSurface({ product }: { product: Product | null }) {
   return (
     <div className="grid h-full place-items-center px-6 text-center">
       <div className="max-w-lg">
-        <Sparkles className="mx-auto h-10 w-10 text-zinc-300" />
-        <p className="mt-4 text-lg font-semibold text-zinc-950">
+        <Sparkles className="mx-auto h-10 w-10 text-zinc-600" />
+        <p className="mt-4 text-lg font-semibold text-white">
           {product?.name ?? "Planned product"}
         </p>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
@@ -1852,6 +1944,7 @@ function PlannedSurface({ product }: { product: Product | null }) {
 }
 
 function AgentPanel({
+  artifacts,
   insight,
   onGenerate,
   onPromptChange,
@@ -1866,6 +1959,7 @@ function AgentPanel({
   subscribed,
   visibleRows,
 }: {
+  artifacts: ArtifactList | null;
   insight: Insight | null;
   onGenerate: () => void;
   onPromptChange: (value: string) => void;
@@ -1884,18 +1978,18 @@ function AgentPanel({
   const runState = runStateLabel(run);
   const runStateClass =
     run?.status === "running"
-      ? "border-cyan-200 bg-cyan-50 text-cyan-700"
+      ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
       : run?.validation?.passed
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-        : "border-zinc-200 bg-zinc-50 text-zinc-500";
+        ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+        : "border-white/10 bg-white/[0.05] text-zinc-400";
 
   return (
-    <aside className="flex min-h-full flex-col bg-zinc-50 text-zinc-950">
-      <div className="border-b border-zinc-200 bg-white px-4 py-4">
+    <aside className="flex min-h-full flex-col bg-[#060a16] text-zinc-100">
+      <div className="border-b border-cyan-300/10 bg-[#060a16] px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-zinc-400">Run builder</p>
-            <h2 className="mt-1 truncate text-lg font-semibold text-zinc-950">
+            <p className="text-xs font-semibold uppercase text-zinc-500">Run builder</p>
+            <h2 className="mt-1 truncate text-lg font-semibold text-white">
               {selectedProduct?.name ?? "Select a product"}
             </h2>
           </div>
@@ -1920,18 +2014,18 @@ function AgentPanel({
           profile={sourceProfile}
         />
 
-        <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-3">
           <div className="mb-2 flex items-center justify-between gap-3">
             <span className="text-xs font-semibold uppercase text-zinc-500">
               Generation brief
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-700">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-200">
               <Sparkles className="h-3.5 w-3.5" />
               deterministic seed
             </span>
           </div>
           <textarea
-            className="h-20 w-full resize-none rounded-lg border border-zinc-200 bg-white p-3 text-sm leading-6 text-zinc-800 outline-none transition focus:border-cyan-500"
+            className="h-20 w-full resize-none rounded-lg border border-white/10 bg-[#0b1020] p-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-700 focus:border-cyan-300/45"
             onChange={(event) => onPromptChange(event.target.value)}
             value={prompt}
           />
@@ -1941,7 +2035,7 @@ function AgentPanel({
             </span>
             {subscribed ? (
               <button
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
                 onClick={onGenerate}
               >
@@ -1954,7 +2048,7 @@ function AgentPanel({
               </button>
             ) : (
               <button
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-700 px-4 text-sm font-semibold text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
                 onClick={onSubscribe}
               >
@@ -1970,23 +2064,46 @@ function AgentPanel({
         </div>
       </div>
 
-      <div className="workspace-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-        <details className="rounded-xl border border-zinc-200 bg-white p-3">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-zinc-950">
+      <div className="workspace-scrollbar-dark min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
+          <p className="text-xs font-semibold uppercase text-zinc-500">Quick actions</p>
+          <div className="mt-3 space-y-2">
+            <button className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
+              <Share2 className="h-4 w-4" />
+              Share dataset
+            </button>
+            <button
+              className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!run}
+              onClick={() =>
+                downloadSelectedArtifacts(
+                  artifacts,
+                  downloadOptions(selectedProduct?.kind ?? "relational").map((option) => option.id),
+                )
+              }
+            >
+              <Download className="h-4 w-4" />
+              Download data
+            </button>
+          </div>
+        </section>
+
+        <details className="rounded-xl border border-white/10 bg-white/[0.035] p-3" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-white">
             Generation steps
-            <ChevronDown className="h-4 w-4 text-zinc-400" />
+            <ChevronDown className="h-4 w-4 text-zinc-500" />
           </summary>
           <div className="mt-3 space-y-2">
             {steps.map((step) => (
-              <div key={step.label} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
+              <div key={step.label} className="rounded-lg border border-white/10 bg-[#0b1020] p-3">
                 <div className="flex items-start gap-3">
                   <span
                     className={`mt-0.5 grid h-5 w-5 place-items-center rounded-full ${
                       step.state === "active"
-                        ? "bg-cyan-100 text-cyan-700"
+                        ? "bg-cyan-300/15 text-cyan-100"
                         : step.state === "done"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-zinc-100 text-zinc-400"
+                          ? "bg-emerald-300/15 text-emerald-100"
+                          : "bg-white/[0.06] text-zinc-500"
                     }`}
                   >
                     {step.state === "active" ? (
@@ -1996,7 +2113,7 @@ function AgentPanel({
                     )}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">{step.label}</p>
+                    <p className="text-sm font-semibold text-zinc-100">{step.label}</p>
                     <p className="mt-1 text-xs leading-5 text-zinc-500">{step.detail}</p>
                   </div>
                 </div>
@@ -2014,21 +2131,21 @@ function AgentPanel({
 
 function GenerationPulse({ active }: { active: boolean }) {
   return (
-    <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2.5">
+    <div className="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2.5">
       <div className="flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-900">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">
           {active ? (
-            <Loader2 className="h-4 w-4 animate-spin text-cyan-700" />
+            <Loader2 className="h-4 w-4 animate-spin text-cyan-200" />
           ) : (
-            <Clock3 className="h-4 w-4 text-cyan-700" />
+            <Clock3 className="h-4 w-4 text-cyan-200" />
           )}
           {active ? "Generation in progress" : "Generator ready"}
         </span>
-        <span className="text-xs font-semibold uppercase text-cyan-700">
+        <span className="text-xs font-semibold uppercase text-cyan-200/75">
           async engine
         </span>
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
           className={`h-full rounded-full ${
             active
@@ -2054,39 +2171,39 @@ function SourceMetadataCard({
   const schemaLabels = connection ? sourceSchemaLabels(connection) : [];
 
   return (
-    <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-3">
+    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs font-semibold uppercase text-zinc-500">Source context</span>
-        <Database className="h-4 w-4 text-cyan-700" />
+        <Database className="h-4 w-4 text-cyan-300" />
       </div>
       <div className="mt-3 space-y-2 text-xs">
         <div className="flex items-center justify-between gap-3">
           <span className="text-zinc-500">Database</span>
-          <span className="max-w-36 truncate font-semibold text-zinc-900">
+          <span className="max-w-36 truncate font-semibold text-zinc-100">
             {connection?.name ?? "Not selected"}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-zinc-500">{resourceLabel}</span>
-          <span className="font-semibold text-zinc-900">
+          <span className="font-semibold text-zinc-100">
             {connection?.resources.length ?? 0}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-zinc-500">Schema</span>
-          <span className="max-w-36 truncate font-semibold text-zinc-900">
+          <span className="max-w-36 truncate font-semibold text-zinc-100">
             {schemaLabels.length ? schemaLabels.join(", ") : "Not refreshed"}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-zinc-500">Refreshed</span>
-          <span className="font-semibold text-zinc-900">
+          <span className="font-semibold text-zinc-100">
             {connection?.refreshed_at ? formatDateTime(connection.refreshed_at) : "Pending"}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-zinc-500">Profile</span>
-          <span className="font-semibold text-zinc-900">
+          <span className="font-semibold text-zinc-100">
             {profile ? `${formatNumber(profile.total_rows)} rows` : "Optional"}
           </span>
         </div>
@@ -2098,8 +2215,8 @@ function SourceMetadataCard({
 function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRows: number }) {
   if (!run) {
     return (
-      <section className="rounded-md border border-zinc-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-zinc-950">Run summary</h3>
+      <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
+        <h3 className="text-sm font-semibold text-white">Run summary</h3>
         <p className="mt-2 text-sm leading-6 text-zinc-500">No generated run selected.</p>
       </section>
     );
@@ -2108,10 +2225,10 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
   const progress = progressPercent(run);
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-4">
+    <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-zinc-950">Run summary</h3>
-        <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-500">
+        <h3 className="text-sm font-semibold text-white">Run summary</h3>
+        <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-xs font-semibold text-zinc-400">
           {run.status}
         </span>
       </div>
@@ -2138,7 +2255,7 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
           <span>Progress</span>
           <span>{progress}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+        <div className="h-2 overflow-hidden rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
             style={{ width: `${progress}%` }}
@@ -2160,13 +2277,13 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
       <div className="mt-4 space-y-2">
         {runResourcesWithCounts(run).map((resource) => (
           <div key={resource.name} className="flex items-center justify-between gap-3 text-sm">
-            <span className="truncate text-zinc-600">{shortTableName(resource.name)}</span>
-            <span className="font-semibold text-zinc-950">{resource.rowCount}</span>
+            <span className="truncate text-zinc-400">{shortTableName(resource.name)}</span>
+            <span className="font-semibold text-zinc-100">{resource.rowCount}</span>
           </div>
         ))}
       </div>
       {run.operation_timings.length ? (
-        <div className="mt-4 border-t border-zinc-100 pt-4">
+        <div className="mt-4 border-t border-white/10 pt-4">
           <p className="text-xs font-semibold uppercase text-zinc-400">Operation timings</p>
           <div className="mt-2 space-y-2">
             {run.operation_timings.map((timing) => (
@@ -2176,11 +2293,11 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${statusDotClass(timing.status)}`} />
-                  <span className="truncate font-semibold text-zinc-600">
+                  <span className="truncate font-semibold text-zinc-400">
                     {formatOperationName(timing.operation)}
                   </span>
                 </span>
-                <span className="shrink-0 font-semibold text-zinc-950">
+                <span className="shrink-0 font-semibold text-zinc-100">
                   {formatDuration(timing.elapsed_seconds)}
                 </span>
               </div>
@@ -2194,9 +2311,9 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2">
+    <div className="rounded-lg border border-white/10 bg-[#0b1020] p-2">
       <p className="text-[0.68rem] font-semibold uppercase text-zinc-400">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-zinc-950">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-zinc-100">{value}</p>
     </div>
   );
 }
@@ -2204,10 +2321,10 @@ function Metric({ label, value }: { label: string; value: string }) {
 function InsightPanel({ insight }: { insight: Insight | null }) {
   if (!insight) {
     return (
-      <section className="rounded-md border border-zinc-200 bg-white p-4">
+      <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-zinc-400" />
-          <h3 className="text-sm font-semibold text-zinc-950">Data insight</h3>
+          <h3 className="text-sm font-semibold text-white">Data insight</h3>
         </div>
         <p className="mt-2 text-sm leading-6 text-zinc-500">No distribution available.</p>
       </section>
@@ -2215,19 +2332,19 @@ function InsightPanel({ insight }: { insight: Insight | null }) {
   }
 
   return (
-    <section className="rounded-md border border-zinc-200 bg-white p-4">
+    <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
       <div className="flex items-center gap-2">
-        <Search className="h-4 w-4 text-cyan-700" />
-        <h3 className="text-sm font-semibold text-zinc-950">{insight.title}</h3>
+        <Search className="h-4 w-4 text-cyan-300" />
+        <h3 className="text-sm font-semibold text-white">{insight.title}</h3>
       </div>
       <div className="mt-4 space-y-3">
         {insight.values.map((item) => (
           <div key={item.label}>
             <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-              <span className="truncate font-semibold text-zinc-600">{item.label}</span>
+              <span className="truncate font-semibold text-zinc-300">{item.label}</span>
               <span className="text-zinc-400">{item.count}</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div className="h-full rounded-full bg-cyan-600" style={{ width: `${item.percent}%` }} />
             </div>
           </div>
@@ -2388,6 +2505,28 @@ function statusDotClass(status: string) {
     return "bg-red-500";
   }
   return "bg-zinc-300";
+}
+
+function statusBadgeClass(status: string) {
+  const normalizedStatus = status.toLowerCase();
+  if (["posted", "completed", "active", "success"].includes(normalizedStatus)) {
+    return "border border-cyan-300/20 bg-cyan-300/10 text-cyan-100";
+  }
+  if (["pending", "queued", "processing"].includes(normalizedStatus)) {
+    return "border border-amber-300/20 bg-amber-300/10 text-amber-100";
+  }
+  if (["failed", "blocked", "rejected"].includes(normalizedStatus)) {
+    return "border border-red-300/20 bg-red-300/10 text-red-100";
+  }
+  if (["reversed", "refunded"].includes(normalizedStatus)) {
+    return "border border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100";
+  }
+  return "border border-white/10 bg-white/[0.06] text-zinc-300";
+}
+
+function resourceRowCount(connection: WorkspaceSource | null, resourceName: string) {
+  const rowCount = connection?.resources.find((resource) => resource.name === resourceName)?.estimated_rows;
+  return rowCount === undefined ? "-" : formatNumber(rowCount);
 }
 
 function delay(milliseconds: number) {
