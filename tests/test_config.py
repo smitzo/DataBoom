@@ -22,6 +22,19 @@ def test_settings_include_local_service_urls() -> None:
     assert settings.redis_url.startswith("redis://")
 
 
+def test_settings_normalize_hosted_postgres_urls_to_psycopg() -> None:
+    settings = Settings(DATABASE_URL="postgres://user:pass@db.example.com:5432/app")
+    postgresql_settings = Settings(
+        DATABASE_URL="postgresql://user:pass@db.example.com:5432/app"
+    )
+
+    assert settings.database_url == "postgresql+psycopg://user:pass@db.example.com:5432/app"
+    assert (
+        postgresql_settings.database_url
+        == "postgresql+psycopg://user:pass@db.example.com:5432/app"
+    )
+
+
 def test_empty_api_key_disables_api_key_authentication() -> None:
     settings = Settings(API_KEY="")
 

@@ -40,7 +40,7 @@ Phase 1 completed the relational engine foundation.
 Phase 2 completes the local product workflow by adding:
 
 - API-backed product catalog and subscriptions,
-- persisted demo sessions, subscriptions, and run metadata,
+- persisted users, sessions, subscriptions, and run metadata,
 - generic DataBoom workspace with relational and document surfaces,
 - backend-owned workspace sources,
 - PostgreSQL source connection testing,

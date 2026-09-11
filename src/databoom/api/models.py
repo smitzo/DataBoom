@@ -233,7 +233,7 @@ class ProductResponse(BaseModel):
 
 
 class SubscriptionRequest(BaseModel):
-    """Subscribe the demo user to a product module."""
+    """Subscribe the authenticated user to a product module."""
 
     model_config = ConfigDict(extra="forbid")
 

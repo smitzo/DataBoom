@@ -29,9 +29,10 @@ The current implementation includes Table-Boom relational generation and the Pha
 - API generation run endpoint for synchronous local relational runs.
 - Async product-run endpoint with progress percentage, expected seconds, and operation timing telemetry.
 - API artifact listing, downloads, and optional API-key protection.
-- Demo auth with `demo` / `demo` credentials.
+- Login ID/password registration and login with server-side password hashes.
 - Product catalog, subscription, product-run, table-preview, and document-preview API endpoints.
-- SQL-backed demo sessions, subscriptions, and run metadata in Dockerized API runs.
+- SQL-backed users, sessions, subscriptions, workspace sources, source profiles, and run metadata.
+- Optional LLM provider policy with platform-key, user-key, and deterministic fallback modes.
 - DataBoom workspace with product navigation, live top-20 relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Row-level async progress with generated-row counts, current resource, rows/sec, remaining time, and operation timings.
 - Live PostgreSQL source testing, schema refresh, DDL snapshot storage, and source profiling.
@@ -42,6 +43,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - 1M-record five-table relational benchmark harness.
 - 1M-record composite-key relational benchmark harness.
 - Next.js and Tailwind frontend workbench.
+- Render Blueprint for the FastAPI backend, Vercel-ready frontend envs, and Supabase Postgres compatibility.
 
 ## Roadmap Summary
 
@@ -49,7 +51,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - Phase 2: Table-Boom scale, FastAPI workflows, source profiling, refreshed-source generation, and Docu-Boom NoSQL document support. `complete for local full-stack MVP`
 - Phase 3: LLM-assisted planning, Graph-Boom support, and richer operator-facing review flows.
 - Phase 4: Masker-Boom policies, redaction, masking, hashing, tokenization, audit logs, and security hardening.
-- Phase 5: production deployment, CI, observability, retention, and adapter extensibility.
+- Phase 5: production deployment hardening, CI, observability, retention, and adapter extensibility.
 
 ## Backend Setup
 
@@ -211,9 +213,11 @@ Public routes:
 
 Authenticated routes:
 
-- `/login`: demo auth.
+- `/login`: login ID/password sign-in.
+- `/register`: account creation.
 - `/dashboard`: product workspace.
 - `/runs`: generated run history.
+- `/settings`: account and LLM provider policy.
 - `/settings/subscriptions`: subscription management.
 
 For the Dockerized backend currently running on alternate local ports, start the frontend like this:
@@ -229,7 +233,30 @@ Then open:
 http://localhost:3000
 ```
 
-Login with email `demo` and password `demo`. The dashboard can subscribe to active products, test PostgreSQL source connections, save workspace sources, refresh relational schema metadata, profile source tables, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display generated rows, rows/sec, expected and remaining time, operation timings, and link to downloadable artifacts.
+Register from `/register` or sign in with a configured seed account. Local and Docker environments seed `operator` / `databoom-local` automatically for convenience; production Render deployments should set `DATABOOM_SEED_LOGIN_ID` and `DATABOOM_SEED_PASSWORD` only when a pre-created reviewer/admin account is needed. The dashboard can subscribe to active products, test PostgreSQL source connections, save workspace sources, refresh relational schema metadata, profile source tables, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display generated rows, rows/sec, expected and remaining time, operation timings, and link to downloadable artifacts.
+
+## Deployment: Render + Supabase + Vercel
+
+The current deployable stack is:
+
+- Render: FastAPI engine container from `Dockerfile` and `render.yaml`.
+- Supabase: hosted PostgreSQL for API state through `DATABOOM_DATABASE_URL`.
+- Vercel: Next.js frontend from `frontend/`.
+- Optional LLM: platform key via `DATABOOM_LLM_PLATFORM_API_KEY`, or user BYOK from `/settings`.
+
+Deployment guide: [docs/operations/deployment.md](docs/operations/deployment.md).
+
+Minimum production environment variables:
+
+```text
+# Render API
+DATABOOM_DATABASE_URL=<supabase pooled or direct connection string>
+DATABOOM_CORS_ORIGINS=https://<your-vercel-app>.vercel.app,http://localhost:3000
+DATABOOM_ALLOW_REGISTRATION=true
+
+# Vercel frontend
+NEXT_PUBLIC_DATABOOM_API_URL=https://<your-render-api>.onrender.com
+```
 
 ## Docker
 
@@ -296,5 +323,6 @@ docker compose --profile tools run --rm app
 - `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
 - `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
 - `docs/operations/phase1-usage.md`: current backend setup, CLI, benchmark, and Docker usage.
+- `docs/operations/deployment.md`: Render, Supabase, Vercel, and LLM key policy deployment guide.
 - `AGENTS.md`: operating rules for coding agents working in this repo.
 - `understanding.md`: explanation log for significant decisions.

@@ -251,7 +251,12 @@ class SQLAlchemyStateStore:
     """
 
     def __init__(self, database_url: str) -> None:
-        self.engine: Engine = create_engine(database_url, pool_pre_ping=True, future=True)
+        self.engine: Engine = create_engine(
+            database_url,
+            pool_pre_ping=True,
+            future=True,
+            connect_args=_database_connect_args(database_url),
+        )
         metadata.create_all(self.engine)
         # Demo workspace sources are seed data. They are inserted only when missing
         # so user-refreshed sources are not overwritten on restart.
@@ -488,6 +493,20 @@ def _parse_subscriptions(payloads: Iterable[object]) -> Iterable[SubscriptionRes
 def _parse_runs(payloads: Iterable[object]) -> Iterable[GenerationRunResponse]:
     for payload in payloads:
         yield GenerationRunResponse.model_validate(payload)
+
+
+def _database_connect_args(database_url: str) -> dict[str, object]:
+    """Return driver options for managed Postgres compatibility.
+
+    Supabase transaction pooling does not support server-side prepared
+    statements. Psycopg can disable automatic preparation with
+    `prepare_threshold=None`, which keeps the SQLAlchemy state store compatible
+    with the pooled URL used by Render deployments.
+    """
+
+    if database_url.startswith("postgresql+psycopg"):
+        return {"prepare_threshold": None}
+    return {}
 
 
 def _parse_user_record(row) -> UserRecord:

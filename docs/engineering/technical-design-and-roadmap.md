@@ -14,7 +14,7 @@ For system-level diagrams, API flow, frontend route architecture, deployment top
 - Phase 3 data family: graph data with nodes, edges, labels, properties, and graph exports.
 - Synthetic values: Faker plus custom generators.
 - Tests: pytest.
-- Deployment: Docker and Docker Compose.
+- Deployment: Docker, Docker Compose, Render API, Supabase Postgres, and Vercel frontend.
 - Artifact storage for Phase 1 and Phase 2: local disk.
 
 ## Product Architecture
@@ -127,9 +127,9 @@ sequenceDiagram
 
 ## API State Persistence
 
-The API uses a `StateStore` boundary for demo sessions, product subscriptions, and generation-run metadata. Local tests can use the in-process memory store, while Dockerized API runs use the SQLAlchemy-backed store against PostgreSQL.
+The API uses a `StateStore` boundary for users, sessions, product subscriptions, workspace sources, source profiles, and generation-run metadata. Local tests can use the in-process memory store, while Dockerized, Render, and Supabase-backed API runs use the SQLAlchemy-backed store against PostgreSQL.
 
-This keeps route behavior independent from the storage implementation. It also lets the dashboard survive API container restarts without changing the frontend contract. Generated datasets remain on local disk in Phase 1 and Phase 2; the database stores the metadata needed to find, preview, and download those artifacts.
+This keeps route behavior independent from the storage implementation. It also lets the dashboard survive API container restarts without changing the frontend contract. Generated datasets remain on local disk in Phase 1 and Phase 2; the database stores the metadata needed to find, preview, and download those artifacts. Managed deployments should use durable artifact storage or a persistent disk before handling serious production workloads.
 
 ## Core Components
 
@@ -139,13 +139,14 @@ This keeps route behavior independent from the storage implementation. It also l
 - `document_model`: Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
 - `graph_model`: future Phase 3 contract for node labels, edge types, properties, and graph cardinality.
 - `prompt_planner`: converts prompt intent into a structured generation plan.
+- `llm_provider_policy`: resolves user key, platform key, or deterministic fallback for future LLM-assisted planning without making the engine depend on LLM availability.
 - `domain_profiles`: provides optional semantic value generation for use cases such as financial and healthcare demos.
 - `masking_policy`: future Masker-Boom contract for classification, redaction, hashing, tokenization, and synthetic replacement.
 - `generator`: streams generated rows table by table.
 - `validator`: checks generated data against schema and plan.
 - `exporter`: writes CSV, SQL, manifests, and reports.
 - `api`: exposes auth, products, subscriptions, run creation, status, artifact, preview, and health endpoints.
-- `state_store`: persists demo sessions, subscriptions, and generation-run metadata behind a replaceable API boundary.
+- `state_store`: persists users, sessions, subscriptions, sources, profiles, and generation-run metadata behind a replaceable API boundary.
 - `cli`: supports local and CI workflows.
 
 ## Phase 1: Table-Boom Relational Foundation
@@ -335,7 +336,7 @@ Implemented MVP capabilities:
 - Table-Boom relational generation through product-run APIs.
 - Docu-Boom NoSQL document generation with nested objects, arrays, references, JSON, and NDJSON artifacts.
 - Document preview endpoint for top documents per collection.
-- SQL-backed demo auth, subscriptions, and run metadata in Dockerized API runs.
+- SQL-backed users, sessions, subscriptions, and run metadata in Dockerized and managed API runs.
 - Backend-owned workspace source store seeded with demo sources and refreshable from PostgreSQL metadata.
 - Generic frontend workspace that renders relational tables or MongoDB-style documents based on product kind.
 - Async product-run endpoint with in-process background execution, generated row counters, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.

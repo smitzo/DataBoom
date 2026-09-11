@@ -106,12 +106,12 @@ cd frontend
 NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-Open `http://localhost:3000`. Login with email `demo` and password `demo`.
+Open `http://localhost:3000`. Register a new account, or use the local seeded login ID `operator` with password `databoom-local`.
 
 The dashboard can:
 
 - show the product catalog,
-- subscribe the demo user to a product,
+- subscribe the authenticated user to a product,
 - generate data through the backend product-run endpoint,
 - test PostgreSQL source connections,
 - save workspace sources,
@@ -121,7 +121,7 @@ The dashboard can:
 - preview MongoDB-style JSON documents for Docu-Boom runs,
 - download generated artifacts and validation files.
 
-In the Dockerized stack, demo sessions, subscriptions, and generation-run metadata are persisted in PostgreSQL. Generated datasets are still written to local disk under `artifacts/`, which keeps Phase 1/2 storage simple and inspectable.
+In the Dockerized stack, users, sessions, subscriptions, workspace sources, source profiles, and generation-run metadata are persisted in PostgreSQL. Generated datasets are still written to local disk under `artifacts/`, which keeps Phase 1/2 storage simple and inspectable.
 
 ## Live PostgreSQL Introspection
 

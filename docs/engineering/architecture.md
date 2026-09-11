@@ -9,11 +9,11 @@ For module-level backend ownership, method responsibilities, runtime state, and 
 ```mermaid
 flowchart LR
     Visitor[Public website visitor] --> PublicSite[Next.js public site]
-    Operator[Authenticated demo operator] --> Dashboard[Next.js dashboard]
+    Operator[Authenticated workspace user] --> Dashboard[Next.js dashboard]
     Developer[Developer or CI] --> CLI[Typer CLI]
 
-    PublicSite --> Login[Demo login]
-    Login --> Dashboard
+    PublicSite --> Auth[Login or register]
+    Auth --> Dashboard
     Dashboard --> API[FastAPI API]
     CLI --> Engine[DataBoom engine]
     API --> Engine
@@ -21,7 +21,7 @@ flowchart LR
     API --> AsyncRuns[AsyncRunManager local background runs]
     AsyncRuns --> Engine
     API --> StateStore[StateStore boundary]
-    StateStore --> MetadataDB[(PostgreSQL metadata)]
+    StateStore --> MetadataDB[(PostgreSQL or Supabase metadata)]
     API --> Redis[(Redis future run/cache helper)]
 
     Engine --> Artifacts[(Local artifacts)]
@@ -107,8 +107,8 @@ sequenceDiagram
     participant Store as StateStore
     participant Disk as Local artifacts
 
-    UI->>API: POST /auth/login
-    API->>Store: save demo session
+    UI->>API: POST /auth/register or /auth/login
+    API->>Store: verify password hash and save bearer session
     UI->>API: POST /subscriptions
     API->>Catalog: validate product and plan
     API->>Store: save subscription
@@ -169,7 +169,8 @@ flowchart TD
     Dashboard --> ProductDetail[/products/[productId] authenticated product run page]
     Dashboard --> Runs[/runs authenticated run history]
     Runs --> RunDetail[/runs/[runId] authenticated run output]
-    Dashboard --> Settings[/settings/subscriptions authenticated settings]
+    Dashboard --> Settings[/settings authenticated settings]
+    Settings --> Subscriptions[/settings/subscriptions product access]
 
     Dashboard --> DataWorkspace[DataWorkspace component]
     DataWorkspace --> RelationalSurface[Table grid for relational products]
@@ -180,6 +181,8 @@ flowchart TD
 The public pages should contain core product marketing and knowledge. The authenticated routes should contain operational workflow: subscribe, generate, preview, download, and inspect runs.
 
 ## Deployment Topology
+
+### Local Docker
 
 ```mermaid
 flowchart LR
@@ -197,7 +200,25 @@ flowchart LR
     end
 ```
 
-Current local deployment uses Docker Compose for FastAPI, PostgreSQL, and Redis. Next.js runs as the local frontend during development. Phase 5 should add a production frontend container, CI, structured logging, retention controls, and deployment documentation.
+Local deployment uses Docker Compose for FastAPI, PostgreSQL, and Redis. Next.js runs as the local frontend during development.
+
+### Render, Supabase, And Vercel
+
+```mermaid
+flowchart LR
+    Browser[Browser] --> Vercel[Next.js on Vercel]
+    Vercel --> Render[FastAPI engine on Render]
+    Render --> Supabase[(Supabase Postgres)]
+    Render --> ArtifactDisk[(Render container disk)]
+    Render --> LLMPolicy{LLM provider policy}
+    LLMPolicy --> PlatformKey[Platform key]
+    LLMPolicy --> UserKey[User key per request]
+    LLMPolicy --> Deterministic[Deterministic fallback]
+```
+
+Render runs the Python API and generation engine. Supabase stores users, sessions, subscriptions, sources, profiles, and run metadata through the existing `StateStore` boundary. Vercel hosts the public site and dashboard. The LLM policy is optional: user key first, platform key second, deterministic fallback always available.
+
+For exact environment variables and smoke tests, see [Deployment Guide](../operations/deployment.md).
 
 ## Run Observability
 

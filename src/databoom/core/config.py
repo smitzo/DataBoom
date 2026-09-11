@@ -122,6 +122,17 @@ class Settings(BaseSettings):
             return None
         return value
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: object) -> object:
+        """Route hosted Postgres URLs through the installed psycopg driver."""
+
+        if isinstance(value, str) and value.startswith("postgres://"):
+            return f"postgresql+psycopg://{value.removeprefix('postgres://')}"
+        if isinstance(value, str) and value.startswith("postgresql://"):
+            return f"postgresql+psycopg://{value.removeprefix('postgresql://')}"
+        return value
+
     @field_validator(
         "seed_login_id",
         "seed_email",

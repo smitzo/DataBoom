@@ -55,7 +55,7 @@ Status: complete for the local full-stack dashboard path.
 
 Goals:
 
-- Login with the demo user. `complete with demo/demo credentials`
+- Register or sign in with a login ID/password session. `complete with backend auth and local seeded account support`
 - Subscribe to product modules. `complete with API-backed subscriptions; Dockerized runs persist them in PostgreSQL`
 - Submit generation requests to the backend. `complete for subscribed products`
 - Show run status. `complete for synchronous local runs and run history`

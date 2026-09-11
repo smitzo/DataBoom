@@ -73,6 +73,7 @@ services:
       context: .
     profiles:
       - tools
+    command: ["databoom", "info"]
     environment:
       DATABOOM_ENV: docker
       DATABOOM_ARTIFACT_ROOT: /app/artifacts

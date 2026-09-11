@@ -22,3 +22,4 @@ The docs are split by concern so product scope, engineering design, and local op
 ## Operations
 
 - [Phase 1 Usage](operations/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
+- [Deployment Guide](operations/deployment.md): Render API, Supabase Postgres, Vercel frontend, and LLM key policy setup.

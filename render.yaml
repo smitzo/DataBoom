@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: databoom-api
+    runtime: docker
+    plan: starter
+    healthCheckPath: /ready
+    envVars:
+      - key: DATABOOM_ENV
+        value: production
+      - key: DATABOOM_ARTIFACT_ROOT
+        value: /app/artifacts
+      - key: DATABOOM_DATABASE_URL
+        sync: false
+      - key: DATABOOM_CORS_ORIGINS
+        sync: false
+      - key: DATABOOM_ALLOW_REGISTRATION
+        value: "true"
+      - key: DATABOOM_SEED_LOGIN_ID
+        sync: false
+      - key: DATABOOM_SEED_EMAIL
+        sync: false
+      - key: DATABOOM_SEED_NAME
+        sync: false
+      - key: DATABOOM_SEED_PASSWORD
+        sync: false
+      - key: DATABOOM_LLM_PLATFORM_API_KEY
+        sync: false
+      - key: DATABOOM_LLM_DEFAULT_MODEL
+        value: gpt-4.1-mini
+      - key: DATABOOM_LLM_REQUEST_TOKEN_LIMIT
+        value: "4000"

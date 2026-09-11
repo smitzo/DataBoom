@@ -2152,3 +2152,111 @@ The approach used here is:
 4. the low-level design doc explains how all backend modules work together.
 
 That gives beginners a clear learning path without burying production code under repetitive notes.
+
+## Decision: make the deployment stack Render, Supabase, and Vercel ready
+
+### Question
+
+Why split deployment across Vercel, Render, and Supabase instead of putting everything in one service?
+
+### Answer
+
+Each platform is good at a different part of the product:
+
+- Vercel is best for the Next.js frontend, routing, static assets, and public pages.
+- Render is better for the Python FastAPI engine because generation is a backend process that needs a real Python runtime, file access for artifacts, and long-running API requests.
+- Supabase gives us managed PostgreSQL for state without operating our own database.
+
+This separation is clean for DataBoom because the frontend does not generate data directly. It asks the FastAPI API to run Table-Boom or Docu-Boom. The API persists metadata in Postgres and writes artifacts. That means the frontend can be redeployed independently from the engine, and the backend can later scale into workers without changing the public site.
+
+### Question
+
+Why keep a backend-owned auth layer if Supabase can provide Auth?
+
+### Answer
+
+Supabase Auth is a good future integration, but the current product already needs a deployable login/register path without blocking the engine on a third-party auth migration.
+
+The backend now stores:
+
+1. a normalized login ID,
+2. email and display name,
+3. a salted PBKDF2 password hash,
+4. opaque bearer sessions,
+5. subscriptions and run metadata tied to the authenticated user.
+
+This is enough for the current product workflow and works against local memory state, Docker Postgres, or Supabase Postgres through the same `StateStore` boundary. Later, Supabase Auth can replace or augment this layer by changing the auth boundary, not the generator, product catalog, run engine, or frontend preview logic.
+
+### Question
+
+Why use PBKDF2 from Python instead of storing passwords directly or adding a bigger auth dependency?
+
+### Answer
+
+Plaintext passwords are never acceptable. A password should be converted into a salted, slow hash before it is stored.
+
+PBKDF2 is available in Python's standard library, so the backend gets a real password-hashing baseline without adding a dependency during this phase. Each password receives its own random salt, and the encoded hash stores the algorithm and iteration count. That makes future upgrades possible because old hashes can still be verified while new hashes use stronger settings.
+
+This is not the final enterprise auth story. Production-grade auth still needs email verification, password reset, account lockout/rate limiting, audit events, and eventually Supabase Auth or another identity provider. But it is much better than a shared demo credential and it keeps the project deployable now.
+
+### Question
+
+Why add an LLM provider policy before building the actual LLM planner?
+
+### Answer
+
+The most important product rule is: DataBoom must keep generating data even when LLM credits are unavailable.
+
+If we directly wire generation to an LLM key, the product becomes fragile. A judge, customer, or developer could see the whole system fail because an API key is missing, exhausted, or rate-limited. The provider policy prevents that by defining the order of responsibility:
+
+1. If the user supplies a key for a request, use that key.
+2. Otherwise, if the platform/admin key exists, use that key.
+3. Otherwise, use the deterministic engine fallback.
+
+The key idea is that the LLM should assist planning, not replace the engine. The engine owns schema parsing, relationship preservation, row generation, artifact export, validation, and previews. The LLM can later help propose schemas, map intent to row counts, describe quality issues, or suggest profiles. If LLM access disappears, the deterministic path still works.
+
+### Question
+
+Why not store the user's API key immediately?
+
+### Answer
+
+Storing user secrets creates security responsibilities:
+
+- encryption,
+- key deletion,
+- access control,
+- audit logs,
+- incident response,
+- secret redaction from logs,
+- support for key rotation.
+
+For the MVP, the safer approach is per-request BYOK. The frontend can ask the backend to resolve policy with a user-supplied key, but the key is not stored in local storage or persisted in the database. Later, if persistent BYOK is required, it should use a proper secret store or encrypted database design.
+
+### Question
+
+Why does Supabase pooling require special SQLAlchemy/psycopg handling?
+
+### Answer
+
+Supabase can provide pooled Postgres connection strings. Transaction-pooling mode is useful for hosted apps because many short-lived connections can reuse a smaller database connection pool.
+
+The catch is prepared statements. Transaction pooling can route different statements through different backend database connections, so server-side prepared statements are not reliable in that mode. Psycopg can automatically prepare statements after they are used repeatedly. That optimization is good for direct database connections, but it can break with transaction pooling.
+
+DataBoom handles this in `SQLAlchemyStateStore` by passing:
+
+```python
+connect_args={"prepare_threshold": None}
+```
+
+for `postgresql+psycopg` URLs. This disables psycopg automatic preparation and makes the state-store queries safer for Supabase pooled URLs.
+
+### Question
+
+Why normalize `postgres://` and `postgresql://` URLs to `postgresql+psycopg://`?
+
+### Answer
+
+Many hosted platforms display ordinary Postgres URLs. SQLAlchemy uses the URL scheme to choose the database driver. DataBoom installs psycopg, so the safest explicit scheme is `postgresql+psycopg://`.
+
+The settings layer now normalizes hosted Postgres URLs automatically. That keeps deployment simpler because the operator can paste a normal hosted Postgres URL, and the backend still uses the driver it actually has installed.

@@ -19,4 +19,4 @@ RUN python -m pip install --upgrade pip \
 RUN useradd --create-home --shell /usr/sbin/nologin boom
 USER boom
 
-CMD ["databoom", "info"]
+CMD ["uvicorn", "databoom.api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
