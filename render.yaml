@@ -15,8 +15,6 @@ services:
         sync: false
       - key: DATABOOM_ALLOW_REGISTRATION
         value: "true"
-      - key: DATABOOM_SEED_LOGIN_ID
-        sync: false
       - key: DATABOOM_SEED_EMAIL
         sync: false
       - key: DATABOOM_SEED_NAME

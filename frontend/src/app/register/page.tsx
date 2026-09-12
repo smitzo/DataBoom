@@ -11,9 +11,7 @@ import { loadSession, saveSession } from "@/lib/session";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [loginId, setLoginId] = useState("");
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,9 +29,7 @@ export default function RegisterPage() {
 
     try {
       const response = await registerRequest({
-        login_id: loginId,
         email,
-        name,
         password,
       });
       saveSession(response);
@@ -55,38 +51,11 @@ export default function RegisterPage() {
               Create workspace
             </p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight text-[color:var(--text-primary)]">
-              Start with a login ID, then choose your data products.
+              Create your workspace with email and password.
             </h1>
-            <p className="mt-5 text-base leading-7 text-[color:var(--text-muted)]">
-              Registration creates the application session. Product subscriptions,
-              sources, runs, and LLM settings are managed inside the dashboard.
-            </p>
           </div>
 
           <form className="space-y-4" onSubmit={submit}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Login ID</span>
-                <input
-                  autoComplete="username"
-                  className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
-                  placeholder="team-alpha"
-                  value={loginId}
-                  onChange={(event) => setLoginId(event.target.value)}
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Name</span>
-                <input
-                  autoComplete="name"
-                  className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
-                  placeholder="Team Alpha"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </label>
-            </div>
-
             <label className="block">
               <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Email</span>
               <input

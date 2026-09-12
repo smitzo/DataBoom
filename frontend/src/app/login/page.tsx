@@ -11,7 +11,7 @@ import { loadSession, saveSession } from "@/lib/session";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loginId, setLoginId] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await loginRequest(loginId, password);
+      const response = await loginRequest(email, password);
       saveSession(response);
       router.push("/dashboard");
     } catch (caughtError) {
@@ -52,19 +52,20 @@ export default function LoginPage() {
               Sign in to your synthetic data workspace.
             </h1>
             <p className="mt-5 text-base leading-7 text-[color:var(--text-muted)]">
-              Use your login ID to manage workspaces, generate datasets, inspect previews,
+              Use your email to manage workspaces, generate datasets, inspect previews,
               and export artifacts from active DataBoom products.
             </p>
 
             <form className="mt-10 space-y-4" onSubmit={submit}>
               <label className="block">
-                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Login ID</span>
+                <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Email</span>
                 <input
-                  autoComplete="username"
+                  autoComplete="email"
                   className="mt-2 h-12 w-full rounded-lg border border-[color:var(--border)] bg-[var(--surface-muted)] px-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-faint)] focus:border-cyan-300/60"
-                  placeholder="operator"
-                  value={loginId}
-                  onChange={(event) => setLoginId(event.target.value)}
+                  placeholder="operator@databoom.local"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
               <label className="block">

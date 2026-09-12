@@ -12,7 +12,7 @@ The completed surface includes:
 
 - Table-Boom relational generation from demo schemas and refreshed PostgreSQL source metadata.
 - Docu-Boom document generation with JSON and NDJSON artifacts.
-- Login ID/password auth with server-side password hashes.
+- Email/password auth with server-side password hashes.
 - Seeded local operator account for development and review.
 - Product subscriptions for Table-Boom and Docu-Boom.
 - Async product runs with progress, generated-row counts, rows/sec, ETA, and operation timings.
@@ -48,7 +48,7 @@ http://localhost:3000/login
 Use the local seeded account:
 
 ```text
-Login ID: operator
+Email: operator@databoom.local
 Password: databoom-local
 ```
 
@@ -65,7 +65,7 @@ NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0
 ## Phase 2 Reviewer Smoke Test
 
 1. Open `/login`.
-2. Sign in with `operator` / `databoom-local`, or register a fresh account.
+2. Sign in with `operator@databoom.local` / `databoom-local`, or register a fresh account.
 3. Open `/settings/subscriptions`.
 4. Subscribe to Table-Boom.
 5. Open `/dashboard`.
@@ -88,7 +88,6 @@ Use this once Render, Supabase, and Vercel are configured.
 3. Register a reviewer account, or configure these Render variables:
 
 ```text
-DATABOOM_SEED_LOGIN_ID=<reviewer-login>
 DATABOOM_SEED_EMAIL=<reviewer-email>
 DATABOOM_SEED_NAME=<reviewer-name>
 DATABOOM_SEED_PASSWORD=<reviewer-password>

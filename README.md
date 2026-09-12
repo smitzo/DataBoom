@@ -29,7 +29,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - API generation run endpoint for synchronous local relational runs.
 - Async product-run endpoint with progress percentage, expected seconds, and operation timing telemetry.
 - API artifact listing, downloads, and optional API-key protection.
-- Login ID/password registration and login with server-side password hashes.
+- Email/password registration and login with server-side password hashes.
 - Product catalog, subscription, product-run, table-preview, and document-preview API endpoints.
 - SQL-backed users, sessions, subscriptions, workspace sources, source profiles, and run metadata.
 - Optional LLM provider policy with platform-key, user-key, and deterministic fallback modes.
@@ -213,7 +213,7 @@ Public routes:
 
 Authenticated routes:
 
-- `/login`: login ID/password sign-in.
+- `/login`: email/password sign-in.
 - `/register`: account creation.
 - `/dashboard`: product workspace.
 - `/runs`: generated run history.
@@ -233,7 +233,7 @@ Then open:
 http://localhost:3000
 ```
 
-Register from `/register` or sign in with a configured seed account. Local and Docker environments seed `operator` / `databoom-local` automatically for convenience; production Render deployments should set `DATABOOM_SEED_LOGIN_ID` and `DATABOOM_SEED_PASSWORD` only when a pre-created reviewer/admin account is needed. The dashboard can subscribe to active products, test PostgreSQL source connections, save workspace sources, refresh relational schema metadata, profile source tables, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display generated rows, rows/sec, expected and remaining time, operation timings, and link to downloadable artifacts.
+Register from `/register` or sign in with a configured seed account. Local and Docker environments seed `operator@databoom.local` / `databoom-local` automatically for convenience; production Render deployments should set `DATABOOM_SEED_EMAIL` and `DATABOOM_SEED_PASSWORD` only when a pre-created reviewer/admin account is needed. The dashboard can subscribe to active products, test PostgreSQL source connections, save workspace sources, refresh relational schema metadata, profile source tables, generate data through the async backend flow, show top-20 relational table previews while CSV artifacts are being written, show MongoDB-style document previews from JSON or NDJSON artifacts, display generated rows, rows/sec, expected and remaining time, operation timings, and link to downloadable artifacts.
 
 ## Deployment: Render + Supabase + Vercel
 

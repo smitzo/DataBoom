@@ -537,7 +537,7 @@ def test_workspace_connection_test_returns_probe_result(tmp_path: Path, monkeypa
 def _login(client: TestClient) -> str:
     response = client.post(
         "/auth/login",
-        json={"login_id": "operator", "password": "databoom-local"},
+        json={"email": "operator@databoom.local", "password": "databoom-local"},
     )
     assert response.status_code == 200, response.text
     return response.json()["token"]

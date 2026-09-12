@@ -90,22 +90,8 @@ class RegisterRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    login_id: str = Field(min_length=3, max_length=80)
     email: str = Field(min_length=3, max_length=320)
-    name: str = Field(min_length=1, max_length=120)
     password: str = Field(min_length=8, max_length=256)
-
-    @field_validator("login_id")
-    @classmethod
-    def validate_login_id(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if not normalized:
-            raise ValueError("login id cannot be empty")
-        if not all(character.isalnum() or character in {"_", "-", "."} for character in normalized):
-            raise ValueError(
-                "login id can contain letters, numbers, dots, hyphens, and underscores"
-            )
-        return normalized
 
     @field_validator("email")
     @classmethod
@@ -115,27 +101,22 @@ class RegisterRequest(BaseModel):
             raise ValueError("valid email is required")
         return normalized
 
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("name cannot be empty")
-        return normalized
-
 
 class LoginRequest(BaseModel):
     """Application login request."""
 
     model_config = ConfigDict(extra="forbid")
 
-    login_id: str = Field(min_length=1)
+    email: str = Field(min_length=3, max_length=320)
     password: str = Field(min_length=1)
 
-    @field_validator("login_id")
+    @field_validator("email")
     @classmethod
-    def normalize_login_id(cls, value: str) -> str:
-        return value.strip().lower()
+    def validate_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
+            raise ValueError("valid email is required")
+        return normalized
 
 
 class AppUserResponse(BaseModel):

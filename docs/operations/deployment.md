@@ -52,7 +52,6 @@ DATABOOM_ALLOW_REGISTRATION=true
 Optional Render variables:
 
 ```text
-DATABOOM_SEED_LOGIN_ID=<reviewer login id>
 DATABOOM_SEED_EMAIL=<reviewer email>
 DATABOOM_SEED_NAME=<reviewer display name>
 DATABOOM_SEED_PASSWORD=<reviewer password>
@@ -109,7 +108,7 @@ Current MVP behavior:
 ## Smoke Test
 
 1. Open the Vercel URL.
-2. Register a new account or sign in with the configured seed login ID.
+2. Register a new account or sign in with the configured seed email.
 3. Open `/settings` and confirm the LLM provider mode.
 4. Open `/settings/subscriptions` and subscribe to Table-Boom or Docu-Boom.
 5. Open `/dashboard`, choose a source/resource, generate a small run, and inspect preview rows.
@@ -120,7 +119,7 @@ Current MVP behavior:
 - Async runs are still managed in-process by the FastAPI instance.
 - Artifact files are local to the API container unless a persistent disk or object storage is added.
 - Registration is open when `DATABOOM_ALLOW_REGISTRATION=true`; close it for private deployments after reviewer accounts are created.
-- Supabase Auth is planned, but current auth is backend-owned login ID/password with hashed passwords.
+- Supabase Auth is planned, but current auth is backend-owned email/password with hashed passwords.
 
 ## References
 

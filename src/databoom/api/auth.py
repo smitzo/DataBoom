@@ -41,6 +41,36 @@ def normalize_email(value: str) -> str:
     return value.strip().lower()
 
 
+def internal_login_id_from_email(email: str) -> str:
+    """Create a stable internal login identifier from an email address.
+
+    The UI authenticates with email only, but the Phase 2 state schema still has
+    a `login_id` column. Keeping a derived internal value avoids a disruptive
+    schema migration while removing login IDs from the product flow.
+    """
+
+    normalized_email = normalize_email(email)
+    local_part = normalized_email.split("@", maxsplit=1)[0]
+    slug = "".join(
+        character if character.isalnum() or character in {"_", "-", "."} else "-"
+        for character in local_part
+    ).strip(".-_")
+    if not slug:
+        slug = "user"
+    digest = hashlib.sha256(normalized_email.encode("utf-8")).hexdigest()[:12]
+    return f"{slug[:48]}-{digest}"
+
+
+def display_name_from_email(email: str) -> str:
+    """Derive a readable account name when registration only asks for email."""
+
+    local_part = normalize_email(email).split("@", maxsplit=1)[0]
+    words = [word for word in local_part.replace(".", " ").replace("_", " ").split("-") if word]
+    if not words:
+        return "DataBoom User"
+    return " ".join(words).title()
+
+
 def hash_password(password: str) -> str:
     """Create a salted PBKDF2 password hash.
 
@@ -122,7 +152,7 @@ def build_user_record(
 def ensure_seed_user(store, settings: Settings) -> None:
     """Create a configured seed user for local or managed deployments.
 
-    Render deployments can set `DATABOOM_SEED_LOGIN_ID` and
+    Render deployments can set `DATABOOM_SEED_EMAIL` and
     `DATABOOM_SEED_PASSWORD` to guarantee a reviewer/admin account exists. Local
     and test environments also get a low-risk default account so the app can be
     opened immediately after `docker compose up`.
@@ -134,23 +164,37 @@ def ensure_seed_user(store, settings: Settings) -> None:
     seed_name = settings.seed_name
 
     if seed_password is None and settings.environment in {"local", "test", "docker"}:
-        seed_login_id = seed_login_id or "operator"
         seed_password = "databoom-local"
         seed_email = seed_email or "operator@databoom.local"
+        seed_login_id = seed_login_id or "operator"
         seed_name = seed_name or "DataBoom Operator"
 
-    if not seed_login_id or not seed_password:
+    if not seed_password:
         return
 
-    normalized_login_id = normalize_login_id(seed_login_id)
-    if store.get_user_by_login_id(normalized_login_id) is not None:
+    seed_email = seed_email or (
+        f"{normalize_login_id(seed_login_id)}@databoom.local" if seed_login_id else None
+    )
+    if not seed_email:
+        return
+
+    normalized_email = normalize_email(seed_email)
+    normalized_login_id = (
+        normalize_login_id(seed_login_id)
+        if seed_login_id
+        else internal_login_id_from_email(normalized_email)
+    )
+    if (
+        store.get_user_by_email(normalized_email) is not None
+        or store.get_user_by_login_id(normalized_login_id) is not None
+    ):
         return
 
     store.save_user(
         build_user_record(
             login_id=normalized_login_id,
-            email=seed_email or f"{normalized_login_id}@databoom.local",
-            name=seed_name or "DataBoom Operator",
+            email=normalized_email,
+            name=seed_name or display_name_from_email(normalized_email),
             password=seed_password,
         )
     )

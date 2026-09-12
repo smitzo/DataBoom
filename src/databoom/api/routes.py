@@ -29,6 +29,8 @@ from databoom import __version__
 from databoom.api.async_jobs import RunControlError, RunNotFoundError
 from databoom.api.auth import (
     build_user_record,
+    display_name_from_email,
+    internal_login_id_from_email,
     new_session_token,
     user_response_from_record,
     verify_password,
@@ -158,15 +160,13 @@ def register(request: Request, payload: RegisterRequest) -> LoginResponse:
         )
 
     store = _state_store(request)
-    if store.get_user_by_login_id(payload.login_id) is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="login id already exists")
     if store.get_user_by_email(payload.email) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="email already exists")
 
     user_record = build_user_record(
-        login_id=payload.login_id,
+        login_id=internal_login_id_from_email(payload.email),
         email=payload.email,
-        name=payload.name,
+        name=display_name_from_email(payload.email),
         password=payload.password,
     )
     try:
@@ -184,7 +184,7 @@ def register(request: Request, payload: RegisterRequest) -> LoginResponse:
 def login(request: Request, payload: LoginRequest) -> LoginResponse:
     """Authenticate an application user."""
 
-    user_record = _state_store(request).get_user_by_login_id(payload.login_id)
+    user_record = _state_store(request).get_user_by_email(payload.email)
     if user_record is None or not verify_password(payload.password, user_record.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid credentials")
 

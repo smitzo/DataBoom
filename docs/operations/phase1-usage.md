@@ -106,7 +106,7 @@ cd frontend
 NEXT_PUBLIC_DATABOOM_API_URL=http://localhost:8001 npm run dev -- --hostname 0.0.0.0 --port 3000
 ```
 
-Open `http://localhost:3000`. Register a new account, or use the local seeded login ID `operator` with password `databoom-local`.
+Open `http://localhost:3000`. Register a new account, or use the local seeded email `operator@databoom.local` with password `databoom-local`.
 
 The dashboard can:
 

@@ -408,31 +408,27 @@ def test_login_rejects_invalid_password(tmp_path: Path) -> None:
 
     response = client.post(
         "/auth/login",
-        json={"login_id": "operator", "password": "wrong"},
+        json={"email": "operator@databoom.local", "password": "wrong"},
     )
 
     assert response.status_code == 401
 
 
-def test_registration_rejects_duplicate_login_id(tmp_path: Path) -> None:
+def test_registration_rejects_duplicate_email(tmp_path: Path) -> None:
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
     client = TestClient(create_app(settings=settings))
 
     response = client.post(
         "/auth/register",
         json={
-            "login_id": "team-alpha",
             "email": "team-alpha@databoom.local",
-            "name": "Team Alpha",
             "password": "strong-password",
         },
     )
     duplicate = client.post(
         "/auth/register",
         json={
-            "login_id": "team-alpha",
-            "email": "another-team@databoom.local",
-            "name": "Another Team",
+            "email": "team-alpha@databoom.local",
             "password": "strong-password",
         },
     )
@@ -538,7 +534,7 @@ def test_sql_state_store_persists_app_flow_across_app_instances(tmp_path: Path) 
 def _login(client: TestClient) -> str:
     response = client.post(
         "/auth/login",
-        json={"login_id": "operator", "password": "databoom-local"},
+        json={"email": "operator@databoom.local", "password": "databoom-local"},
     )
     assert response.status_code == 200
     return str(response.json()["token"])

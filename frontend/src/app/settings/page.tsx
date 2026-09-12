@@ -73,9 +73,7 @@ function SettingsContent({ session }: { session: Session }) {
             <div>
               <p className="text-sm font-semibold uppercase text-zinc-500">Signed in as</p>
               <h2 className="mt-2 text-2xl font-semibold text-white">{session.user.name}</h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                {session.user.login_id} · {session.user.email}
-              </p>
+              <p className="mt-1 text-sm text-zinc-500">{session.user.email}</p>
             </div>
           </div>
 

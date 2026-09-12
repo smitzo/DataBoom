@@ -10,7 +10,6 @@ export type ApiHealth = {
 
 export type AppUser = {
   user_id: string;
-  login_id: string;
   email: string;
   name: string;
 };
@@ -236,9 +235,7 @@ export type DocumentPreview = {
 let cachedApiBaseUrl: string | null = null;
 
 export async function register(payload: {
-  login_id: string;
   email: string;
-  name: string;
   password: string;
 }) {
   return apiRequest<LoginResponse>("/auth/register", {
@@ -247,10 +244,10 @@ export async function register(payload: {
   });
 }
 
-export async function login(loginId: string, password: string) {
+export async function login(email: string, password: string) {
   return apiRequest<LoginResponse>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ login_id: loginId, password }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
@@ -490,18 +487,42 @@ async function apiRequest<T>(path: string, init: RequestInit = {}, token?: strin
 
 async function readErrorMessage(response: Response) {
   try {
-    const payload = (await response.json()) as { detail?: string };
-    return payload.detail ?? `Request failed with ${response.status}`;
+    const payload = (await response.json()) as { detail?: unknown };
+    return formatApiErrorDetail(payload.detail) ?? `Request failed with ${response.status}`;
   } catch {
     return `Request failed with ${response.status}`;
   }
+}
+
+function formatApiErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") {
+          return item;
+        }
+        if (item && typeof item === "object" && "msg" in item) {
+          return String((item as { msg: unknown }).msg);
+        }
+        return JSON.stringify(item);
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+  if (detail && typeof detail === "object" && "message" in detail) {
+    return String((detail as { message: unknown }).message);
+  }
+  return null;
 }
 
 function apiBaseCandidates() {
   const configuredUrl = process.env.NEXT_PUBLIC_DATABOOM_API_URL;
   return Array.from(
     new Set(
-      [configuredUrl, "http://localhost:8001", "http://localhost:8000"].filter(
+      [configuredUrl, "http://localhost:8000", "http://localhost:8001"].filter(
         (url): url is string => Boolean(url),
       ),
     ),
