@@ -92,6 +92,18 @@ class Settings(BaseSettings):
             "LLM_REQUEST_TOKEN_LIMIT",
         ),
     )
+    llm_timeout_seconds: float = Field(
+        default=20.0,
+        gt=0,
+        le=120,
+        validation_alias=AliasChoices("DATABOOM_LLM_TIMEOUT_SECONDS", "LLM_TIMEOUT_SECONDS"),
+    )
+    llm_max_retries: int = Field(
+        default=1,
+        ge=0,
+        le=5,
+        validation_alias=AliasChoices("DATABOOM_LLM_MAX_RETRIES", "LLM_MAX_RETRIES"),
+    )
     log_level: str = Field(
         default="INFO",
         validation_alias=AliasChoices("DATABOOM_LOG_LEVEL", "LOG_LEVEL"),
