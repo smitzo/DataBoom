@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from databoom.api.models import DataProductKind, ProductStatus
 from databoom.document import DocumentCollectionSpec, DocumentFieldSpec
 from databoom.generation import DomainProfile
+from databoom.graph import GraphEdgeSpec, GraphNodeSpec, GraphPropertySpec
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,8 @@ class ProductCatalogEntry:
     schema_ddl: str | None = None
     default_row_counts: dict[str, int] | None = None
     document_collections: tuple[DocumentCollectionSpec, ...] = ()
+    graph_nodes: tuple[GraphNodeSpec, ...] = ()
+    graph_edges: tuple[GraphEdgeSpec, ...] = ()
 
     @property
     def tables(self) -> tuple[str, ...]:
@@ -78,6 +81,10 @@ class ProductCatalogEntry:
                 collection.name: collection.default_count
                 for collection in self.document_collections
             }
+        if self.kind == DataProductKind.GRAPH:
+            node_counts = {node.label: node.default_count for node in self.graph_nodes}
+            edge_counts = {edge.edge_type: edge.default_count for edge in self.graph_edges}
+            return node_counts | edge_counts
         return dict(self.default_row_counts or {})
 
 
@@ -215,6 +222,66 @@ DOCU_BOOM_COLLECTIONS = (
 )
 
 
+GRAPH_BOOM_NODES = (
+    GraphNodeSpec(
+        label="Customer",
+        default_count=80,
+        properties=(
+            GraphPropertySpec("segment", "segment"),
+            GraphPropertySpec("status", "status"),
+            GraphPropertySpec("country", "country"),
+        ),
+    ),
+    GraphNodeSpec(
+        label="Account",
+        default_count=120,
+        properties=(
+            GraphPropertySpec("account_type", "account_type"),
+            GraphPropertySpec("status", "status"),
+            GraphPropertySpec("risk_score", "risk_score"),
+        ),
+    ),
+    GraphNodeSpec(
+        label="Device",
+        default_count=60,
+        properties=(
+            GraphPropertySpec("device_type", "device_type"),
+            GraphPropertySpec("risk_score", "risk_score"),
+            GraphPropertySpec("country", "country"),
+        ),
+    ),
+)
+
+
+GRAPH_BOOM_EDGES = (
+    GraphEdgeSpec(
+        edge_type="OWNS",
+        source_label="Customer",
+        target_label="Account",
+        default_count=140,
+        properties=(GraphPropertySpec("weight", "weight"),),
+    ),
+    GraphEdgeSpec(
+        edge_type="USES_DEVICE",
+        source_label="Customer",
+        target_label="Device",
+        default_count=180,
+        properties=(GraphPropertySpec("timestamp", "timestamp"),),
+    ),
+    GraphEdgeSpec(
+        edge_type="TRANSFERRED_TO",
+        source_label="Account",
+        target_label="Account",
+        default_count=260,
+        properties=(
+            GraphPropertySpec("amount", "amount"),
+            GraphPropertySpec("timestamp", "timestamp"),
+            GraphPropertySpec("risk_score", "risk_score"),
+        ),
+    ),
+)
+
+
 PRODUCT_CATALOG: tuple[ProductCatalogEntry, ...] = (
     ProductCatalogEntry(
         id="table-boom",
@@ -269,15 +336,17 @@ PRODUCT_CATALOG: tuple[ProductCatalogEntry, ...] = (
         family="DataBoom",
         module="Graph data",
         kind=DataProductKind.GRAPH,
-        status=ProductStatus.PLANNED,
+        status=ProductStatus.ACTIVE,
         description="Generate connected node and edge datasets with labels and properties.",
         domain=DomainProfile.GENERAL,
+        graph_nodes=GRAPH_BOOM_NODES,
+        graph_edges=GRAPH_BOOM_EDGES,
         output_formats=("json", "csv"),
         use_cases=("fraud networks", "recommendations", "knowledge graphs"),
         features=(
-            "Planned node and edge generation.",
-            "Planned graph cardinality and edge-reference validation.",
-            "Planned graph preview workspace.",
+            "Node and edge generation with stable IDs.",
+            "Edge-reference validation for generated graph artifacts.",
+            "JSON graph and CSV node/edge exports.",
         ),
         plans=DEFAULT_PLANS,
     ),

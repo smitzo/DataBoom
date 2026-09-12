@@ -197,7 +197,7 @@ WORKSPACE_SOURCES: tuple[WorkspaceSource, ...] = (
         engine="Neo4j",
         host="graph-demo.internal",
         description="Nodes, edges, and relationship-heavy roadmap datasets.",
-        status=WorkspaceSourceStatus.PLANNED,
+        status=WorkspaceSourceStatus.CONNECTED,
         resources=(
             WorkspaceResource("customers", "node", 100, ("id", "segment")),
             WorkspaceResource("accounts", "node", 150, ("id", "type")),

@@ -135,6 +135,63 @@ def test_document_product_flow_generates_json_and_preview(tmp_path: Path) -> Non
     }
 
 
+def test_graph_product_flow_generates_nodes_edges_and_preview(tmp_path: Path) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    client = TestClient(create_app(settings=settings))
+    token = _login(client)
+
+    subscription = client.post(
+        "/subscriptions",
+        headers=_auth_headers(token),
+        json={"product_id": "graph-boom", "plan_id": "starter"},
+    )
+    assert subscription.status_code == 201, subscription.text
+
+    run = client.post(
+        "/products/graph-boom/runs",
+        headers=_auth_headers(token),
+        json={
+            "row_counts": {
+                "Customer": 2,
+                "Account": 2,
+                "Device": 1,
+                "OWNS": 2,
+                "USES_DEVICE": 2,
+                "TRANSFERRED_TO": 2,
+            },
+            "seed": "graph-flow",
+            "output_formats": ["json", "csv"],
+        },
+    )
+
+    assert run.status_code == 201, run.text
+    run_payload = run.json()
+    assert run_payload["kind"] == "graph"
+    assert run_payload["total_rows"] == 11
+    assert run_payload["generated_rows"] == 11
+    assert run_payload["graph"]["node_count"] == 5
+    assert run_payload["graph"]["edge_count"] == 6
+    assert run_payload["validation"]["passed"] is True
+    assert set(run_payload["validation"]["checked_tables"]) == {"nodes", "edges"}
+
+    preview = client.get(
+        f"/runs/{run_payload['run_id']}/graph-preview",
+        params={"node_limit": 2, "edge_limit": 2},
+    )
+    assert preview.status_code == 200, preview.text
+    preview_payload = preview.json()
+    assert len(preview_payload["nodes"]) == 2
+    assert len(preview_payload["edges"]) == 2
+    assert preview_payload["nodes"][0]["label"] == "Customer"
+    assert {"source", "target"} <= set(preview_payload["edges"][0])
+
+    artifacts = client.get(f"/runs/{run_payload['run_id']}/artifacts")
+    assert artifacts.status_code == 200
+    assert {"graph.json", "nodes.csv", "edges.csv"} <= {
+        artifact["relative_path"] for artifact in artifacts.json()["files"]
+    }
+
+
 def test_document_preview_falls_back_to_ndjson_when_json_is_incomplete(
     tmp_path: Path,
 ) -> None:
@@ -388,12 +445,12 @@ def test_planned_product_cannot_generate(tmp_path: Path) -> None:
     subscription = client.post(
         "/subscriptions",
         headers=_auth_headers(token),
-        json={"product_id": "graph-boom", "plan_id": "starter"},
+        json={"product_id": "masker-boom", "plan_id": "starter"},
     )
     assert subscription.status_code == 201, subscription.text
 
     response = client.post(
-        "/products/graph-boom/runs",
+        "/products/masker-boom/runs",
         headers=_auth_headers(token),
         json={"seed": "planned-product"},
     )

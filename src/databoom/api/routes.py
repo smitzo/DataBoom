@@ -41,6 +41,8 @@ from databoom.api.models import (
     DocumentPreviewResponse,
     GenerationRunRequest,
     GenerationRunResponse,
+    GraphArtifactResponse,
+    GraphPreviewResponse,
     HealthResponse,
     LLMProviderPolicyRequest,
     LLMProviderPolicyResponse,
@@ -794,6 +796,33 @@ def preview_run_documents(
     )
 
 
+@router.get(
+    "/runs/{run_id}/graph-preview",
+    response_model=GraphPreviewResponse,
+    tags=["runs"],
+    dependencies=[protected_route],
+)
+def preview_run_graph(
+    request: Request,
+    run_id: str,
+    node_limit: int = Query(default=10, ge=1, le=50),
+    edge_limit: int = Query(default=10, ge=1, le=50),
+) -> GraphPreviewResponse:
+    """Return top nodes and edges from a generated graph artifact."""
+
+    run = _get_existing_run(request, run_id)
+    graph_artifact = _find_graph_artifact(run)
+    preview = _read_graph_preview(graph_artifact, node_limit, edge_limit)
+    if preview is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="graph artifact not found",
+        )
+
+    nodes, edges = preview
+    return GraphPreviewResponse(run_id=run.run_id, nodes=nodes, edges=edges)
+
+
 def _get_existing_run(request: Request, run_id: str) -> GenerationRunResponse:
     run = request.app.state.async_run_manager.get_run(run_id)
     if run is None:
@@ -1037,6 +1066,12 @@ def _find_table_artifact(
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="table not found")
 
 
+def _find_graph_artifact(run: GenerationRunResponse) -> GraphArtifactResponse:
+    if run.graph is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="graph not found")
+    return run.graph
+
+
 def _read_document_preview(
     collection_artifact: CollectionArtifactResponse,
     limit: int,
@@ -1070,3 +1105,52 @@ def _read_document_preview(
             if isinstance(document, dict):
                 documents.append(document)
     return tuple(documents)
+
+
+def _read_graph_preview(
+    graph_artifact: GraphArtifactResponse,
+    node_limit: int,
+    edge_limit: int,
+) -> tuple[tuple[dict[str, object], ...], tuple[dict[str, object], ...]] | None:
+    if graph_artifact.graph_json_path is not None:
+        path = graph_artifact.graph_json_path.resolve()
+        if path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                data = None
+            if isinstance(data, dict):
+                nodes = data.get("nodes", [])
+                edges = data.get("edges", [])
+                return (
+                    tuple(record for record in nodes[:node_limit] if isinstance(record, dict)),
+                    tuple(record for record in edges[:edge_limit] if isinstance(record, dict)),
+                )
+
+    if graph_artifact.nodes_csv_path is None or graph_artifact.edges_csv_path is None:
+        return None
+    nodes_path = graph_artifact.nodes_csv_path.resolve()
+    edges_path = graph_artifact.edges_csv_path.resolve()
+    if not nodes_path.is_file() or not edges_path.is_file():
+        return None
+
+    return (
+        _read_graph_csv(nodes_path, node_limit),
+        _read_graph_csv(edges_path, edge_limit),
+    )
+
+
+def _read_graph_csv(path, limit: int) -> tuple[dict[str, object], ...]:
+    records: list[dict[str, object]] = []
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for _, row in zip(range(limit), reader, strict=False):
+            record: dict[str, object] = dict(row)
+            properties = record.get("properties")
+            if isinstance(properties, str):
+                try:
+                    record["properties"] = json.loads(properties)
+                except json.JSONDecodeError:
+                    record["properties"] = {}
+            records.append(record)
+    return tuple(records)

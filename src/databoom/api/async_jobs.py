@@ -27,6 +27,7 @@ from databoom.api.models import (
     CollectionArtifactResponse,
     DataProductKind,
     GenerationRunResponse,
+    GraphArtifactResponse,
     OperationStatus,
     OperationTimingResponse,
     ProductRunRequest,
@@ -36,6 +37,7 @@ from databoom.api.models import (
 from databoom.api.products import ProductCatalogEntry
 from databoom.api.runs import (
     _document_collections_for_source,
+    _graph_specs_for_source,
     _schema_ddl_for_source,
     _source_default_counts,
     _source_for_payload,
@@ -388,6 +390,7 @@ def _running_product_response(
             )
             table_count = len(tables)
             collections = ()
+            graph = None
         case DataProductKind.DOCUMENT:
             collections = _planned_collection_artifacts(
                 product,
@@ -398,7 +401,20 @@ def _running_product_response(
             )
             table_count = len(collections)
             tables = ()
-        case DataProductKind.GRAPH | DataProductKind.MASKING:
+            graph = None
+        case DataProductKind.GRAPH:
+            graph = _planned_graph_artifact(
+                product,
+                row_counts,
+                artifact_dir,
+                output_formats,
+                source=source,
+            )
+            nodes, edges = _graph_specs_for_source(product, source)
+            table_count = len(nodes) + len(edges)
+            tables = ()
+            collections = ()
+        case DataProductKind.MASKING:
             raise ValueError(f"{product.name} is planned and is not runnable yet")
 
     return GenerationRunResponse(
@@ -426,6 +442,7 @@ def _running_product_response(
         ),
         tables=tables,
         collections=collections,
+        graph=graph,
     )
 
 
@@ -492,6 +509,26 @@ def _planned_collection_artifacts(
     )
 
 
+def _planned_graph_artifact(
+    product: ProductCatalogEntry,
+    row_counts: dict[str, int],
+    artifact_dir: Path,
+    output_formats: tuple[str, ...],
+    *,
+    source: WorkspaceSource | None = None,
+) -> GraphArtifactResponse:
+    nodes, edges = _graph_specs_for_source(product, source)
+    node_count = sum(row_counts.get(node.label, node.default_count) for node in nodes)
+    edge_count = sum(row_counts.get(edge.edge_type, edge.default_count) for edge in edges)
+    return GraphArtifactResponse(
+        node_count=node_count,
+        edge_count=edge_count,
+        graph_json_path=artifact_dir / "graph.json" if "json" in output_formats else None,
+        nodes_csv_path=artifact_dir / "nodes.csv" if "csv" in output_formats else None,
+        edges_csv_path=artifact_dir / "edges.csv" if "csv" in output_formats else None,
+    )
+
+
 def _failed_response(
     *,
     product: ProductCatalogEntry,
@@ -507,6 +544,15 @@ def _failed_response(
     source = _source_for_payload(product, payload, source)
     row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
     total_rows = sum(row_counts.values())
+    if product.kind == DataProductKind.GRAPH:
+        nodes, edges = _graph_specs_for_source(product, source)
+        table_count = len(nodes) + len(edges)
+    else:
+        table_count = (
+            len(source.resources)
+            if source
+            else len(product.tables or product.collections)
+        )
     return GenerationRunResponse(
         run_id=run_id,
         retry_of_run_id=retry_of_run_id,
@@ -518,7 +564,7 @@ def _failed_response(
         domain=product.domain,
         output_formats=tuple(payload.output_formats or product.output_formats),
         total_rows=total_rows,
-        table_count=len(source.resources) if source else len(product.tables or product.collections),
+        table_count=table_count,
         generated_rows=0,
         progress_percent=100.0,
         current_operation="failed",

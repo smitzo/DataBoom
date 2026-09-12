@@ -552,6 +552,18 @@ class CollectionArtifactResponse(BaseModel):
     ndjson_path: Path | None = None
 
 
+class GraphArtifactResponse(BaseModel):
+    """API representation of generated graph artifacts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    node_count: int
+    edge_count: int
+    graph_json_path: Path | None = None
+    nodes_csv_path: Path | None = None
+    edges_csv_path: Path | None = None
+
+
 class ValidationIssueResponse(BaseModel):
     """API representation of one validation issue."""
 
@@ -645,6 +657,16 @@ class DocumentPreviewResponse(BaseModel):
     documents: tuple[dict[str, object], ...]
 
 
+class GraphPreviewResponse(BaseModel):
+    """Small graph preview returned from generated graph artifacts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str
+    nodes: tuple[dict[str, object], ...]
+    edges: tuple[dict[str, object], ...]
+
+
 class GenerationRunResponse(BaseModel):
     """Generation run state returned by the API."""
 
@@ -673,5 +695,6 @@ class GenerationRunResponse(BaseModel):
     operation_timings: tuple[OperationTimingResponse, ...] = ()
     tables: tuple[TableArtifactResponse, ...] = ()
     collections: tuple[CollectionArtifactResponse, ...] = ()
+    graph: GraphArtifactResponse | None = None
     validation: ValidationSummaryResponse | None = None
     error: str | None = None

@@ -1,12 +1,13 @@
 """Generation run execution helpers for the API.
 
 Purpose:
-    Convert API product requests into concrete Table-Boom or Docu-Boom generation
-    runs and API response payloads.
+    Convert API product requests into concrete Table-Boom, Docu-Boom, or
+    Graph-Boom generation runs and API response payloads.
 
 Data flow:
-    request payload -> source/schema/profile resolution -> generation plan or
-    document spec -> artifact export -> validation -> `GenerationRunResponse`.
+    request payload -> source/schema/profile resolution -> generation plan,
+    document spec, or graph spec -> artifact export -> validation ->
+    `GenerationRunResponse`.
 
 Why this layer exists:
     Routes should validate HTTP concerns and delegate execution. This module keeps
@@ -29,6 +30,7 @@ from databoom.api.models import (
     DataProductKind,
     GenerationRunRequest,
     GenerationRunResponse,
+    GraphArtifactResponse,
     OperationStatus,
     OperationTimingResponse,
     ProductRunRequest,
@@ -56,6 +58,7 @@ from databoom.generation import (
     create_generation_plan,
 )
 from databoom.generation.plan import OutputFormat
+from databoom.graph import GraphEdgeSpec, GraphGenerator, GraphNodeSpec, GraphPropertySpec
 from databoom.ingest import parse_postgres_ddl
 from databoom.profiling import SourceProfile
 from databoom.validation import ValidationReport, validate_export
@@ -195,7 +198,18 @@ def execute_product_generation_run(
                 artifact_dir=artifact_dir,
                 progress_callback=progress_callback,
             )
-        case DataProductKind.GRAPH | DataProductKind.MASKING:
+        case DataProductKind.GRAPH:
+            return execute_graph_generation_run(
+                product,
+                payload,
+                settings,
+                source=source,
+                run_id=run_id,
+                created_at=created_at,
+                artifact_dir=artifact_dir,
+                progress_callback=progress_callback,
+            )
+        case DataProductKind.MASKING:
             raise ValueError(f"{product.name} is planned and is not runnable yet")
 
 
@@ -263,6 +277,80 @@ def execute_document_generation_run(
             passed=bool(result.validation["passed"]),
             checked_tables=tuple(result.validation["checked_collections"]),
             issues=(),
+        ),
+    )
+
+
+def execute_graph_generation_run(
+    product: ProductCatalogEntry,
+    payload: ProductRunRequest,
+    settings: Settings,
+    *,
+    source: WorkspaceSource | None = None,
+    run_id: str | None = None,
+    created_at: datetime | None = None,
+    artifact_dir: Path | None = None,
+    progress_callback: RunProgressCallback | None = None,
+) -> GenerationRunResponse:
+    """Execute a synchronous local Graph-Boom generation run."""
+
+    created_at = created_at or datetime.now(UTC)
+    run_id = run_id or uuid4().hex
+    artifact_dir = artifact_dir or ensure_artifact_root(settings) / "runs" / run_id
+    generation_started = _started_at()
+    nodes, edges = _graph_specs_for_source(product, source)
+    row_counts = payload.row_counts or _source_default_counts(source) or product.default_counts
+    output_formats = tuple(payload.output_formats or product.output_formats)
+    result = GraphGenerator(
+        nodes=nodes,
+        edges=edges,
+        row_counts=row_counts,
+        seed=payload.seed,
+        output_dir=artifact_dir,
+        output_formats=output_formats,
+        progress_callback=progress_callback,
+    ).generate()
+    completed_at = datetime.now(UTC)
+    total_seconds = max((completed_at - created_at).total_seconds(), 0.0)
+
+    return GenerationRunResponse(
+        run_id=run_id,
+        kind=DataProductKind.GRAPH,
+        status=RunStatus.COMPLETED,
+        created_at=created_at,
+        completed_at=completed_at,
+        artifact_dir=artifact_dir,
+        manifest_path=result.manifest.manifest_path,
+        validation_path=result.validation_path,
+        domain=product.domain,
+        output_formats=output_formats,
+        total_rows=result.total_rows,
+        table_count=len(nodes) + len(edges),
+        generated_rows=result.total_rows,
+        progress_percent=100.0,
+        rows_per_second=_rows_per_second(result.total_rows, total_seconds),
+        operation_timings=(
+            _completed_timing("generate_graph", generation_started),
+            _elapsed_timing("total_run", created_at, completed_at),
+        ),
+        graph=GraphArtifactResponse(
+            node_count=result.manifest.artifact.node_count,
+            edge_count=result.manifest.artifact.edge_count,
+            graph_json_path=result.manifest.artifact.graph_json_path,
+            nodes_csv_path=result.manifest.artifact.nodes_csv_path,
+            edges_csv_path=result.manifest.artifact.edges_csv_path,
+        ),
+        validation=ValidationSummaryResponse(
+            passed=bool(result.validation["passed"]),
+            checked_tables=tuple(result.validation.get("checked_graph_resources", ())),
+            issues=tuple(
+                ValidationIssueResponse(
+                    code=str(issue["code"]),
+                    message=str(issue["message"]),
+                    table_name=str(issue.get("resource_name") or "graph"),
+                )
+                for issue in result.validation["issues"]
+            ),
         ),
     )
 
@@ -363,6 +451,62 @@ def _document_collections_for_source(
     )
 
 
+def _graph_specs_for_source(
+    product: ProductCatalogEntry,
+    source: WorkspaceSource | None,
+) -> tuple[tuple[GraphNodeSpec, ...], tuple[GraphEdgeSpec, ...]]:
+    if source is None:
+        return product.graph_nodes, product.graph_edges
+
+    node_resources = tuple(
+        resource
+        for resource in source.resources
+        if resource.resource_type.lower() == "node"
+    )
+    edge_resources = tuple(
+        resource
+        for resource in source.resources
+        if resource.resource_type.lower() == "edge"
+    )
+    nodes = tuple(
+        GraphNodeSpec(
+            label=_graph_label(resource.name),
+            default_count=resource.estimated_rows,
+            properties=tuple(
+                _graph_property(column)
+                for column in resource.columns
+                if column not in {"id", "_id"}
+            ),
+        )
+        for resource in node_resources
+    )
+    if not nodes:
+        return product.graph_nodes, product.graph_edges
+
+    # Demo graph sources currently describe edge resources without full endpoint
+    # metadata. Pairing the first two node labels gives a deterministic runnable
+    # local graph while leaving richer endpoint rules for source profiling later.
+    source_label = nodes[0].label
+    target_label = nodes[1].label if len(nodes) > 1 else nodes[0].label
+    edges = tuple(
+        GraphEdgeSpec(
+            edge_type=_graph_edge_type(resource.name),
+            source_label=source_label,
+            target_label=target_label,
+            default_count=resource.estimated_rows,
+            properties=tuple(
+                _graph_property(column)
+                for column in resource.columns
+                if column not in {"id", "_id", "from", "to", "source", "target"}
+            ),
+        )
+        for resource in edge_resources
+    )
+    if not edges:
+        return nodes, product.graph_edges
+    return nodes, edges
+
+
 def _column_definition(column: str) -> str:
     quoted = _sql_identifier(column)
     if column == "id":
@@ -416,6 +560,40 @@ def _document_field(column: str) -> DocumentFieldSpec:
     if column == "status":
         return DocumentFieldSpec(column, "status")
     return DocumentFieldSpec(column, "text")
+
+
+def _graph_property(column: str) -> GraphPropertySpec:
+    if column in {"segment", "tier"}:
+        return GraphPropertySpec(column, "segment")
+    if column == "status":
+        return GraphPropertySpec(column, "status")
+    if column in {"type", "account_type"}:
+        return GraphPropertySpec(column, "account_type")
+    if column == "device_type":
+        return GraphPropertySpec(column, "device_type")
+    if column in {"risk_score", "score"}:
+        return GraphPropertySpec(column, "risk_score")
+    if column in {"amount", "balance", "total", "value"}:
+        return GraphPropertySpec(column, "amount")
+    if column == "weight":
+        return GraphPropertySpec(column, "weight")
+    if column.endswith("_at") or column in {"posted_at", "created_at", "timestamp"}:
+        return GraphPropertySpec(column, "timestamp")
+    if column == "country":
+        return GraphPropertySpec(column, "country")
+    return GraphPropertySpec(column, "text")
+
+
+def _graph_label(value: str) -> str:
+    return "".join(part.capitalize() for part in value.replace("-", "_").split("_") if part)
+
+
+def _graph_edge_type(value: str) -> str:
+    return "_".join(
+        part.upper()
+        for part in value.replace("-", "_").split("_")
+        if part
+    )
 
 
 def _sql_identifier(value: str) -> str:
