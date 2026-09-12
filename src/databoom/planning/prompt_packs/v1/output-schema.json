@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "summary": {"type": "string"},
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "kind": {"type": "string", "enum": ["table", "collection", "node", "edge"]},
+          "target_count": {"type": "integer", "minimum": 0, "maximum": 10000000},
+          "strategy": {"type": "string"},
+          "notes": {"type": "string"}
+        },
+        "required": ["name", "kind", "target_count", "strategy", "notes"]
+      }
+    },
+    "constraints": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["summary", "resources", "constraints", "warnings"]
+}
