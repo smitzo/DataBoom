@@ -121,20 +121,23 @@ The next architecture work should keep these rules:
 
 ## Phase 3 Entry Plan
 
-Phase 3 should start with planner and graph foundations, not UI polish.
+Phase 3 starts with backend graph foundations, then planner and UI review surfaces.
+The first active scope is Graph-Boom: graph-specific model contracts, deterministic
+node and edge generation, graph artifact writers, graph validation, and API
+preview/download support.
 
 Recommended first commits:
 
-1. `backend: add planner interface abstraction`
-2. `backend: load versioned prompt packs`
-3. `backend: validate planner output schema`
-4. `optimization: add prompt cache key generation`
-5. `test: add golden planner cases`
-6. `backend: add graph data model`
-7. `backend: generate graph node and edge artifacts`
-8. `backend: validate graph data artifacts`
-9. `api: expose dry run plan review`
-10. `frontend: add plan and graph review views`
+1. `docs: start phase 3 graph boom`
+2. `backend: add graph data model`
+3. `backend: generate graph node and edge artifacts`
+4. `backend: validate graph data artifacts`
+5. `api: expose graph boom product runs`
+6. `frontend: add graph workspace preview`
+7. `backend: add planner interface abstraction`
+8. `backend: load versioned prompt packs`
+9. `optimization: add prompt cache key generation`
+10. `test: add golden planner cases`
 
 ## Definition Of Phase 2 Done
 

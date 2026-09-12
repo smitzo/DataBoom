@@ -6,7 +6,7 @@ DataBoom is the parent platform. Its catalog has four main products:
 | --- | --- | --- | --- |
 | `Table-Boom` | Relational/tabular | Active | Generate PostgreSQL-style relational datasets with primary-key and foreign-key integrity. |
 | `Docu-Boom` | NoSQL documents | Active in Phase 2 | Generate MongoDB-style nested JSON/NDJSON collections with document-shaped previews. |
-| `Graph-Boom` | Graph nodes and edges | Planned for Phase 3 | Generate connected node/edge datasets with labels, properties, and graph validation. |
+| `Graph-Boom` | Graph nodes and edges | Active in Phase 3 | Generate connected node/edge datasets with labels, properties, and graph validation. |
 | `Masker-Boom` | Masking/redaction | Planned for Phase 4 | Redact, tokenize, hash, or synthetically replace sensitive source data while preserving useful structure. |
 
 ## Important Naming Rule
@@ -50,4 +50,6 @@ Phase 2 completes the local product workflow by adding:
 - local JSON/NDJSON artifacts for document runs,
 - documentation and reusable UI/backend contracts for product-kind based rendering.
 
-Graph-Boom and Masker-Boom remain visible in the catalog and roadmap, but they are not runnable generators yet.
+Graph-Boom is the active Phase 3 implementation target. Masker-Boom remains
+visible in the catalog and roadmap, but it is not a runnable transformation
+pipeline yet.

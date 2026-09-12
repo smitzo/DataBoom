@@ -24,3 +24,4 @@ The docs are split by concern so product scope, engineering design, and local op
 - [Phase 1 Usage](operations/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
 - [Phase 2 Closeout](operations/phase2-closeout.md): full-stack completion checklist, local login, reviewer smoke tests, and Phase 3 handoff.
 - [Deployment Guide](operations/deployment.md): Render API, Supabase Postgres, Vercel frontend, and LLM key policy setup.
+- [Phase 3 Graph-Boom Plan](operations/phase3-graph-boom.md): active graph data implementation checklist, backend contracts, and done criteria.

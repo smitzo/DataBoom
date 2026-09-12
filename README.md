@@ -8,7 +8,7 @@ DataBoom is a synthetic data and masking platform for teams that need realistic,
 | --- | --- | --- |
 | `Table-Boom` | Relational/table generation with key integrity and CSV/JSON/SQL exports. | Active |
 | `Docu-Boom` | NoSQL document generation with nested JSON/NDJSON artifacts. | Active in Phase 2 |
-| `Graph-Boom` | Node and edge generation for graph datasets. | Planned for Phase 3 |
+| `Graph-Boom` | Node and edge generation for graph datasets. | Active in Phase 3 |
 | `Masker-Boom` | Redaction, masking, tokenization, and integrity-preserving privacy workflows. | Planned for Phase 4 |
 
 See [DataBoom Product Family](docs/product/product-family.md) for the canonical product taxonomy.
@@ -49,7 +49,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 
 - Phase 1: Table-Boom relational foundation for PostgreSQL schema-driven generation.
 - Phase 2: Table-Boom scale, FastAPI workflows, source profiling, refreshed-source generation, and Docu-Boom NoSQL document support. `complete for local full-stack MVP`
-- Phase 3: LLM-assisted planning, Graph-Boom support, and richer operator-facing review flows.
+- Phase 3: Graph-Boom support, graph previews/exports, optional LLM-assisted planning, and richer operator-facing review flows. `active`
 - Phase 4: Masker-Boom policies, redaction, masking, hashing, tokenization, audit logs, and security hardening.
 - Phase 5: production deployment hardening, CI, observability, retention, and adapter extensibility.
 
