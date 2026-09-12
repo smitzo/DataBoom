@@ -36,6 +36,7 @@ import type {
   ArtifactList,
   DocumentPreview,
   GenerationRun,
+  GraphPreview,
   Product,
   Subscription,
   TablePreview,
@@ -46,6 +47,7 @@ import {
   apiUrl,
   createAsyncProductRun,
   getDocumentPreview,
+  getGraphPreview,
   getProducts,
   getRun,
   getRunArtifacts,
@@ -83,6 +85,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [artifacts, setArtifacts] = useState<ArtifactList | null>(null);
   const [previews, setPreviews] = useState<PreviewMap>({});
   const [documentPreviews, setDocumentPreviews] = useState<DocumentPreviewMap>({});
+  const [graphPreview, setGraphPreview] = useState<GraphPreview | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedConnectionId, setSelectedConnectionId] = useState<string>("");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -118,6 +121,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       setArtifacts(null);
       setPreviews({});
       setDocumentPreviews({});
+      setGraphPreview(null);
       return;
     }
     const activeRun = run;
@@ -130,25 +134,29 @@ export function DataWorkspace({ session }: { session: Session }) {
 
     let cancelled = false;
     async function loadRunSurface() {
-      const [nextArtifacts, nextTablePreviews, nextDocumentPreviews] = await Promise.all([
-        getRunArtifacts(activeRun.run_id).catch(() => null),
-        activeRun.kind === "relational"
-          ? Promise.all(
-              activeRun.tables
-                .filter((table) => table.csv_path)
-                .map((table) => loadTablePreviewSafe(activeRun.run_id, table.table_name)),
-            )
-          : Promise.resolve([]),
-        activeRun.kind === "document"
-          ? Promise.all(
-              activeRun.collections
-                .filter((collection) => collection.json_path)
-                .map((collection) =>
-                  loadDocumentPreviewSafe(activeRun.run_id, collection.collection_name),
-                ),
-            )
-          : Promise.resolve([]),
-      ]);
+      const [nextArtifacts, nextTablePreviews, nextDocumentPreviews, nextGraphPreview] =
+        await Promise.all([
+          getRunArtifacts(activeRun.run_id).catch(() => null),
+          activeRun.kind === "relational"
+            ? Promise.all(
+                activeRun.tables
+                  .filter((table) => table.csv_path)
+                  .map((table) => loadTablePreviewSafe(activeRun.run_id, table.table_name)),
+              )
+            : Promise.resolve([]),
+          activeRun.kind === "document"
+            ? Promise.all(
+                activeRun.collections
+                  .filter((collection) => collection.json_path)
+                  .map((collection) =>
+                    loadDocumentPreviewSafe(activeRun.run_id, collection.collection_name),
+                  ),
+              )
+            : Promise.resolve([]),
+          activeRun.kind === "graph"
+            ? loadGraphPreviewSafe(activeRun.run_id)
+            : Promise.resolve(null),
+        ]);
 
       if (cancelled) {
         return;
@@ -169,6 +177,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             .map((preview) => [preview.collection_name, preview]),
         ),
       );
+      setGraphPreview(nextGraphPreview);
     }
 
     loadRunSurface();
@@ -246,7 +255,10 @@ export function DataWorkspace({ session }: { session: Session }) {
   const resourceNames = selectedConnection
     ? connectionResources(selectedConnection, activeKind)
     : productResources(selectedProduct);
-  const visibleRows = selectedTablePreview?.rows.length ?? selectedDocumentPreview?.documents.length ?? 0;
+  const visibleRows =
+    selectedTablePreview?.rows.length ??
+    selectedDocumentPreview?.documents.length ??
+    (graphPreview ? graphPreview.nodes.length + graphPreview.edges.length : 0);
 
   useEffect(() => {
     if (!selectedProduct || connectionOptions.length === 0) {
@@ -661,6 +673,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             <DataSurface
               activeKind={activeKind}
               documentPreview={selectedDocumentPreview}
+              graphPreview={graphPreview}
               isGenerating={selectedRun?.status === "running" || status === "generating"}
               product={selectedProduct}
               selectedResource={selectedResource}
@@ -875,9 +888,11 @@ function WorkspaceSidebar({
   onSourceSchemaNamesChange: (value: string) => void;
   onTestConnection: () => void;
 }) {
-  const ResourceIcon = activeKind === "document" ? FileJson : Table2;
+  const ResourceIcon =
+    activeKind === "document" ? FileJson : activeKind === "graph" ? Layers3 : Table2;
   const ProductIcon = product ? productIcon(product.kind) : Database;
-  const resourceLabel = activeKind === "document" ? "Collections" : "Tables";
+  const resourceLabel =
+    activeKind === "document" ? "Collections" : activeKind === "graph" ? "Graph resources" : "Tables";
 
   if (collapsed) {
     return (
@@ -1579,6 +1594,7 @@ function DownloadFormatMenu({
 function DataSurface({
   activeKind,
   documentPreview,
+  graphPreview,
   isGenerating,
   product,
   selectedResource,
@@ -1587,6 +1603,7 @@ function DataSurface({
 }: {
   activeKind: Product["kind"];
   documentPreview: DocumentPreview | null;
+  graphPreview: GraphPreview | null;
   isGenerating: boolean;
   product: Product | null;
   selectedResource: string | null;
@@ -1616,7 +1633,11 @@ function DataSurface({
     );
   }
 
-  if (activeKind === "graph" || activeKind === "masking") {
+  if (activeKind === "graph") {
+    return <GraphPreviewPanel isGenerating={isGenerating} preview={graphPreview} />;
+  }
+
+  if (activeKind === "masking") {
     return <PlannedSurface product={product} />;
   }
 
@@ -1645,6 +1666,67 @@ function DataSurface({
       preview={tablePreview}
       selectedResource={selectedResource}
     />
+  );
+}
+
+function GraphPreviewPanel({
+  isGenerating,
+  preview,
+}: {
+  isGenerating: boolean;
+  preview: GraphPreview | null;
+}) {
+  const nodes = preview?.nodes ?? [];
+  const edges = preview?.edges ?? [];
+
+  if (!preview) {
+    return (
+      <div className="grid h-full place-items-center px-6 text-center">
+        <div>
+          <Layers3 className="mx-auto h-10 w-10 text-zinc-600" />
+          <p className="mt-4 text-lg font-semibold text-white">Graph preview</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {isGenerating
+              ? "Waiting for generated nodes and relationships."
+              : "Generate a Graph-Boom run to preview nodes and relationships."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid min-h-full gap-4 p-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <GraphRecordList records={nodes} title={`Nodes · ${nodes.length}`} />
+      <GraphRecordList records={edges} title={`Edges · ${edges.length}`} />
+    </div>
+  );
+}
+
+function GraphRecordList({
+  records,
+  title,
+}: {
+  records: Record<string, unknown>[];
+  title: string;
+}) {
+  return (
+    <section className="rounded-xl border border-cyan-300/15 bg-[#0c1426] p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        <Layers3 className="h-4 w-4 text-cyan-300" />
+      </div>
+      <div className="workspace-scrollbar-dark max-h-[30rem] space-y-3 overflow-auto pr-1">
+        {records.map((record, index) => (
+          <pre
+            className="overflow-auto rounded-lg border border-white/10 bg-black/25 p-3 text-xs leading-5 text-cyan-50"
+            key={`${String(record.id ?? "record")}-${index}`}
+          >
+            {JSON.stringify(record, null, 2)}
+          </pre>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -2167,7 +2249,12 @@ function SourceMetadataCard({
   product: Product | null;
   profile: WorkspaceSourceProfile | null;
 }) {
-  const resourceLabel = product?.kind === "document" ? "Collections" : "Tables";
+  const resourceLabel =
+    product?.kind === "document"
+      ? "Collections"
+      : product?.kind === "graph"
+        ? "Graph resources"
+        : "Tables";
   const schemaLabels = connection ? sourceSchemaLabels(connection) : [];
 
   return (
@@ -2236,7 +2323,9 @@ function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRo
         <Metric label="Rows" value={String(run.total_rows)} />
         <Metric label="Generated" value={`${run.generated_rows}/${run.total_rows}`} />
         <Metric
-          label={run.kind === "document" ? "Collections" : "Tables"}
+          label={
+            run.kind === "document" ? "Collections" : run.kind === "graph" ? "Resources" : "Tables"
+          }
           value={String(run.table_count)}
         />
         <Metric label="Preview" value={String(visibleRows)} />
@@ -2376,6 +2465,14 @@ async function loadTablePreviewSafe(runId: string, tableName: string) {
 async function loadDocumentPreviewSafe(runId: string, collectionName: string) {
   try {
     return await getDocumentPreview(runId, collectionName, 20);
+  } catch {
+    return null;
+  }
+}
+
+async function loadGraphPreviewSafe(runId: string) {
+  try {
+    return await getGraphPreview(runId, 20, 20);
   } catch {
     return null;
   }
@@ -2551,7 +2648,30 @@ function buildAgentSteps(
   const profileReady = product ? product.kind !== "relational" || Boolean(profile) : false;
   const resourceCount =
     connection?.resources.length || (product ? productResources(product).length : 0);
-  const resourceLabel = product?.kind === "document" ? "collections" : "resources";
+  const resourceLabel =
+    product?.kind === "document"
+      ? "collections"
+      : product?.kind === "graph"
+        ? "graph resources"
+        : "resources";
+  const contractLabel =
+    product?.kind === "document"
+      ? "Load document contract"
+      : product?.kind === "graph"
+        ? "Load graph contract"
+        : "Refresh schema contract";
+  const resolveLabel =
+    product?.kind === "document"
+      ? "Resolve document shape"
+      : product?.kind === "graph"
+        ? "Resolve graph endpoints"
+        : "Profile and resolve keys";
+  const generateLabel =
+    product?.kind === "document"
+      ? "Generate documents"
+      : product?.kind === "graph"
+        ? "Generate nodes and edges"
+        : "Generate rows";
 
   return [
     {
@@ -2565,7 +2685,7 @@ function buildAgentSteps(
       state: sourceReady ? "done" : "waiting",
     },
     {
-      label: product?.kind === "document" ? "Load document contract" : "Refresh schema contract",
+      label: contractLabel,
       detail:
         product && connection?.refreshed_at
           ? `${resourceCount} ${resourceLabel}, refreshed ${formatDateTime(
@@ -2577,17 +2697,19 @@ function buildAgentSteps(
       state: schemaReady ? "done" : running ? "active" : "waiting",
     },
     {
-      label: product?.kind === "document" ? "Resolve document shape" : "Profile and resolve keys",
+      label: resolveLabel,
       detail:
         profile
           ? `${formatNumber(profile.total_rows)} source rows profiled`
           : product?.kind === "document"
             ? "Object IDs, nested arrays, and collection references"
-            : "Optional profiling plus primary and foreign keys",
+            : product?.kind === "graph"
+              ? "Stable node IDs, edge types, and valid source/target labels"
+              : "Optional profiling plus primary and foreign keys",
       state: profileReady || run ? "done" : running ? "active" : "waiting",
     },
     {
-      label: product?.kind === "document" ? "Generate documents" : "Generate rows",
+      label: generateLabel,
       detail: run
         ? `${formatNumber(run.generated_rows)} / ${formatNumber(run.total_rows)} records`
         : "Local artifact stream",
@@ -2708,6 +2830,9 @@ function runMatchesProduct(run: GenerationRun, product: Product) {
   if (run.kind !== product.kind) {
     return false;
   }
+  if (run.kind === "graph") {
+    return Boolean(run.graph);
+  }
   const runResourceNames = new Set(runResources(run).map(shortTableName));
   return productResources(product).some((resource) => runResourceNames.has(resource));
 }
@@ -2715,6 +2840,9 @@ function runMatchesProduct(run: GenerationRun, product: Product) {
 function runResources(run: GenerationRun) {
   if (run.kind === "document") {
     return run.collections.map((collection) => collection.collection_name);
+  }
+  if (run.kind === "graph" && run.graph) {
+    return ["nodes", "edges"];
   }
   return run.tables.map((table) => table.table_name);
 }
@@ -2725,6 +2853,12 @@ function runResourcesWithCounts(run: GenerationRun) {
       name: collection.collection_name,
       rowCount: collection.row_count,
     }));
+  }
+  if (run.kind === "graph" && run.graph) {
+    return [
+      { name: "nodes", rowCount: run.graph.node_count },
+      { name: "edges", rowCount: run.graph.edge_count },
+    ];
   }
   return run.tables.map((table) => ({ name: table.table_name, rowCount: table.row_count }));
 }
@@ -2970,6 +3104,9 @@ function productResources(product: Product | null) {
   }
   if (product.kind === "relational") {
     return product.tables;
+  }
+  if (product.kind === "graph") {
+    return Object.keys(product.default_row_counts);
   }
   return product.use_cases;
 }

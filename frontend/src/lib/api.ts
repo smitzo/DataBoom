@@ -174,6 +174,7 @@ export type GenerationRun = {
   operation_timings: OperationTiming[];
   tables: GeneratedTable[];
   collections: GeneratedCollection[];
+  graph: GeneratedGraph | null;
   validation: {
     passed: boolean;
     checked_tables: string[];
@@ -205,6 +206,14 @@ export type GeneratedCollection = {
   ndjson_path: string | null;
 };
 
+export type GeneratedGraph = {
+  node_count: number;
+  edge_count: number;
+  graph_json_path: string | null;
+  nodes_csv_path: string | null;
+  edges_csv_path: string | null;
+};
+
 export type RunArtifact = {
   name: string;
   relative_path: string;
@@ -230,6 +239,12 @@ export type DocumentPreview = {
   run_id: string;
   collection_name: string;
   documents: Record<string, unknown>[];
+};
+
+export type GraphPreview = {
+  run_id: string;
+  nodes: Record<string, unknown>[];
+  edges: Record<string, unknown>[];
 };
 
 let cachedApiBaseUrl: string | null = null;
@@ -438,6 +453,14 @@ export async function getTablePreview(runId: string, tableName: string, limit = 
 export async function getDocumentPreview(runId: string, collectionName: string, limit = 10) {
   const params = new URLSearchParams({ collection: collectionName, limit: String(limit) });
   return apiRequest<DocumentPreview>(`/runs/${runId}/document-preview?${params.toString()}`);
+}
+
+export async function getGraphPreview(runId: string, nodeLimit = 10, edgeLimit = 10) {
+  const params = new URLSearchParams({
+    node_limit: String(nodeLimit),
+    edge_limit: String(edgeLimit),
+  });
+  return apiRequest<GraphPreview>(`/runs/${runId}/graph-preview?${params.toString()}`);
 }
 
 export async function apiUrl(path: string) {
