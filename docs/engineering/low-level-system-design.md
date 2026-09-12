@@ -17,6 +17,7 @@ flowchart TD
     Runs --> IngestDDL[databoom.ingest.ddl]
     Runs --> Planning[databoom.generation.plan]
     Runs --> Document[databoom.document.generator]
+    Runs --> GraphBoom[databoom.graph.generator]
 
     IngestDDL --> Schema[databoom.schema.models]
     IngestPostgres --> Schema
@@ -29,6 +30,7 @@ flowchart TD
     Values --> Domains[databoom.generation.domains]
 
     Rows --> Export[databoom.export.local]
+    GraphBoom --> Seed
     Export --> Validation[databoom.validation.report]
     Profiling --> State
     State --> Runs
@@ -47,6 +49,8 @@ flowchart TD
 | `ExportManifest` | `databoom.export.local` | Lists generated artifact paths and row counts. |
 | `ValidationReport` | `databoom.validation.report` | Machine-readable integrity and artifact validation result. |
 | `DocumentCollectionSpec` | `databoom.document.models` | Declarative Docu-Boom collection and field definition. |
+| `GraphNodeSpec` / `GraphEdgeSpec` | `databoom.graph.models` | Declarative Graph-Boom node labels, edge types, endpoint labels, and properties. |
+| `GraphGenerator` | `databoom.graph.generator` | Streams graph JSON and CSV artifacts while preserving valid edge endpoints. |
 | `SourceProfile` | `databoom.profiling.postgres` | Cached source statistics used to shape future generation. |
 | `StateStore` | `databoom.api.state` | Persistence boundary for sessions, subscriptions, sources, profiles, and runs. |
 
@@ -182,6 +186,34 @@ sequenceDiagram
 
 Docu-Boom is separate from Table-Boom because document data has nested objects, arrays, and object-id references. It should not inherit table-specific assumptions like SQL primary keys or foreign-key constraints.
 
+## Graph-Boom Execution
+
+```mermaid
+sequenceDiagram
+    participant API as API Product Run
+    participant Spec as GraphNodeSpec/GraphEdgeSpec
+    participant Generator as GraphGenerator
+    participant Seed as SeedManager
+    participant Disk as Local Disk
+    participant Validate as Graph Validation
+
+    API->>Spec: resolve catalog or source graph specs
+    API->>Generator: node specs, edge specs, counts, seed, output dir
+    Generator->>Seed: deterministic streams per label/type/property
+    Generator->>Generator: generate stable node IDs by label
+    Generator->>Generator: choose valid source and target node IDs for edges
+    Generator->>Disk: write graph.json
+    Generator->>Disk: write nodes.csv and edges.csv
+    Generator->>Disk: write manifest.json
+    Validate->>Disk: read graph artifacts
+    Validate-->>API: duplicate-ID, dangling-edge, and count validation
+```
+
+Graph-Boom is separate from Table-Boom because graph correctness is endpoint
+validity, label/type consistency, and edge cardinality. It reuses seeds,
+artifact directories, API run metadata, async progress, and artifact downloads,
+but owns its own node/edge contracts and validation.
+
 ## API Async Run Flow
 
 ```mermaid
@@ -242,11 +274,12 @@ State and artifacts are intentionally separate:
 | Output | Writer | Current Use |
 | --- | --- | --- |
 | CSV | `_CsvTableWriter` | Main relational validation and table preview format. |
-| JSON | `_JsonTableWriter` and document writer | Relational JSON exports and document collection arrays. |
+| JSON | `_JsonTableWriter`, document writer, and graph writer | Relational JSON exports, document collection arrays, and graph JSON. |
 | SQL | `_SqlTableWriter` | Portable local replay inserts. |
 | NDJSON | `DocumentGenerator` | Streaming-friendly document preview/export format. |
-| Manifest | `ArtifactExporter` and `DocumentGenerator` | Artifact discovery by API/frontend/CLI. |
-| Validation | `validate_export` and document summary | Integrity status and machine-readable issues. |
+| Graph CSV | `GraphGenerator` | Node and edge CSV files for graph import and preview fallback. |
+| Manifest | `ArtifactExporter`, `DocumentGenerator`, and `GraphGenerator` | Artifact discovery by API/frontend/CLI. |
+| Validation | `validate_export`, document summary, and graph validation | Integrity status and machine-readable issues. |
 
 ## Error Boundaries
 
@@ -277,9 +310,9 @@ State and artifacts are intentionally separate:
 4. Add unit tests for `ValueGenerator`.
 5. Add integration tests proving planner-to-row-generation flow.
 
-### Add Graph-Boom
+### Extend Graph-Boom
 
-Graph-Boom should introduce graph-specific contracts instead of forcing graphs through table plans:
+Graph-Boom introduces graph-specific contracts instead of forcing graphs through table plans:
 
 - node specs,
 - edge specs,
@@ -288,7 +321,10 @@ Graph-Boom should introduce graph-specific contracts instead of forcing graphs t
 - graph-specific artifact writers,
 - graph-specific validation.
 
-Shared reusable pieces should include seed management, state storage, API run metadata, artifact-root conventions, and progress reporting.
+Shared reusable pieces include seed management, state storage, API run metadata,
+artifact-root conventions, artifact downloads, and progress reporting. Next graph
+extensions should add richer endpoint rules, graph-source profiling, Cypher or
+database-specific exports, and frontend graph visualization.
 
 ### Add Masker-Boom
 

@@ -2260,3 +2260,87 @@ Why normalize `postgres://` and `postgresql://` URLs to `postgresql+psycopg://`?
 Many hosted platforms display ordinary Postgres URLs. SQLAlchemy uses the URL scheme to choose the database driver. DataBoom installs psycopg, so the safest explicit scheme is `postgresql+psycopg://`.
 
 The settings layer now normalizes hosted Postgres URLs automatically. That keeps deployment simpler because the operator can paste a normal hosted Postgres URL, and the backend still uses the driver it actually has installed.
+
+## Decision: make Graph-Boom a separate node and edge engine
+
+### Question
+
+Why not represent graph data as two ordinary relational tables named `nodes` and `edges` and reuse Table-Boom?
+
+### Answer
+
+Because graph correctness is not the same as relational correctness.
+
+Table-Boom cares about tables, columns, primary keys, foreign keys, dependency order, and SQL-shaped exports. Graph-Boom cares about node labels, edge types, source and target endpoint labels, node properties, edge properties, duplicate node IDs, dangling edge references, and graph-shaped exports.
+
+Reusing the relational engine directly would make the graph product look simpler at first, but it would hide graph rules behind fake tables. That becomes messy when we add graph-specific features like edge fanout, community structure, fraud-ring patterns, knowledge-graph relationship types, Cypher exports, or graph visual previews.
+
+The better design is:
+
+1. keep shared platform concerns reusable,
+2. give Graph-Boom its own contracts,
+3. keep output and validation graph-aware.
+
+Shared concerns include `SeedManager`, artifact directories, run metadata, async progress, API artifact downloads, and tests. Graph-specific concerns live in `databoom.graph`.
+
+### Question
+
+How does the Graph-Boom engine generate data from nothing?
+
+### Answer
+
+It does not create meaning magically. It starts from a graph specification:
+
+- node labels such as `Customer`, `Account`, and `Device`,
+- edge types such as `OWNS`, `USES_DEVICE`, and `TRANSFERRED_TO`,
+- per-label and per-edge counts,
+- property specs such as `segment`, `risk_score`, `amount`, and `timestamp`,
+- a deterministic seed.
+
+The generator first creates stable node IDs for each label. For example:
+
+```text
+customer-00000001
+account-00000001
+device-00000001
+```
+
+Then it creates edges by selecting valid source and target IDs from the already-generated node IDs for the edge's configured endpoint labels. This means an `OWNS` edge can point from a generated `Customer` ID to a generated `Account` ID without dangling references.
+
+Property values are deterministic pseudo-random values shaped by the property kind. For example, `risk_score` is a bounded decimal, `amount` is a money-like number, `timestamp` is sampled from a time range, and `segment` is selected from a controlled category list.
+
+### Question
+
+Why is deterministic pseudo-random generation acceptable here?
+
+### Answer
+
+For Phase 3, the goal is structurally correct graph data, not perfect statistical similarity to a production graph.
+
+Deterministic pseudo-random generation gives us:
+
+- reproducible test runs,
+- stable demos,
+- easy debugging,
+- fast local generation,
+- no dependency on sensitive production rows,
+- no dependency on LLM credits.
+
+Later graph quality work can add source profiling, degree distributions, community patterns, anomaly patterns, and graph-specific quality metrics. The current design leaves room for that because specs and validation are separate from the low-level value generator.
+
+### Question
+
+How does Graph-Boom validate output?
+
+### Answer
+
+The first validator reads the generated graph artifacts and checks:
+
+- every node has an ID,
+- node IDs are unique,
+- every edge source exists as a node ID,
+- every edge target exists as a node ID,
+- manifest node count matches the artifact,
+- manifest edge count matches the artifact.
+
+This catches the most dangerous graph data failure: a relationship pointing to a missing node. It also makes artifact validation independent from the generator's in-memory state, which is the same production-oriented principle used by Table-Boom CSV validation.

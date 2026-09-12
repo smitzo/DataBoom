@@ -13,7 +13,7 @@ DataBoom is a synthetic data and masking platform for teams that need realistic,
 
 See [DataBoom Product Family](docs/product/product-family.md) for the canonical product taxonomy.
 
-The current implementation includes Table-Boom relational generation and the Phase 2 Docu-Boom foundation. Banking, healthcare, ecommerce, SaaS, and similar domains are demo use cases or profiles, not separate products.
+The current implementation includes Table-Boom relational generation, Docu-Boom document generation, and the first Phase 3 Graph-Boom backend/API slice. Banking, healthcare, ecommerce, SaaS, and similar domains are demo use cases or profiles, not separate products.
 
 ## Current Capabilities
 
@@ -31,6 +31,7 @@ The current implementation includes Table-Boom relational generation and the Pha
 - API artifact listing, downloads, and optional API-key protection.
 - Email/password registration and login with server-side password hashes.
 - Product catalog, subscription, product-run, table-preview, and document-preview API endpoints.
+- Graph-Boom node/edge generation with graph JSON, nodes CSV, edges CSV, graph validation, and graph-preview API support.
 - SQL-backed users, sessions, subscriptions, workspace sources, source profiles, and run metadata.
 - Optional LLM provider policy with platform-key, user-key, and deterministic fallback modes.
 - DataBoom workspace with product navigation, live top-20 relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
@@ -298,6 +299,7 @@ docker compose --profile tools run --rm app
 - `src/databoom/profiling`: source connection testing and PostgreSQL table profiling.
 - `src/databoom/schema`: normalized schema models and relationship graph code.
 - `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
+- `src/databoom/graph`: Graph-Boom node/edge contracts, deterministic graph generator, graph artifacts, and graph validation.
 - `src/databoom/export`: local artifact writers.
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.

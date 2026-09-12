@@ -30,7 +30,7 @@ The backend and frontend should branch on product `kind`, not product name:
 | --- | --- | --- |
 | `relational` | `Table-Boom` | Table navigator, spreadsheet grid, CSV/JSON/SQL artifacts. |
 | `document` | `Docu-Boom` | Collection navigator, MongoDB-like JSON document preview, JSON/NDJSON artifacts. |
-| `graph` | `Graph-Boom` | Planned node/edge preview and graph export surface. |
+| `graph` | `Graph-Boom` | Node/edge generation, graph JSON/CSV exports, validation, and preview API. |
 | `masking` | `Masker-Boom` | Planned policy, redaction, classification, and audit surface. |
 
 ## Current Scope

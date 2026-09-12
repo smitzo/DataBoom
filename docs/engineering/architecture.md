@@ -41,7 +41,7 @@ flowchart TD
 
     Kind -->|relational| TableBoom[Table-Boom]
     Kind -->|document| DocuBoom[Docu-Boom]
-    Kind -->|graph| GraphBoom[Graph-Boom planned]
+    Kind -->|graph| GraphBoom[Graph-Boom]
     Kind -->|masking| MaskerBoom[Masker-Boom planned]
 
     TableBoom --> TableContracts[DDL schema model relationship graph generation plan]
@@ -74,10 +74,16 @@ flowchart LR
         DocumentSpec[Document collection specs] --> DocumentPlan[Document generation plan]
     end
 
+    subgraph GraphPath[Graph path]
+        GraphSpec[Graph node and edge specs] --> GraphPlan[Graph generation plan]
+    end
+
     Planner --> RelationalPlan
     Planner --> DocumentPlan
+    Planner --> GraphPlan
     RelationalPlan --> SeedManager[Deterministic seed manager]
     DocumentPlan --> SeedManager
+    GraphPlan --> SeedManager
     SeedManager --> Runtime[Run context]
     Runtime --> Generator[Generator]
     Generator --> Exporter[Artifact exporter]
@@ -175,7 +181,8 @@ flowchart TD
     Dashboard --> DataWorkspace[DataWorkspace component]
     DataWorkspace --> RelationalSurface[Table grid for relational products]
     DataWorkspace --> DocumentSurface[JSON cards for document products]
-    DataWorkspace --> PlannedSurface[Planned state for graph/masking]
+    DataWorkspace --> GraphSurface[Graph preview surface Phase 3]
+    DataWorkspace --> PlannedSurface[Planned state for masking]
 ```
 
 The public pages should contain core product marketing and knowledge. The authenticated routes should contain operational workflow: subscribe, generate, preview, download, and inspect runs.
@@ -228,6 +235,7 @@ The Phase 2 local API exposes a lightweight asynchronous run lifecycle:
 - `GET /runs/{run_id}` returns status, generated rows, current resource, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.
 - Table previews read flushed CSV rows while generation is still running.
 - Document previews read completed JSON arrays or partially flushed NDJSON lines.
+- Graph previews read generated graph JSON or node/edge CSV files after a graph run.
 - Completed relational runs report timings for schema parsing, plan building, export, validation, and total runtime.
 
 The current `AsyncRunManager` is intentionally in-process. It is enough for local MVP workflows, demos, and frontend progress polling. A production worker queue can replace this boundary later without changing the frontend run contract.
@@ -250,7 +258,7 @@ These operations are separate on purpose. A quick schema refresh should not alwa
 3. Add an internal spec/model for the new data surface.
 4. Add a generator service that returns the shared run response shape.
 5. Add validation and artifact export logic for that surface.
-6. Add preview endpoints when the data shape needs a custom preview.
+6. Add preview endpoints when the data shape needs a custom preview, such as document or graph runs.
 7. Add a frontend surface component selected by `product.kind`.
 8. Add focused tests for catalog, generation, preview, artifact, and planned-state behavior.
 

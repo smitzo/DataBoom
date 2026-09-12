@@ -137,7 +137,7 @@ This keeps route behavior independent from the storage implementation. It also l
 - `schema_model`: stores normalized tables, columns, constraints, and relationships.
 - `relationship_solver`: computes dependency order and foreign-key mappings.
 - `document_model`: Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
-- `graph_model`: future Phase 3 contract for node labels, edge types, properties, and graph cardinality.
+- `graph_model`: Phase 3 contract for node labels, edge types, properties, endpoint labels, and graph validation.
 - `prompt_planner`: converts prompt intent into a structured generation plan.
 - `llm_provider_policy`: resolves user key, platform key, or deterministic fallback for future LLM-assisted planning without making the engine depend on LLM availability.
 - `domain_profiles`: provides optional semantic value generation for use cases such as financial and healthcare demos.
@@ -370,6 +370,14 @@ Recommended commits:
 
 Goal: add LLM-assisted planning behind a safe, replaceable interface, add Graph-Boom data generation, and create richer operator-facing experiences.
 
+Current status: Phase 3 is active. The first backend slice is implemented:
+Graph-Boom has graph-specific node/edge contracts, deterministic generation,
+graph JSON plus node/edge CSV artifacts, validation for duplicate node IDs,
+dangling edge endpoints, and count mismatches, product-run API support, async
+run placeholders, and a graph-preview endpoint. Frontend graph visualization,
+graph plan review, richer graph cardinality controls, and optional LLM-assisted
+planning remain Phase 3 follow-up work.
+
 Technical objectives:
 
 - Add prompt pack loading.
@@ -381,22 +389,23 @@ Technical objectives:
 - Show run status, artifacts, validation errors, and plan review.
 - Keep local deterministic planner as fallback.
 - Add a graph data model for nodes, edges, labels, properties, and cardinality.
-- Generate graph node and edge artifacts.
+- Generate graph node and edge artifacts. `implemented: first backend/API slice`
 - Validate edge references, node counts, edge counts, and property shapes.
-- Add graph preview and graph plan review concepts to the frontend.
+- Add graph preview API support. `implemented`
+- Add graph visualization and graph plan review concepts to the frontend.
 
 Recommended commits:
 
-1. `backend: add planner interface abstraction`
-2. `backend: load versioned prompt packs`
-3. `backend: validate llm planner output schema`
-4. `optimization: add prompt cache key generation`
-5. `test: add golden planner prompt cases`
-6. `api: expose dry run plan review`
-7. `backend: add graph data model`
-8. `backend: generate graph node and edge artifacts`
-9. `backend: validate graph data artifacts`
-10. `frontend: build generation run dashboard`
+1. `docs: start phase 3 graph boom`
+2. `backend: add graph boom generator`
+3. `api: expose graph boom runs`
+4. `frontend: add graph workspace preview`
+5. `backend: add planner interface abstraction`
+6. `backend: load versioned prompt packs`
+7. `backend: validate llm planner output schema`
+8. `optimization: add prompt cache key generation`
+9. `test: add golden planner prompt cases`
+10. `api: expose dry run plan review`
 11. `frontend: add plan and graph review views`
 12. `docs: document prompt pack and graph model maintenance`
 
