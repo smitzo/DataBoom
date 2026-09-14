@@ -1,6 +1,8 @@
-# Technical Design and Roadmap
+# Engineering Roadmap
 
-For system-level diagrams, API flow, frontend route architecture, deployment topology, and engine extensibility, see [Architecture](architecture.md). For backend module ownership, execution sequences, and artifact-processing details, see [Low-Level System Design](low-level-system-design.md).
+This file owns delivery status, phase objectives, and commit order. For system
+boundaries and deployment topology, see [High-Level Design](high-level-design.md).
+For Python modules and execution sequences, see [Low-Level Design](low-level-design.md).
 
 ## Stack
 
@@ -15,139 +17,22 @@ For system-level diagrams, API flow, frontend route architecture, deployment top
 - Synthetic values: Faker plus custom generators.
 - Tests: pytest.
 - Deployment: Docker, Docker Compose, Render API, Supabase Postgres, and Vercel frontend.
-- Artifact storage for Phase 1 and Phase 2: local disk.
+- Artifact storage through Phase 3: local disk.
 
-## Product Architecture
+## Phase Status
 
-```mermaid
-flowchart TD
-    DataBoom[DataBoom Platform]
-    DataBoom --> TableBoom[Table-Boom Relational]
-    DataBoom --> DocuBoom[Docu-Boom Documents]
-    DataBoom --> GraphBoom[Graph-Boom Graphs]
-    DataBoom --> MaskerBoom[Masker-Boom Masking]
-    TableBoom --> UseCasesA[Financial Healthcare Ecommerce SaaS use cases]
-    DocuBoom --> UseCasesB[Catalog Orders Events User Profiles]
-    GraphBoom --> GraphUseCases[Nodes Edges Properties]
-    MaskerBoom --> MaskingUseCases[Redaction Tokenization Audit]
-```
+| Phase | Outcome | Status |
+| --- | --- | --- |
+| 1 | Table-Boom relational foundation and 100k benchmark. | Complete |
+| 2 | 500k scale baseline, API, profiling, async runs, and Docu-Boom. | Complete |
+| 3 | Graph-Boom, assisted planning, prompt telemetry, and plan review. | Complete |
+| 4 | Masker-Boom privacy policies and security hardening. | Next |
+| 5 | Production operations, durable artifacts, workers, CI, and releases. | Planned |
 
-Table-Boom, Docu-Boom, and Graph-Boom create synthetic data for different data surfaces. Masker-Boom transforms sensitive existing data while preserving useful integrity. The codebase keeps shared contracts in neutral package names such as `databoom.schema`, `databoom.generation`, `databoom.document`, and future `databoom.masking` modules.
-
-## High-Level Design
-
-```mermaid
-flowchart LR
-    User[User or CI] --> CLI[Typer CLI]
-    User --> API[FastAPI API]
-    CLI --> Planner[Generation Planner]
-    API --> Planner
-    DDL[PostgreSQL DDL] --> SchemaIngestor[Schema Ingestor]
-    SourceDB[(PostgreSQL Source DB)] --> SchemaIngestor
-    SourceDB --> Profiler[Profiler Phase 2]
-    NoSQLSpec[NoSQL Document Spec Phase 2] --> DocumentModel[Document Model]
-    GraphSpec[Graph Model Phase 3] --> GraphModel[Graph Model]
-    SchemaIngestor --> SchemaModel[Normalized Schema Model]
-    Profiler --> SchemaModel
-    SchemaModel --> Planner
-    DocumentModel --> Planner
-    GraphModel --> Planner
-    Planner --> Solver[Relationship Solver]
-    Solver --> Generator[Data Generator]
-    Generator --> Validator[Validator]
-    Validator --> Exporter[Exporter]
-    Exporter --> Artifacts[(Local Artifacts)]
-    Validator --> Report[Validation Report]
-```
-
-## Low-Level Design
-
-```mermaid
-flowchart TD
-    subgraph Schema
-        TableModel[TableModel]
-        ColumnModel[ColumnModel]
-        ConstraintModel[ConstraintModel]
-        RelationshipGraph[RelationshipGraph]
-    end
-
-    subgraph Planning
-        GenerationRequest[GenerationRequest]
-        GenerationPlan[GenerationPlan]
-        TablePlan[TablePlan]
-        ColumnPlan[ColumnPlan]
-    end
-
-    subgraph Runtime
-        RunContext[RunContext]
-        SeedManager[SeedManager]
-        RowFactory[RowFactory]
-        ForeignKeyRegistry[ForeignKeyRegistry]
-        ChunkWriter[ChunkWriter]
-    end
-
-    TableModel --> RelationshipGraph
-    ColumnModel --> TableModel
-    ConstraintModel --> TableModel
-    GenerationRequest --> GenerationPlan
-    RelationshipGraph --> GenerationPlan
-    GenerationPlan --> TablePlan
-    TablePlan --> ColumnPlan
-    GenerationPlan --> RunContext
-    RunContext --> SeedManager
-    RunContext --> RowFactory
-    RowFactory --> ForeignKeyRegistry
-    RowFactory --> ChunkWriter
-```
-
-## Generation Sequence
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as CLI/API
-    participant S as Schema Ingestor
-    participant P as Planner
-    participant G as Generator
-    participant V as Validator
-    participant E as Exporter
-
-    U->>C: submit schema, prompt, seed, output path
-    C->>S: parse schema
-    S-->>C: normalized schema model
-    C->>P: build generation plan
-    P-->>C: plan with dependency order
-    C->>G: execute plan
-    G->>E: stream table chunks
-    G-->>C: generation manifest
-    C->>V: validate generated artifacts
-    V-->>C: validation report
-    C-->>U: artifact paths and validation status
-```
-
-## API State Persistence
-
-The API uses a `StateStore` boundary for users, sessions, product subscriptions, workspace sources, source profiles, and generation-run metadata. Local tests can use the in-process memory store, while Dockerized, Render, and Supabase-backed API runs use the SQLAlchemy-backed store against PostgreSQL.
-
-This keeps route behavior independent from the storage implementation. It also lets the dashboard survive API container restarts without changing the frontend contract. Generated datasets remain on local disk in Phase 1 and Phase 2; the database stores the metadata needed to find, preview, and download those artifacts. Managed deployments should use durable artifact storage or a persistent disk before handling serious production workloads.
-
-## Core Components
-
-- `schema_ingestor`: parses DDL and reads PostgreSQL metadata.
-- `schema_model`: stores normalized tables, columns, constraints, and relationships.
-- `relationship_solver`: computes dependency order and foreign-key mappings.
-- `document_model`: Phase 2 contract for NoSQL collections, nested fields, arrays, identifiers, and references.
-- `graph_model`: Phase 3 contract for node labels, edge types, properties, endpoint labels, and graph validation.
-- `prompt_planner`: converts prompt intent into a structured generation plan.
-- `llm_provider_policy`: resolves user key, platform key, or deterministic fallback for future LLM-assisted planning without making the engine depend on LLM availability.
-- `domain_profiles`: provides optional semantic value generation for use cases such as financial and healthcare demos.
-- `masking_policy`: future Masker-Boom contract for classification, redaction, hashing, tokenization, and synthetic replacement.
-- `generator`: streams generated rows table by table.
-- `validator`: checks generated data against schema and plan.
-- `exporter`: writes CSV, SQL, manifests, and reports.
-- `api`: exposes auth, products, subscriptions, run creation, status, artifact, preview, and health endpoints.
-- `state_store`: persists users, sessions, subscriptions, sources, profiles, and generation-run metadata behind a replaceable API boundary.
-- `cli`: supports local and CI workflows.
+The current architecture, including planning and approval, is maintained in the
+[High-Level Design](high-level-design.md). Module and contract ownership is in the
+[Low-Level Design](low-level-design.md). Completed phase evidence is archived
+under `docs/operations/phase-history`.
 
 ## Phase 1: Table-Boom Relational Foundation
 
@@ -304,7 +189,7 @@ Why eleventh: performance goals must be measured, not assumed.
 
 Goal: harden Table-Boom for larger local runs, expose API/CLI workflows, and add Docu-Boom for the first NoSQL/document data generation path.
 
-Current status: Phase 2 is complete for the local full-stack product workflow. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are backend-owned, persisted in API state, testable from the dashboard, refreshable from live PostgreSQL introspection, and profileable for row counts, null rates, distinct counts, ranges, top values, and relationship fanout histograms. Refreshed relational sources store both resource-level metadata and a PostgreSQL DDL snapshot, so generation can run from the source contract instead of a hardcoded demo schema. Cached source profiles can now drive relationship fanout for Table-Boom runs. A 500k benchmark baseline exists, one-million-row simple and composite-key benchmark harnesses exist, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs execute asynchronously with row-level progress, ETA, throughput, and operation timings. Source-secret management, distributed worker orchestration, production retention, privacy controls, and deployment-grade observability move to later production phases instead of blocking Phase 2. The operational handoff is maintained in [Phase 2 Closeout](../operations/phase2-closeout.md).
+Current status: Phase 2 is complete for the local full-stack product workflow. Table-Boom and Docu-Boom can be selected through the catalog, subscribed to, generated through the API, previewed in the frontend, and downloaded from local artifacts. Workspace sources are backend-owned, persisted in API state, testable from the dashboard, refreshable from live PostgreSQL introspection, and profileable for row counts, null rates, distinct counts, ranges, top values, and relationship fanout histograms. Refreshed relational sources store both resource-level metadata and a PostgreSQL DDL snapshot, so generation can run from the source contract instead of a hardcoded demo schema. Cached source profiles can now drive relationship fanout for Table-Boom runs. A 500k benchmark baseline exists, one-million-row simple and composite-key benchmark harnesses exist, validation is chunk-aware for CSV artifacts, and dashboard-triggered product runs execute asynchronously with row-level progress, ETA, throughput, and operation timings. Source-secret management, distributed worker orchestration, production retention, privacy controls, and deployment-grade observability move to later production phases instead of blocking Phase 2. The operational handoff is maintained in [Phase 2 Closeout](../operations/phase-history/phase2-closeout.md).
 
 Technical objectives:
 
@@ -370,29 +255,26 @@ Recommended commits:
 
 Goal: add LLM-assisted planning behind a safe, replaceable interface, add Graph-Boom data generation, and create richer operator-facing experiences.
 
-Current status: Phase 3 is active. The first backend slice is implemented:
-Graph-Boom has graph-specific node/edge contracts, deterministic generation,
-graph JSON plus node/edge CSV artifacts, validation for duplicate node IDs,
-dangling edge endpoints, and count mismatches, product-run API support, async
-run placeholders, and a graph-preview endpoint. Frontend graph visualization,
-graph plan review, richer graph cardinality controls, and optional LLM-assisted
-planning remain Phase 3 follow-up work.
+Current status: Phase 3 is complete. Graph-Boom has graph-specific node/edge
+contracts, deterministic generation, graph JSON plus node/edge CSV artifacts,
+validation, asynchronous runs, API previews, and a product-kind-driven workspace.
+The planning layer has a provider-neutral interface, deterministic fallback,
+versioned prompt packs, strict structured output, cache telemetry, persisted plan
+review, approved-plan execution, golden contracts, and run traceability. See the
+[Phase 3 Closeout](../operations/phase-history/phase3-closeout.md).
 
 Technical objectives:
 
-- Add prompt pack loading.
-- Add prompt cache key strategy.
-- Add planner output schema validation.
-- Add benchmark prompts and golden plan tests.
-- Support dry-run plan review.
-- Add a lightweight frontend or dashboard only if it improves run visibility.
-- Show run status, artifacts, validation errors, and plan review.
-- Keep local deterministic planner as fallback.
-- Add a graph data model for nodes, edges, labels, properties, and cardinality.
-- Generate graph node and edge artifacts. `implemented: first backend/API slice`
-- Validate edge references, node counts, edge counts, and property shapes.
-- Add graph preview API support. `implemented`
-- Add graph visualization and graph plan review concepts to the frontend.
+- Load versioned prompt packs from package resources. `complete`
+- Build non-sensitive prompt cache keys from stable metadata. `complete`
+- Validate planner output through strict JSON Schema and Pydantic. `complete`
+- Maintain golden plan contracts for relational, document, and graph products. `complete`
+- Persist plans and require explicit review before execution. `complete`
+- Show proposal summary, resource targets, warnings, and cache/latency telemetry. `complete`
+- Keep the deterministic planner as the always-available fallback. `complete`
+- Generate and validate graph nodes, edges, labels, properties, and endpoints. `complete`
+- Export graph JSON and node/edge CSV artifacts. `complete`
+- Expose Graph-Boom preview and plan-review surfaces in the workspace. `complete`
 
 Recommended commits:
 
@@ -412,6 +294,8 @@ Recommended commits:
 ## Phase 4: Masker-Boom Privacy, Policies, and Security Hardening
 
 Goal: add Masker-Boom as the privacy and masking service layer for sensitive environments.
+
+Current status: next phase.
 
 Technical objectives:
 

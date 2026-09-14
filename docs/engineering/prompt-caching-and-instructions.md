@@ -1,141 +1,173 @@
-# Prompt Caching and Instructions
+# LLM Planning, Prompt Caching, And Agent Instructions
 
-This document defines how DataBoom should structure prompts, reusable instructions, and agent context so OpenAI requests can benefit from prompt caching while remaining maintainable.
+This document owns DataBoom's LLM planning contract, prompt-pack layout, cache
+strategy, telemetry, and repository instruction hygiene. The generation engines
+remain deterministic; the model proposes a small plan that must pass validation
+and human review.
 
-## Objectives
+## Runtime Boundary
 
-- Keep durable instructions stable and versioned.
-- Put reusable prompt content before volatile run-specific content.
-- Track cache efficiency through usage metrics.
-- Maintain prompt files and agent instructions as first-class project artifacts.
-- Avoid mixing generated schema samples, timestamps, request IDs, or user-specific data into stable prompt prefixes.
-
-## OpenAI Prompt Caching Rules to Design Around
-
-OpenAI prompt caching works best when repeated requests share an exact prompt prefix. Recent OpenAI models support automatic prompt caching for eligible prompts, and cache hits require stable content at the beginning of the request.
-
-DataBoom should structure LLM-assisted planning requests in this order:
-
-1. Stable system and developer instructions.
-2. Stable planner contract and output schema.
-3. Stable examples and benchmark prompts.
-4. Stable schema summary format.
-5. Variable schema instance, user prompt, row counts, seed, and run options.
-
-Do not place timestamps, request IDs, tenant-specific metadata, random values, sampled source data, or temporary debug context before the stable prompt blocks.
-
-## Cache-Friendly Prompt Layout
-
-Use this logical layout when Phase 2 or Phase 3 introduces LLM-assisted planning:
-
-```text
-[stable] Product role and safety boundaries
-[stable] Planner responsibilities
-[stable] Output JSON schema
-[stable] Generation constraints and examples
-[stable] Known database/type mapping rules
-[mostly stable] Normalized schema summary format
-[variable] Current schema summary
-[variable] User generation prompt
-[variable] Row targets, seed, export format, and run options
+```mermaid
+flowchart LR
+    Metadata[Product and source metadata] --> Request[PlannerRequest]
+    Intent[User intent] --> Request
+    Request --> Policy{Provider policy}
+    Policy -->|user key| Hosted[Structured-output planner]
+    Policy -->|platform key| Hosted
+    Policy -->|no key or failure| Local[Deterministic planner]
+    Hosted --> Validate[Strict schema and Pydantic validation]
+    Local --> Proposal[PlanProposal]
+    Validate --> Proposal
+    Proposal --> Review[Operator review]
+    Review -->|approved| Engine[Deterministic generation engine]
 ```
 
-The planner should return a structured generation plan. It should not directly generate the final dataset.
+The provider receives normalized metadata, resource names, field names, counts,
+formats, seed, and user intent. It does not receive source rows, database
+credentials, API state, user identity, or artifact contents.
 
-Generation products and Masker-Boom should use separate prompt packs because generation and masking have different safety boundaries. Table-Boom, Docu-Boom, and Graph-Boom prompts produce data plans; Masker-Boom prompts should eventually produce policy suggestions, classification hints, or review summaries, never raw sensitive data.
+## Implemented Prompt Pack
 
-## Prompt Cache Keys
-
-When using OpenAI API support for prompt cache keys, DataBoom should derive keys from stable non-sensitive identifiers:
-
-```text
-databoom:{product_family}:{planner_version}:{schema_fingerprint}:{prompt_pack_version}
-```
-
-Rules:
-
-- Never include raw database values.
-- Never include secrets, connection strings, user emails, or organization names unless explicitly approved.
-- Use product-family namespaces such as `table-boom`, `docu-boom`, `graph-boom`, or `masker-boom`.
-- Use a schema fingerprint based on normalized metadata, not sampled data.
-- Rotate the key when the stable prompt pack changes.
-- Log cache usage metrics, not prompt contents.
-
-## Prompt Files
-
-Future implementation should store reusable prompts under a dedicated prompt pack directory, for example:
+The versioned generation pack lives at:
 
 ```text
-prompts/
-  planner/
-    system.md
-    developer.md
-    output-schema.json
-    examples.md
-    version.txt
+src/databoom/planning/prompt_packs/v1/
+  system.md
+  developer.md
+  examples.md
+  output-schema.json
+  version.txt
 ```
 
-Prompt packs must be treated like code:
+`databoom.planning.prompts.load_prompt_pack` reads these files as Python package
+resources. This is important because local source checkouts, wheels, tests, and
+Docker images must use the same prompt version without relying on the current
+working directory.
 
-- reviewed in pull requests,
-- tested against benchmark prompts,
-- versioned,
-- included in release notes when behavior changes,
-- kept free of customer data.
+The stable request order is:
 
-## Benchmark Prompt Set
+1. system role and safety boundary,
+2. developer planning rules,
+3. stable examples,
+4. strict output JSON Schema,
+5. variable normalized resource metadata and user intent.
 
-These prompts define the first benchmark set for planner and generator behavior:
+Exact reusable content comes first because prompt caching depends on exact prefix
+matches. Variable timestamps, run IDs, user data, sampled values, and debug text
+must never be inserted before the stable blocks. Eligible requests generally need
+at least 1,024 prompt tokens before cached-input accounting becomes useful.
 
-1. "Given this PostgreSQL schema, generate 500 users, 120 organizations, and realistic memberships while preserving all foreign keys."
-2. "Create ecommerce demo data with customers, addresses, products, orders, payments, and refunds for the last 18 months."
-3. "Generate 10,000 invoice records with line items, taxes, discounts, payment states, and overdue edge cases."
-4. "Create a tiny dataset for documentation with 5 companies, 12 users, and enough related records to demonstrate the product."
-5. "Generate boundary cases: null optional values, maximum string lengths, old dates, future dates, and zero-value amounts."
-6. "Create a dataset where every project has between 2 and 6 tasks, each task has comments, and all users belong to valid teams."
-7. "Generate CSV files per table and a validation report without writing to any database."
-8. "Create SQL inserts that can be loaded into a clean PostgreSQL database in dependency order."
+## Strict Output Contract
 
-Masker-Boom privacy prompts are intentionally deferred until Phase 4.
+The hosted adapter uses the Responses API with `text.format.type=json_schema` and
+strict mode. Provider output is then validated again as `PlanDecision`.
 
-## Instruction Caching for Codex
+The decision may contain only:
 
-Codex discovers persistent repository guidance through `AGENTS.md`. Keep project-wide agent behavior there and keep task-specific instructions in the user prompt.
+- a summary,
+- the exact requested resources,
+- a target count and strategy for each resource,
+- constraints,
+- warnings.
 
-Guidelines:
+`proposal_from_decision` rejects missing resources, unknown resources, duplicate
+resources, changed resource kinds, invalid counts, or extra fields. A model cannot
+add a new table, collection, node, or edge that the engine did not expose.
 
-- Keep `AGENTS.md` stable and concise.
-- Put durable project rules, phase priorities, commit labels, and verification expectations in `AGENTS.md`.
-- Put large design details in `docs/` and link to them from `AGENTS.md`.
-- Do not paste volatile task state into `AGENTS.md`.
-- Restart Codex or begin a fresh task after changing `AGENTS.md` when you need the new instructions loaded.
-- If future docs become large, split specialized guidance into nested `AGENTS.md` files near the relevant source tree.
+## Prompt Cache Key
 
-## Metrics to Capture
+DataBoom derives a stable, non-sensitive key:
 
-Once LLM planning is implemented, each LLM request should record:
+```text
+databoom:{product_kind}:{planner_version}:{schema_fingerprint}:{prompt_pack_version}
+```
 
-- model,
-- prompt pack version,
-- schema fingerprint,
-- prompt cache key,
-- total input tokens,
+The schema fingerprint is a SHA-256 hash of normalized resource metadata sorted
+by kind and name. The key intentionally excludes:
+
+- raw row values,
+- connection strings,
+- API keys,
+- user email or organization,
+- prompt text,
+- timestamps and run IDs.
+
+Changing a resource contract or prompt-pack version changes the key. Changing
+only user intent preserves the stable namespace and reusable prompt prefix.
+
+## Telemetry
+
+Every `PlanProposal` records safe planner telemetry:
+
+- planner mode and model,
+- planner and prompt-pack versions,
+- schema fingerprint and cache key,
+- input and output tokens,
 - cached input tokens,
-- cache write tokens when available,
-- output tokens,
-- latency,
-- planner success/failure,
-- validation outcome after generation.
+- cache-write tokens when returned,
+- planning latency in milliseconds,
+- deterministic fallback reason.
 
-These metrics should be structured logs and should not include raw prompts by default.
+Telemetry is useful for cost, latency, and cache analysis. Logs must not include
+the API key, full prompt, source rows, or generated artifacts. The dashboard may
+show a compact cache/latency summary, while aggregate operations dashboards are a
+later observability task.
 
-## Documentation Maintenance
+## Provider Reliability
 
-Update this file whenever:
+`PlanningService` resolves providers in this order:
 
-- planner prompt layout changes,
-- OpenAI model family changes,
-- prompt cache key strategy changes,
-- output plan schema changes,
-- benchmark prompts change,
-- Codex repository guidance changes.
+1. user key supplied for the current planning request,
+2. platform key configured on the backend,
+3. deterministic planner.
+
+Hosted requests use bounded output tokens, timeout, and retry settings. Missing
+credentials, exhausted credit, rate limits, network failures, invalid JSON, and
+schema-validation failures return a deterministic proposal rather than disabling
+generation. The fallback reason is safe operational metadata, not a raw provider
+exception.
+
+## User Key Handling
+
+The frontend keeps a user-supplied key in `sessionStorage`, so it survives route
+changes in one browser tab but is removed when the tab session ends. The key is
+sent only while creating a plan. It is not stored in `StateStore`, `PlanProposal`,
+run metadata, local storage, or backend logs.
+
+Persistent BYOK would require encrypted secret storage, rotation, deletion,
+access controls, audit events, and redaction. That is intentionally outside the
+current implementation.
+
+## Golden Contracts
+
+`tests/fixtures/planner_golden_cases.json` defines stable relational, document,
+and graph planning cases. Tests verify summaries, resource counts, strategies,
+constraints, and content-addressed plan identity. Provider-adapter tests verify
+strict schema mode, cache-key forwarding, telemetry extraction, and fallback.
+
+Prompt-pack changes require:
+
+1. a new pack version when behavior changes materially,
+2. golden-contract review,
+3. planner and API tests,
+4. verification that package artifacts include the prompt files,
+5. an update to this document when cache or safety boundaries change.
+
+## Codex Repository Instructions
+
+API prompt caching and Codex repository instructions are separate concerns.
+Codex discovers durable repository guidance through `AGENTS.md`.
+
+- Keep project-wide phase rules, commit labels, and verification expectations in
+  `AGENTS.md`.
+- Keep task-specific requests in the active user prompt.
+- Link detailed architecture rather than copying it into `AGENTS.md`.
+- Do not put temporary run IDs, benchmark output, or active debugging state in
+  durable instructions.
+- Update `understanding.md` only for significant backend, Python, database,
+  operating-system, Docker, performance, or system-design decisions.
+
+## References
+
+- [OpenAI prompt caching guide](https://developers.openai.com/api/docs/guides/prompt-caching)
+- [OpenAI structured outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)

@@ -8,16 +8,17 @@ DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its catalo
 
 ## Current Phase
 
-Current work is Phase 2 hardening: 500k benchmark evidence, structural profiling, run lifecycle reliability, and reusable frontend/backend polish. Phase 3 has not started yet.
+Phase 3 is complete: Graph-Boom, provider-neutral assisted planning, versioned prompt packs, cache telemetry, plan review, and approved-plan execution are implemented. Current work starts Phase 4 with Masker-Boom privacy policies and security hardening.
 
 Before implementation, read:
 
 - `instructions.md`
 - `docs/README.md`
 - `docs/product/functional-specification.md`
-- `docs/engineering/technical-design-and-roadmap.md`
+- `docs/engineering/roadmap.md`
 - `docs/product/product-family.md`
-- `docs/engineering/architecture.md`
+- `docs/engineering/high-level-design.md`
+- `docs/engineering/low-level-design.md`
 - `docs/engineering/engineering-standards.md`
 - `docs/engineering/prompt-caching-and-instructions.md`
 - `docs/product/product-reasoning-faq.md`
@@ -27,8 +28,8 @@ Before implementation, read:
 
 - Keep changes commit-sized and easy to review.
 - Prefer backend engine work before frontend work.
-- Keep Masker-Boom privacy features out of Phase 1 and Phase 2 implementation unless explicitly requested.
-- Keep Phase 1 and Phase 2 artifact storage on local disk.
+- Build Masker-Boom through explicit privacy policies, integrity checks, and audit outputs; do not mix masking behavior into generation engines.
+- Keep generated artifacts on local disk until durable object storage is implemented.
 - Preserve deterministic generation through seed-based behavior.
 - Favor streaming exports over full in-memory datasets.
 - Reuse backend services and frontend components before adding new product-specific branches.
@@ -97,7 +98,7 @@ Phase 2 should focus on Table-Boom scale and Docu-Boom:
 - Docker Compose,
 - local artifact management.
 
-Phase 3 should introduce LLM-assisted planning and Graph-Boom:
+Phase 3 completed LLM-assisted planning and Graph-Boom:
 
 - LLM-assisted planning,
 - prompt packs,
@@ -125,8 +126,8 @@ Phase 5 should finish:
 - Keep durable instructions in this file and stable docs.
 - Keep task-specific instructions in the active user prompt.
 - Avoid adding timestamps, run IDs, or temporary details to stable instruction files.
-- When adding LLM prompts later, place stable instruction blocks before variable schema and user input.
-- Track prompt pack versions and cache metrics once LLM planning exists.
+- Keep stable LLM instruction blocks and output schemas before variable metadata and user input.
+- Version prompt packs and preserve cache, token, latency, validation, and fallback telemetry.
 
 ## Verification Expectations
 

@@ -7,13 +7,13 @@ DataBoom is a synthetic data and masking platform for teams that need realistic,
 | Product | Purpose | Status |
 | --- | --- | --- |
 | `Table-Boom` | Relational/table generation with key integrity and CSV/JSON/SQL exports. | Active |
-| `Docu-Boom` | NoSQL document generation with nested JSON/NDJSON artifacts. | Active in Phase 2 |
-| `Graph-Boom` | Node and edge generation for graph datasets. | Active in Phase 3 |
+| `Docu-Boom` | NoSQL document generation with nested JSON/NDJSON artifacts. | Active |
+| `Graph-Boom` | Node and edge generation for graph datasets. | Active |
 | `Masker-Boom` | Redaction, masking, tokenization, and integrity-preserving privacy workflows. | Planned for Phase 4 |
 
 See [DataBoom Product Family](docs/product/product-family.md) for the canonical product taxonomy.
 
-The current implementation includes Table-Boom relational generation, Docu-Boom document generation, and the first Phase 3 Graph-Boom backend/API slice. Banking, healthcare, ecommerce, SaaS, and similar domains are demo use cases or profiles, not separate products.
+The current implementation includes Table-Boom relational generation, Docu-Boom document generation, Graph-Boom node/edge generation, and reviewed assisted planning with deterministic fallback. Banking, healthcare, ecommerce, SaaS, and similar domains are demo use cases or profiles, not separate products.
 
 ## Current Capabilities
 
@@ -33,7 +33,7 @@ The current implementation includes Table-Boom relational generation, Docu-Boom 
 - Product catalog, subscription, product-run, table-preview, and document-preview API endpoints.
 - Graph-Boom node/edge generation with graph JSON, nodes CSV, edges CSV, graph validation, and graph-preview API support.
 - SQL-backed users, sessions, subscriptions, workspace sources, source profiles, and run metadata.
-- Optional LLM provider policy with platform-key, user-key, and deterministic fallback modes.
+- Optional LLM-assisted plan proposals with strict output validation, prompt-cache telemetry, explicit review, approved-plan execution, and deterministic fallback.
 - DataBoom workspace with product navigation, live top-20 relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Row-level async progress with generated-row counts, current resource, rows/sec, remaining time, and operation timings.
 - Live PostgreSQL source testing, schema refresh, DDL snapshot storage, and source profiling.
@@ -50,7 +50,7 @@ The current implementation includes Table-Boom relational generation, Docu-Boom 
 
 - Phase 1: Table-Boom relational foundation for PostgreSQL schema-driven generation.
 - Phase 2: Table-Boom scale, FastAPI workflows, source profiling, refreshed-source generation, and Docu-Boom NoSQL document support. `complete for local full-stack MVP`
-- Phase 3: Graph-Boom support, graph previews/exports, optional LLM-assisted planning, and richer operator-facing review flows. `active`
+- Phase 3: Graph-Boom support, graph previews/exports, optional LLM-assisted planning, and operator-facing review flows. `complete`
 - Phase 4: Masker-Boom policies, redaction, masking, hashing, tokenization, audit logs, and security hardening.
 - Phase 5: production deployment hardening, CI, observability, retention, and adapter extensibility.
 
@@ -300,6 +300,7 @@ docker compose --profile tools run --rm app
 - `src/databoom/schema`: normalized schema models and relationship graph code.
 - `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
 - `src/databoom/graph`: Graph-Boom node/edge contracts, deterministic graph generator, graph artifacts, and graph validation.
+- `src/databoom/planning`: planner contracts, deterministic and hosted adapters, versioned prompt packs, cache telemetry, and proposal validation.
 - `src/databoom/export`: local artifact writers.
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.
@@ -317,15 +318,16 @@ docker compose --profile tools run --rm app
 - `docs/product/product-family.md`: DataBoom platform products and use-case naming rules.
 - `docs/product/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
 - `docs/product/product-reasoning-faq.md`: 4W1H reasoning and competitive/product FAQ.
-- `docs/product/synthetic-data-inspiration.md`: lessons from adjacent synthetic-data tools and workflow references.
-- `docs/engineering/architecture.md`: architecture diagrams, extensibility model, API flow, frontend routes, and deployment topology.
+- `docs/product/design-research.md`: product and workflow lessons from adjacent synthetic-data tools.
+- `docs/engineering/high-level-design.md`: system boundaries, planning review, extensibility, API flow, frontend routes, and deployment topology.
+- `docs/engineering/low-level-design.md`: Python modules, contracts, execution sequences, state, artifacts, and failure boundaries.
 - `docs/engineering/engineering-standards.md`: reusable backend/frontend code standards.
-- `docs/engineering/technical-design-and-roadmap.md`: system design, phase roadmap, objectives, and commit sequence.
+- `docs/engineering/roadmap.md`: phase status, objectives, and commit sequence.
 - `docs/engineering/optimization-plan.md`: optimization roadmap for engine speed, quality, profiling, blueprints, and observability.
 - `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
 - `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
-- `docs/operations/phase1-usage.md`: current backend setup, CLI, benchmark, and Docker usage.
-- `docs/operations/phase2-closeout.md`: full-stack Phase 2 completion checklist, local login, reviewer smoke tests, and Phase 3 handoff.
+- `docs/operations/local-development.md`: backend/frontend setup, CLI, benchmarks, demos, and Docker usage.
+- `docs/operations/phase-history`: completed phase handoffs and verification evidence.
 - `docs/operations/deployment.md`: Render, Supabase, Vercel, and LLM key policy deployment guide.
 - `AGENTS.md`: operating rules for coding agents working in this repo.
 - `understanding.md`: explanation log for significant decisions.

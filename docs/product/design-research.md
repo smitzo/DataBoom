@@ -1,4 +1,4 @@
-# Synthetic Data Inspiration Notes
+# Product And Workflow Design Research
 
 This document captures product and implementation lessons from adjacent tools. These are inspiration notes, not a plan to copy another product.
 

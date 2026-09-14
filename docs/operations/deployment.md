@@ -22,7 +22,7 @@ flowchart LR
 | Backend | Render | FastAPI API, generation engine, async run manager, artifact serving. |
 | State | Supabase Postgres | Users, sessions, subscriptions, workspace sources, profiles, run metadata. |
 | Artifacts | Render container disk | Generated CSV, JSON, NDJSON, SQL, manifest, validation files. |
-| LLM | Optional external provider | Future planning assistance only; deterministic generation remains available. |
+| LLM | Optional external provider | Structured plan proposals only; deterministic planning and generation remain available. |
 
 ## Supabase Setup
 
@@ -58,6 +58,8 @@ DATABOOM_SEED_PASSWORD=<reviewer password>
 DATABOOM_LLM_PLATFORM_API_KEY=<admin/provider key>
 DATABOOM_LLM_DEFAULT_MODEL=gpt-4.1-mini
 DATABOOM_LLM_REQUEST_TOKEN_LIMIT=4000
+DATABOOM_LLM_TIMEOUT_SECONDS=20
+DATABOOM_LLM_MAX_RETRIES=1
 ```
 
 The Render health check path is `/ready`.
@@ -98,11 +100,14 @@ DataBoom must keep running even when provider credits are exhausted. The policy 
 2. Use the platform/admin key when configured on Render.
 3. Fall back to deterministic non-LLM generation.
 
-Current MVP behavior:
+Current behavior:
 
 - `/settings` can show whether the platform key is configured.
-- `/settings` can resolve a user key for request mode.
-- The user key is not stored in local storage or in the backend database.
+- `/settings` can hold a user key for planning requests in the current browser tab.
+- The user key uses tab-scoped `sessionStorage`; it is not persisted in backend state or plan metadata.
+- A hosted model proposes a validated plan but does not generate bulk records.
+- Users review and approve a plan before the async engine can execute it.
+- Provider failures return a deterministic plan with a safe fallback reason.
 - The generation engine remains deterministic and available without any LLM key.
 
 ## Smoke Test
@@ -110,8 +115,8 @@ Current MVP behavior:
 1. Open the Vercel URL.
 2. Register a new account or sign in with the configured seed email.
 3. Open `/settings` and confirm the LLM provider mode.
-4. Open `/settings/subscriptions` and subscribe to Table-Boom or Docu-Boom.
-5. Open `/dashboard`, choose a source/resource, generate a small run, and inspect preview rows.
+4. Open `/settings/subscriptions` and subscribe to an active product.
+5. Open `/dashboard`, choose a source/resource, create and approve a small plan, and inspect preview output.
 6. Open `/runs` and confirm the generated run and artifacts are visible.
 
 ## Current Production Gaps

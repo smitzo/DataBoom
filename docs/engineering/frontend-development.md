@@ -19,7 +19,7 @@ The frontend should evolve in phases that match backend capability. It should be
 - Use dedicated authenticated pages for login, dashboard, runs, product execution, and subscription settings.
 - Use wide desktop space intentionally with operational panels, tables, and artifact actions.
 - Make domain profiles visible and easy to understand.
-- Make DataBoom's product family visible: Table-Boom and Docu-Boom are active, while Graph-Boom and Masker-Boom are planned.
+- Make DataBoom's product family visible: Table-Boom, Docu-Boom, and Graph-Boom are active, while Masker-Boom is planned.
 - Treat validation and artifacts as first-class outcomes.
 - Keep components small and reusable.
 - Keep public shell components reusable: launch bar, header, theme toggle, sections, and footer sitemap.
@@ -67,7 +67,7 @@ Goals:
 - Show selected source context, schema freshness, profile state, run progress, validation state, and operation timing stages in the run builder. `complete`
 - Display manifest and validation report. `partial: validation pass/fail and downloads are visible; detailed report UI is still planned`
 - Surface validation failures clearly.
-- Keep Graph-Boom and Masker-Boom visible as planned work without building their runtime UI before their phases.
+- Keep Masker-Boom visible as planned work; Graph-Boom now has its Phase 3 runtime preview.
 
 ## Phase F3: Schema and Domain Builder
 
@@ -85,12 +85,14 @@ Goals:
 
 Backend dependency: LLM planner interface and prompt packs.
 
+Status: complete for proposal, review, rejection, approval, execution, and compact planner telemetry.
+
 Goals:
 
-- Add natural-language prompt input.
-- Show prompt-to-plan output.
-- Allow plan review before generation.
-- Show prompt cache metrics and planner version where useful.
+- Add natural-language prompt input. `complete`
+- Show prompt-to-plan output. `complete`
+- Allow plan review before generation. `complete`
+- Show prompt cache metrics and planner mode where useful. `complete`
 
 ## Phase F5: Production Console
 

@@ -50,6 +50,6 @@ Phase 2 completes the local product workflow by adding:
 - local JSON/NDJSON artifacts for document runs,
 - documentation and reusable UI/backend contracts for product-kind based rendering.
 
-Graph-Boom is the active Phase 3 implementation target. Masker-Boom remains
-visible in the catalog and roadmap, but it is not a runnable transformation
-pipeline yet.
+Phase 3 completed Graph-Boom generation, validation, previews, and reviewed plan
+execution. Masker-Boom is the Phase 4 target and remains visible in the catalog,
+but it is not a runnable transformation pipeline yet.

@@ -1,4 +1,4 @@
-# Low-Level System Design
+# Low-Level Design
 
 This document explains how the DataBoom backend processes a request from input to generated output. It is intentionally implementation-oriented: use it when you want to understand which Python module owns which decision, how data moves, and where to extend the engine.
 
@@ -11,6 +11,10 @@ flowchart TD
     API --> Async[databoom.api.async_jobs]
     API --> State[databoom.api.state]
     API --> Workspaces[databoom.api.workspaces]
+    API --> PlanRoutes[databoom.api.plans]
+    PlanRoutes --> Planner[databoom.planning]
+    Planner --> PromptPacks[databoom.planning.prompt_packs]
+    Planner --> ProviderPolicy[databoom.llm.provider]
 
     Workspaces --> IngestPostgres[databoom.ingest.postgres]
     Workspaces --> Profiling[databoom.profiling.postgres]
@@ -51,8 +55,69 @@ flowchart TD
 | `DocumentCollectionSpec` | `databoom.document.models` | Declarative Docu-Boom collection and field definition. |
 | `GraphNodeSpec` / `GraphEdgeSpec` | `databoom.graph.models` | Declarative Graph-Boom node labels, edge types, endpoint labels, and properties. |
 | `GraphGenerator` | `databoom.graph.generator` | Streams graph JSON and CSV artifacts while preserving valid edge endpoints. |
+| `PlannerRequest` | `databoom.planning.models` | Provider-neutral metadata and intent accepted by every planner. |
+| `PlanDecision` | `databoom.planning.models` | Strict small output containing resources, strategies, constraints, and warnings. |
+| `PlanProposal` | `databoom.planning.models` | Persisted draft/approved/rejected plan with safe telemetry and content-addressed identity. |
+| `Planner` | `databoom.planning.planner` | Replaceable interface implemented by deterministic and structured-output planners. |
 | `SourceProfile` | `databoom.profiling.postgres` | Cached source statistics used to shape future generation. |
-| `StateStore` | `databoom.api.state` | Persistence boundary for sessions, subscriptions, sources, profiles, and runs. |
+| `StateStore` | `databoom.api.state` | Persistence boundary for sessions, subscriptions, sources, profiles, plans, and runs. |
+
+## Planning And Review Execution
+
+```mermaid
+sequenceDiagram
+    participant UI as Dashboard
+    participant Route as Plan Route
+    participant Mapper as api.plans
+    participant Service as PlanningService
+    participant Planner as Planner implementation
+    participant Store as StateStore
+    participant Async as AsyncRunManager
+
+    UI->>Route: product, intent, counts, formats, source_id
+    Route->>Store: verify session, subscription, and source ownership
+    Route->>Mapper: normalize catalog/source metadata
+    Mapper-->>Route: immutable PlannerRequest
+    Route->>Service: propose(request, optional user key)
+    Service->>Planner: deterministic or structured-output proposal
+    Planner-->>Service: validated draft PlanProposal
+    Service-->>Route: proposal plus safe telemetry
+    Route->>Store: save plan under user email
+    Route-->>UI: reviewable draft
+    UI->>Route: approve plan
+    Route->>Store: persist reviewer and reviewed_at
+    UI->>Route: execute approved plan
+    Route->>Mapper: convert proposal to ProductRunRequest
+    Mapper-->>Route: counts, seed, formats, source_id, plan_id
+    Route->>Async: submit product generation
+```
+
+`planner_request_from_product` is the boundary that prevents source rows from
+entering model input. It maps catalog or refreshed source metadata to resource
+contracts. `proposal_from_decision` then requires the planner to return exactly
+the same resource names and kinds. The engine receives only an approved proposal
+translated into its existing `ProductRunRequest`.
+
+### Prompt Pack And Cache Flow
+
+```mermaid
+flowchart LR
+    Package[Package resources v1] --> Stable[System developer examples schema]
+    Resources[Normalized resource metadata] --> Fingerprint[SHA-256 schema fingerprint]
+    Fingerprint --> CacheKey[Non-sensitive cache key]
+    Stable --> Request[Responses API request]
+    CacheKey --> Request
+    Variable[Intent counts seed formats] --> Request
+    Request --> Strict[Strict JSON schema output]
+    Strict --> Decision[PlanDecision validation]
+    Decision --> Proposal[PlanProposal]
+```
+
+Prompt files are package resources rather than relative filesystem reads, so a
+wheel, local process, and Docker image load the same version. Stable content is
+placed before variable request data. The cache key contains product kind,
+planner version, schema fingerprint, and prompt-pack version; it contains no user
+identity, connection secret, or row value.
 
 ## Table-Boom Execution
 
@@ -225,8 +290,8 @@ sequenceDiagram
     participant Runs as api.runs
     participant Disk as Local Artifacts
 
-    UI->>Routes: POST /products/{product_id}/runs/async
-    Routes->>State: verify session and subscription
+    UI->>Routes: POST /plans/{plan_id}/runs/async
+    Routes->>State: verify session, subscription, ownership, and approval
     Routes->>Async: submit product run
     Async->>State: load source profile snapshot
     Async->>State: save running placeholder
@@ -251,7 +316,8 @@ flowchart LR
     StateStore --> Subscriptions[Subscriptions]
     StateStore --> Sources[Workspace sources]
     StateStore --> Profiles[Source profiles]
-    StateStore --> Runs[Run metadata]
+    StateStore --> Plans[Plan proposals and reviews]
+    StateStore --> Runs[Run metadata with plan_id]
 
     ArtifactRoot[Artifact root] --> RunDir[runs/run_id]
     RunDir --> Manifest[manifest.json]
@@ -292,6 +358,9 @@ State and artifacts are intentionally separate:
 | Source profile | SQL profiling query fails | API returns `400`; existing cached profile remains untouched. |
 | Artifact validation | Missing CSV or bad FK | `ValidationReport.passed = false` with issue codes. |
 | Async cancellation | User cancels running run | Cooperative cancellation updates run state to `canceled`. |
+| Planner provider | Missing key, timeout, quota, or network error | Return a deterministic proposal with a safe fallback reason. |
+| Planner output | Invalid JSON, unknown resource, changed kind, or bad count | Reject provider output before persistence or execution. |
+| Plan review | Draft not approved or owned by another user | Reject execution with an authorization or review-state error. |
 
 ## Extension Points
 

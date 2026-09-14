@@ -1,8 +1,10 @@
-# DataBoom Architecture
+# High-Level Design
 
 DataBoom is designed as a product platform, not a single hard-coded generator. The extension point is the data surface: relational tables, document collections, graph nodes/edges, and masking policies.
 
-For module-level backend ownership, method responsibilities, runtime state, and artifact-processing details, see [Low-Level System Design](low-level-system-design.md).
+This document is the canonical system architecture for DataBoom. It describes
+services and trust boundaries, not individual Python methods. For module-level
+ownership, runtime state, and artifact processing, see [Low-Level Design](low-level-design.md).
 
 ## System Context
 
@@ -60,9 +62,18 @@ Banking, healthcare, ecommerce, insurance, and SaaS are use cases. They should b
 ## Engine Pipeline
 
 ```mermaid
-flowchart LR
-    Request[Generation request] --> ProductResolver[Resolve product/catalog config]
-    ProductResolver --> Planner[Plan builder]
+flowchart TD
+    Request[Generation intent and metadata] --> ProductResolver[Resolve product and source contract]
+    ProductResolver --> PlannerBoundary[Planner interface]
+    PlannerBoundary --> ProviderPolicy{Provider policy}
+    ProviderPolicy -->|user or platform key| StructuredPlanner[Structured-output planner]
+    ProviderPolicy -->|no key or provider failure| LocalPlanner[Deterministic planner]
+    StructuredPlanner --> Proposal[Validated PlanProposal]
+    LocalPlanner --> Proposal
+    Proposal --> PlanStore[(Per-user plan state)]
+    PlanStore --> Review{Operator review}
+    Review -->|rejected| Revise[Revise intent]
+    Review -->|approved| ExecutionAdapter[Approved-plan execution adapter]
 
     subgraph RelationalPath[Relational path]
         DDL[DDL or live schema] --> SchemaIngestor[Schema ingestor]
@@ -78,9 +89,9 @@ flowchart LR
         GraphSpec[Graph node and edge specs] --> GraphPlan[Graph generation plan]
     end
 
-    Planner --> RelationalPlan
-    Planner --> DocumentPlan
-    Planner --> GraphPlan
+    ExecutionAdapter --> RelationalPlan
+    ExecutionAdapter --> DocumentPlan
+    ExecutionAdapter --> GraphPlan
     RelationalPlan --> SeedManager[Deterministic seed manager]
     DocumentPlan --> SeedManager
     GraphPlan --> SeedManager
@@ -90,6 +101,12 @@ flowchart LR
     Exporter --> Validator[Validator]
     Validator --> Manifest[Manifest and validation report]
 ```
+
+The planner controls only a small, validated decision: resource names, target
+counts, strategies, constraints, warnings, seed, and formats. It does not emit
+bulk records and cannot execute a run. Generation remains deterministic and
+product-specific after approval, so provider availability and model behavior do
+not become data-integrity dependencies.
 
 The engine is extendable because each product kind owns its input model and generation strategy, while shared concerns remain reusable:
 
@@ -108,6 +125,7 @@ The engine is extendable because each product kind owns its input model and gene
 sequenceDiagram
     participant UI as Frontend workspace
     participant API as FastAPI API
+    participant Planner as Planning service
     participant Catalog as Product catalog
     participant Engine as Generation engine
     participant Store as StateStore
@@ -118,11 +136,19 @@ sequenceDiagram
     UI->>API: POST /subscriptions
     API->>Catalog: validate product and plan
     API->>Store: save subscription
-    UI->>API: POST /products/{product_id}/runs/async
-    API->>Store: verify subscription
-    API->>Catalog: resolve product kind and defaults
+    UI->>API: POST /products/{product_id}/plans
+    API->>Catalog: resolve product and source metadata
+    API->>Planner: propose validated plan
+    Planner-->>API: draft PlanProposal and safe telemetry
+    API->>Store: persist plan for authenticated user
+    API-->>UI: plan summary, counts, warnings, planner metrics
+    UI->>API: POST /plans/{plan_id}/review approved
+    API->>Store: persist terminal review decision
+    UI->>API: POST /plans/{plan_id}/runs/async
+    API->>Store: verify ownership, subscription, and approval
+    API->>Catalog: map approved plan to product run request
     API->>Store: save running run metadata
-    API-->>UI: running run response with ETA
+    API-->>UI: running response with plan_id and ETA
     API->>Engine: execute product generation in background
     Engine->>Disk: stream artifacts and flush preview rows
     UI->>API: GET /runs/{run_id}
@@ -132,6 +158,30 @@ sequenceDiagram
     Engine->>Disk: write manifest and validation
     API->>Store: save completed run metadata
 ```
+
+### Planning Trust Boundary
+
+```mermaid
+flowchart LR
+    Metadata[Schema and resource metadata] --> PromptBuilder[Versioned prompt pack]
+    Intent[User intent and row targets] --> PromptBuilder
+    PromptBuilder --> Model[Optional hosted model]
+    Model --> StrictSchema[Strict JSON schema]
+    StrictSchema --> Pydantic[Pydantic validation]
+    Pydantic --> ResourceCheck[Exact resource and kind check]
+    ResourceCheck --> Draft[Draft plan]
+    Draft --> Human[Human approval]
+    Human --> Engine[Deterministic engine]
+
+    SourceRows[(Source row values)] -. never sent .-> Model
+    ApiKey[User API key] -. memory only .-> Model
+```
+
+Stable instructions, output schema, and examples are loaded from a versioned
+package prompt pack. Variable source metadata and intent come last. The schema
+fingerprint and prompt-pack version form a non-sensitive cache key. Telemetry
+records token counts, cached tokens, latency, mode, and fallback reason without
+recording prompts, keys, or source values.
 
 ## Workspace Source Flow
 
@@ -154,8 +204,10 @@ sequenceDiagram
     UI->>API: POST /workspace-sources/{source_id}/profile
     API->>SourceDB: row counts, nulls, distinct counts, ranges, top values
     API-->>UI: profile snapshot
-    UI->>API: POST /products/{product_id}/runs/async with source_id
+    UI->>API: POST /products/{product_id}/plans with source_id
     API->>Store: resolve refreshed source contract
+    API-->>UI: reviewable source-shaped plan
+    UI->>API: approve plan and start async run
     API->>Engine: generate from source DDL snapshot
 ```
 
@@ -181,7 +233,8 @@ flowchart TD
     Dashboard --> DataWorkspace[DataWorkspace component]
     DataWorkspace --> RelationalSurface[Table grid for relational products]
     DataWorkspace --> DocumentSurface[JSON cards for document products]
-    DataWorkspace --> GraphSurface[Graph preview surface Phase 3]
+    DataWorkspace --> GraphSurface[Node and edge preview]
+    DataWorkspace --> PlanReview[Plan proposal and approval]
     DataWorkspace --> PlannedSurface[Planned state for masking]
 ```
 
@@ -223,15 +276,20 @@ flowchart LR
     LLMPolicy --> Deterministic[Deterministic fallback]
 ```
 
-Render runs the Python API and generation engine. Supabase stores users, sessions, subscriptions, sources, profiles, and run metadata through the existing `StateStore` boundary. Vercel hosts the public site and dashboard. The LLM policy is optional: user key first, platform key second, deterministic fallback always available.
+Render runs the Python API and generation engine. Supabase stores users,
+sessions, subscriptions, sources, profiles, plans, and run metadata through the
+existing `StateStore` boundary. Vercel hosts the public site and dashboard. The
+LLM policy is optional: user key first, platform key second, deterministic
+fallback always available.
 
 For exact environment variables and smoke tests, see [Deployment Guide](../operations/deployment.md).
 
 ## Run Observability
 
-The Phase 2 local API exposes a lightweight asynchronous run lifecycle:
+The API exposes a lightweight asynchronous run lifecycle:
 
-- `POST /products/{product_id}/runs/async` creates a running run immediately.
+- `POST /products/{product_id}/plans` creates a reviewable proposal.
+- `POST /plans/{plan_id}/runs/async` creates a run only after approval.
 - `GET /runs/{run_id}` returns status, generated rows, current resource, progress percentage, rows per second, expected seconds, remaining seconds, and operation timings.
 - Table previews read flushed CSV rows while generation is still running.
 - Document previews read completed JSON arrays or partially flushed NDJSON lines.

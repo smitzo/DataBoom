@@ -7,17 +7,18 @@ This repository is in active implementation. Keep documentation, roadmap status,
 ## Documentation Map
 
 - [Docs Index](docs/README.md): documentation structure and separation of concerns.
-- [Prompt Caching and Instructions](docs/engineering/prompt-caching-and-instructions.md): prompt architecture, cache-friendly instruction layout, prompt library, and OpenAI/Codex instruction handling.
+- [LLM Planning and Prompt Caching](docs/engineering/prompt-caching-and-instructions.md): implemented planner boundary, prompt packs, cache telemetry, and OpenAI/Codex instruction handling.
 - [DataBoom Product Family](docs/product/product-family.md): Table-Boom, Docu-Boom, Graph-Boom, Masker-Boom, and use-case naming rules.
-- [Engineering Architecture](docs/engineering/architecture.md): system diagrams, engine extensibility, API flow, frontend routes, and deployment topology.
+- [High-Level Design](docs/engineering/high-level-design.md): system boundaries, plan review, engine extensibility, API flow, frontend routes, and deployment topology.
+- [Low-Level Design](docs/engineering/low-level-design.md): backend modules, contracts, execution sequences, persistence, and failure boundaries.
 - [Engineering Standards](docs/engineering/engineering-standards.md): reusable frontend/backend code standards and product-kind rendering rules.
 - [Functional Specification](docs/product/functional-specification.md): users, workflows, product behavior, MVP scope, acceptance criteria, and out-of-scope items.
 - [Product Reasoning and FAQ](docs/product/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
-- [Technical Design and Roadmap](docs/engineering/technical-design-and-roadmap.md): stack, high-level design, low-level design, five-phase technical plan, deployment objectives, and commit sequence.
+- [Engineering Roadmap](docs/engineering/roadmap.md): five-phase status, objectives, deployment goals, and commit sequence.
 - [Optimization Plan](docs/engineering/optimization-plan.md): backend optimization roadmap for speed, quality, profiling, blueprints, and observability.
-- [Phase 1 Usage](docs/operations/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
+- [Local Development](docs/operations/local-development.md): local setup, CLI generation, benchmark, and Docker Compose usage.
 - [Frontend Development Plan](docs/engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
-- [Synthetic Data Inspiration Notes](docs/product/synthetic-data-inspiration.md): lessons from adjacent synthetic-data tools and workflow references.
+- [Design Research](docs/product/design-research.md): product and workflow lessons from adjacent tools.
 - [Agent Operating Guide](AGENTS.md): persistent Codex guidance for this repository, including commit labels, phase discipline, and documentation rules.
 - [Understanding Log](understanding.md): detailed beginner-friendly explanations for significant design, architecture, performance, reliability, and product decisions.
 
@@ -25,14 +26,14 @@ This repository is in active implementation. Keep documentation, roadmap status,
 
 - MVP stack: Python 3.12, FastAPI, Typer, Pydantic, SQLAlchemy, psycopg, PostgreSQL, pytest, Docker, and Docker Compose.
 - Phase 1 starts with the backend engine.
-- Current implementation focus is Table-Boom and Docu-Boom. Banking, healthcare, ecommerce, and similar domains are demo use cases, not products.
-- Phase 1 and Phase 2 store generated artifacts on local disk.
+- Table-Boom, Docu-Boom, and Graph-Boom are active. Banking, healthcare, ecommerce, and similar domains are demo use cases, not products.
+- Phase 1 through Phase 3 store generated artifacts on local disk.
 - Phase 1 should target at least 100k generated records through streaming-friendly design.
 - Phase 2 should harden scale toward 500k generated records.
 - Phase 2 should complete NoSQL/document-style data support after the relational API and scale foundation are stable.
-- Phase 3 should add graph data support for nodes, edges, properties, and graph exports.
+- Phase 3 completed graph data support, assisted planning, prompt telemetry, and plan review.
 - Masker-Boom privacy, masking, redaction, tokenization, and integrity-preserving transformations are intentionally deferred until Phase 4.
-- LLM-assisted planning should be introduced in Phase 2 or Phase 3 behind a replaceable interface.
+- LLM-assisted planning must stay behind the replaceable planner interface with strict validation, explicit review, and deterministic fallback.
 - PostgreSQL is the first supported relational database.
 - Deployment readiness is required, not optional.
 
@@ -60,7 +61,7 @@ Build this project as a clear sequence of small commits. Each commit should repr
 - `performance: reduce relationship lookup memory`
 - `security: add api key authentication`
 
-Every phase in [Technical Design and Roadmap](docs/engineering/technical-design-and-roadmap.md) includes a recommended commit sequence.
+Every phase in the [Engineering Roadmap](docs/engineering/roadmap.md) includes a recommended commit sequence.
 
 Update [Understanding Log](understanding.md) when a change is significant enough that future contributors should understand the reasoning, tradeoffs, or performance impact.
 
@@ -77,4 +78,4 @@ Before adding a backend or frontend feature, first check whether an existing ser
 
 ## Immediate Next Objective
 
-Complete remaining Phase 2 hardening with 500k-scale benchmarking, structural profiling depth, and reliability checks while keeping the implemented Table-Boom and Docu-Boom workflows modular and reviewable.
+Start Phase 4 with Masker-Boom policy contracts, sensitive-field classification hints, deterministic masking/tokenization, relationship-preserving transformations, privacy validation, and audit output. Preserve the approved-plan and deterministic-engine boundaries completed in Phase 3.

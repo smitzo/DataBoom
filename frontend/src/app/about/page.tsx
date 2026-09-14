@@ -162,7 +162,7 @@ export default function AboutPage() {
           <h2 className="text-4xl font-medium text-[color:var(--text-primary)]">
             What makes DataBoom{" "}
             <span className="font-serif italic text-[color:var(--text-secondary)]">
-              different
+              different ?
             </span>
           </h2>
           <div className="mt-10 space-y-5">

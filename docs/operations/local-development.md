@@ -1,4 +1,4 @@
-# Phase 1 Usage
+# Local Development And Verification
 
 This guide covers the current Phase 1 backend workflow: parse PostgreSQL DDL, create a deterministic plan, generate rows, export CSV/SQL artifacts, and validate the result.
 

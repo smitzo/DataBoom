@@ -2344,3 +2344,152 @@ The first validator reads the generated graph artifacts and checks:
 - manifest edge count matches the artifact.
 
 This catches the most dangerous graph data failure: a relationship pointing to a missing node. It also makes artifact validation independent from the generator's in-memory state, which is the same production-oriented principle used by Table-Boom CSV validation.
+
+## Decision: let an LLM propose a plan, never generate the bulk dataset
+
+### Question
+
+How does LLM-assisted planning work without making DataBoom dependent on an LLM?
+
+### Answer
+
+The model and the generation engine have deliberately different jobs.
+
+The planner receives a small metadata-only request: product kind, resource names,
+field names, target counts, output formats, seed, and user intent. It returns a
+small structured decision with strategies, constraints, and warnings. The
+deterministic Table-Boom, Docu-Boom, or Graph-Boom engine still creates every
+record, writes every artifact, and runs validation.
+
+This boundary matters because language models are good at interpreting intent,
+but they are not efficient bulk record processors. Asking a model to print one
+million rows would spend tokens on repetitive output, be difficult to resume,
+provide weak referential-integrity guarantees, and make cost or credit exhaustion
+an execution dependency. A deterministic engine can stream those rows with
+bounded memory and reproduce them from a seed.
+
+In Python, the boundary is expressed as a `Planner` `Protocol`. Both
+`DeterministicPlanner` and `OpenAIPlanner` implement the same `propose` behavior.
+The rest of the API depends on the protocol's contract, not provider-specific
+request objects. This is dependency inversion: high-level planning workflow does
+not depend directly on one low-level network adapter.
+
+### Question
+
+Why validate structured model output twice?
+
+### Answer
+
+The provider request uses strict JSON Schema, which asks the model API to return
+only the allowed shape. DataBoom then validates that response as a frozen
+Pydantic `PlanDecision`. Finally, `proposal_from_decision` compares the decision
+against the original request and requires the exact same resource names and
+kinds.
+
+Each layer catches a different failure:
+
+1. strict JSON Schema rejects unexpected fields and wrong primitive shapes,
+2. Pydantic enforces counts, lengths, enums, uniqueness, and immutability,
+3. request-to-response comparison prevents a model from inventing or deleting a
+   table, collection, node, or edge.
+
+Structured output is not automatically trusted output. It becomes executable
+only after local validation and human approval.
+
+### Question
+
+Why persist a `PlanProposal` before starting generation?
+
+### Answer
+
+Large runs consume CPU, disk, and time. The operator should see resource counts,
+strategies, constraints, warnings, formats, and seed before paying that cost.
+Persisting the plan creates an auditable boundary between intent and execution.
+
+A plan starts as `draft`. Review moves it exactly once to `approved` or
+`rejected`. Only an approved plan can be translated into `ProductRunRequest`.
+The generated run stores `plan_id`, so a later investigation can answer which
+reviewed decision produced an artifact.
+
+Plan IDs are content-addressed: DataBoom hashes the normalized executable plan
+content and uses part of that digest as the ID. Retrying the same request produces
+the same ID, which makes proposal retries idempotent and avoids duplicate review
+records. Changing intent, count, strategy, seed, or format changes the identity.
+
+### Question
+
+How does prompt caching reduce cost and latency?
+
+### Answer
+
+Prompt caching can reuse an exact prefix that the provider has already processed.
+DataBoom therefore orders prompt content from stable to variable:
+
+1. system safety boundary,
+2. developer planning rules,
+3. examples,
+4. strict output schema,
+5. current resource metadata and user intent.
+
+The first four blocks are versioned package resources. They do not contain
+timestamps, run IDs, user identity, sampled rows, or debug data. The cache key is
+built from product kind, planner version, a SHA-256 schema fingerprint, and prompt
+pack version. It contains no raw values or secrets.
+
+The response usage object is converted into `input_tokens`,
+`cached_input_tokens`, `cache_write_tokens`, and `output_tokens`. This lets us
+measure whether stable prefixes are actually reused instead of merely assuming
+that caching works.
+
+### Question
+
+Did Phase 3 prove that hosted planning reduced latency from a specific number to
+another number?
+
+### Answer
+
+No, and the documentation should not invent a benchmark.
+
+Phase 3 added per-request `latency_ms` and cache-token telemetry, plus deterministic
+golden tests and adapter tests. A credible before/after claim requires repeated
+real-provider runs with the same model, region, schema, prompt pack, and warm/cold
+cache conditions. Network latency and provider load can otherwise dominate the
+result.
+
+What is already optimized by design is the expensive part: the LLM returns only
+a small plan, while the local engine streams bulk data. Prompt caching can reduce
+repeated prefix processing, but the exact improvement must be reported from
+collected telemetry after deployment.
+
+### Question
+
+What happens when an API key is missing, credits are exhausted, or the provider
+returns invalid output?
+
+### Answer
+
+`PlanningService` catches the provider boundary and returns a deterministic plan.
+Hosted calls have bounded timeout and retry settings so a network dependency
+cannot hold the run builder indefinitely. The fallback proposal records a short,
+safe reason such as provider failure, but generation remains available.
+
+This is graceful degradation. The optional intelligent feature can become less
+personalized, but the core product does not become unavailable. It is especially
+important for demos and judging environments where credentials, network access,
+or credit balance may be unpredictable.
+
+### Question
+
+Why load prompt files through `importlib.resources` instead of ordinary relative
+paths?
+
+### Answer
+
+A relative path often works in a source checkout and then fails in a wheel or
+container because the process starts from a different working directory.
+`importlib.resources` resolves files from the installed Python package. Package
+data tests then prove that local development, editable installs, built wheels,
+and Docker images ship the same prompt pack and output schema.
+
+This is a small Python packaging choice with a large operational benefit: prompt
+behavior does not depend on where the process happens to start.

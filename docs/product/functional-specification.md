@@ -2,9 +2,9 @@
 
 ## Product Summary
 
-DataBoom is the parent platform for four catalog products: Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom. Table-Boom generates relational data, Docu-Boom generates NoSQL document data, Graph-Boom will generate graph data, and Masker-Boom will redact, mask, tokenize, or replace sensitive source data while preserving useful structure.
+DataBoom is the parent platform for four catalog products: Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom. Table-Boom generates relational data, Docu-Boom generates NoSQL document data, Graph-Boom generates graph data, and Masker-Boom will redact, mask, tokenize, or replace sensitive source data while preserving useful structure.
 
-Table-Boom and Docu-Boom are the current implementation focus. PostgreSQL-backed relational generation came first; NoSQL document data is completed in Phase 2. Graph data is planned for Phase 3. Masker-Boom starts in Phase 4 after the generation, profiling, validation, and policy foundations are reliable.
+Table-Boom, Docu-Boom, and Graph-Boom are active generation products. PostgreSQL-backed relational generation came first, NoSQL document data completed Phase 2, and graph generation plus assisted plan review completed Phase 3. Masker-Boom starts in Phase 4 after the generation, profiling, validation, and policy foundations are reliable.
 
 The product should help engineers, QA teams, data teams, demo teams, and privacy-aware platform teams create or transform useful datasets without hand-writing fragile fixtures or copying production data casually.
 
@@ -13,8 +13,8 @@ The product should help engineers, QA teams, data teams, demo teams, and privacy
 | Product | Role | Current Scope |
 | --- | --- | --- |
 | Table-Boom | Generate relational/table data from schemas and profiles. | Active. PostgreSQL-first with CSV, JSON, SQL artifacts and table previews. |
-| Docu-Boom | Generate NoSQL document data. | Active in Phase 2. JSON/NDJSON artifacts and document previews. |
-| Graph-Boom | Generate graph node and edge data. | Planned for Phase 3. |
+| Docu-Boom | Generate NoSQL document data. | Active. JSON/NDJSON artifacts and document previews. |
+| Graph-Boom | Generate graph node and edge data. | Active. Graph JSON/CSV artifacts, validation, previews, and reviewed plans. |
 | Masker-Boom | Mask or redact sensitive existing data while preserving useful shape and relationships. | Planned for Phase 4. |
 
 Banking, healthcare, ecommerce, SaaS, insurance, and similar domains are demo use cases or profiles under these products. They are not separate products.
@@ -23,7 +23,7 @@ Banking, healthcare, ecommerce, SaaS, insurance, and similar domains are demo us
 
 Teams need realistic data for development, QA, demos, CI, analytics, and automation. Production data is risky to copy, and simple fixture generators often fail when data must respect primary keys, foreign keys, unique constraints, nullable fields, enums, date ranges, and realistic table relationships.
 
-Table-Boom solves the relational side by understanding schema structure, planning generation, producing valid table data, validating the result, and exporting it in formats that can be loaded or inspected. Docu-Boom solves the document side with nested collection artifacts. Masker-Boom will solve the adjacent problem of making existing sensitive datasets safer to use without destroying keys, joins, or useful shape.
+Table-Boom solves the relational side by understanding schema structure, planning generation, producing valid table data, validating the result, and exporting it in formats that can be loaded or inspected. Docu-Boom solves the document side with nested collection artifacts. Graph-Boom creates validated nodes and endpoint-safe edges. Masker-Boom will solve the adjacent problem of making existing sensitive datasets safer to use without destroying keys, joins, or useful shape.
 
 ## Target Users
 
@@ -45,10 +45,11 @@ See [Product Reasoning and FAQ](product-reasoning-faq.md) for deeper answers to 
 1. User provides PostgreSQL DDL or a live PostgreSQL connection.
 2. User provides a generation prompt, row counts, and a seed.
 3. DataBoom parses the schema and builds a relationship graph.
-4. DataBoom creates a generation plan.
-5. User runs the generator.
-6. DataBoom validates the generated dataset.
-7. User exports SQL or CSV files from local disk.
+4. DataBoom creates a generation plan through the hosted or deterministic planner.
+5. User reviews and approves the plan.
+6. User runs the generator.
+7. DataBoom validates the generated dataset.
+8. User exports SQL or CSV files from local disk.
 
 ### Workflow 2: Generate From Existing Database
 
@@ -69,15 +70,16 @@ Masker-Boom privacy-safe replacement is not a Phase 1 or Phase 2 requirement. Fi
 
 ### Workflow 4: API-Driven Generation
 
-1. Client submits schema reference and generation request to the API.
-2. API creates a generation run.
-3. Worker executes generation and validation.
-4. Client polls run status.
-5. Client downloads artifacts from local storage.
+1. Client submits source metadata, intent, row counts, and formats to the API.
+2. API creates and persists a validated plan proposal.
+3. Client reviews and approves the plan.
+4. API creates an asynchronous generation run linked to that plan.
+5. Worker executes generation and validation.
+6. Client polls run status and downloads artifacts from local storage.
 
 ### Workflow 5: NoSQL Document Data Generation
 
-Planned for Phase 2.
+Implemented in Phase 2.
 
 1. User provides a document collection specification, inferred profile, or NoSQL-oriented prompt.
 2. DataBoom builds a document generation plan with nested objects, arrays, identifiers, and references.
@@ -86,7 +88,7 @@ Planned for Phase 2.
 
 ### Workflow 6: Graph Data Generation
 
-Planned for Phase 3.
+Implemented in Phase 3.
 
 1. User provides a graph model, graph-oriented prompt, or table-to-graph mapping.
 2. DataBoom plans node labels, edge types, properties, and cardinality.
@@ -133,7 +135,7 @@ The plan should include:
 - export formats,
 - validation checks.
 
-Phase 1 uses deterministic local planning. LLM-assisted planning can be introduced in Phase 2 or Phase 3.
+Phase 1 and Phase 2 use deterministic local planning. Phase 3 adds optional LLM-assisted proposals behind the same planner interface, strict output validation, human review, and deterministic fallback.
 
 ### Domain Profiles
 
@@ -196,11 +198,11 @@ Phase 1 outputs:
 - JSON validation report.
 - Local artifact manifest.
 
-Later outputs:
+Additional current and later outputs:
 
 - direct PostgreSQL load,
-- NDJSON and nested JSON document artifacts,
-- graph node and edge artifacts,
+- NDJSON and nested JSON document artifacts, `implemented`
+- graph node and edge artifacts, `implemented`
 - Parquet,
 - framework fixture formats.
 
@@ -224,7 +226,6 @@ Out of scope until later:
 
 - Masker-Boom implementation before Phase 4,
 - broad database cloning across many vendors,
-- graph data before Phase 3,
 - object storage,
 - perfect business-domain semantics,
 - production database mutation,

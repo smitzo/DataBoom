@@ -4,7 +4,7 @@ This document explains why DataBoom exists, where it fits, and how to answer com
 
 ## Short Positioning
 
-DataBoom is not just a fake-value generator and not just a chat prompt. It is a platform for four related data products: Table-Boom creates relational synthetic data, Docu-Boom creates NoSQL document data, Graph-Boom will create graph data, and Masker-Boom will transform sensitive existing data into safer datasets while preserving integrity.
+DataBoom is not just a fake-value generator and not just a chat prompt. It is a platform for four related data products: Table-Boom creates relational synthetic data, Docu-Boom creates NoSQL document data, Graph-Boom creates graph data, and Masker-Boom will transform sensitive existing data into safer datasets while preserving integrity.
 
 The platform should eventually serve sensitive domains such as fintech, healthcare, insurance, SaaS, customer support, internal operations, and analytics. Phase 1 focuses on Table-Boom's relational generation engine first. Phase 2 expands into Docu-Boom NoSQL document data, Phase 3 adds Graph-Boom data, and Masker-Boom privacy, masking, hashing, tokenization, and policy enforcement arrive in Phase 4 once the core generation paths are reliable.
 
@@ -12,7 +12,7 @@ The platform should eventually serve sensitive domains such as fintech, healthca
 
 ### What are Table-Boom, Docu-Boom, and Graph-Boom?
 
-They create synthetic data from scratch for different data surfaces. Table-Boom handles relational tables, Docu-Boom handles nested NoSQL documents, and Graph-Boom will handle nodes and edges. Banking, healthcare, ecommerce, and similar domains are use cases or demo profiles under those products.
+They create synthetic data from scratch for different data surfaces. Table-Boom handles relational tables, Docu-Boom handles nested NoSQL documents, and Graph-Boom handles nodes and edges. Banking, healthcare, ecommerce, and similar domains are use cases or demo profiles under those products.
 
 ### What is Masker-Boom?
 
@@ -80,7 +80,7 @@ DataBoom splits the generation problem into specialized components:
 
 ### Where do NoSQL and graph data fit?
 
-PostgreSQL relational generation is the first foundation because foreign keys, dependency ordering, and validation are the hardest core problems to prove early. Phase 2 should add Docu-Boom NoSQL document data once the API, scaling, and profiling foundations are stronger. Phase 3 should add Graph-Boom once planning and operator review are mature enough to reason about nodes, edges, properties, and cardinality.
+PostgreSQL relational generation was the first foundation because foreign keys, dependency ordering, and validation are the hardest core problems to prove early. Phase 2 added Docu-Boom NoSQL document data after the API, scaling, and profiling foundations. Phase 3 added Graph-Boom plus plan review for nodes, edges, properties, and cardinality.
 
 This keeps scope disciplined:
 

@@ -1,27 +1,28 @@
-# DataBoom Docs
+# DataBoom Documentation
 
-The docs are split by concern so product scope, engineering design, and local operations do not fight for space in one folder.
+The documentation has three ownership areas. Start with the index for the area
+you are changing; each index identifies the canonical document for a topic and
+prevents architecture, product scope, and run instructions from drifting into
+each other.
 
-## Product
+## Documentation Map
 
-- [Product Family](product/product-family.md): canonical Table-Boom, Docu-Boom, Graph-Boom, and Masker-Boom taxonomy.
-- [Functional Specification](product/functional-specification.md): users, workflows, MVP behavior, acceptance criteria, and scope boundaries.
-- [Product Reasoning FAQ](product/product-reasoning-faq.md): 4W1H answers for why DataBoom exists and how it compares with alternatives.
-- [Synthetic Data Inspiration](product/synthetic-data-inspiration.md): lessons from adjacent synthetic-data tools and workflow references.
+| Area | Owns | Start here |
+| --- | --- | --- |
+| [Product](product/README.md) | Product family, users, workflows, scope, positioning, and research. | [Functional Specification](product/functional-specification.md) |
+| [Engineering](engineering/README.md) | HLD, LLD, roadmap, standards, optimization, frontend, and LLM planning. | [High-Level Design](engineering/high-level-design.md) |
+| [Operations](operations/README.md) | Local setup, deployment, smoke tests, and completed phase handoffs. | [Local Development](operations/local-development.md) |
 
-## Engineering
+## Canonical Sources
 
-- [Architecture](engineering/architecture.md): system diagrams, engine extensibility, API flow, frontend route structure, and deployment topology.
-- [Low-Level System Design](engineering/low-level-system-design.md): backend module ownership, data flow, execution sequences, artifact output, validation, and extension points.
-- [Technical Design and Roadmap](engineering/technical-design-and-roadmap.md): five-phase technical plan, objectives, and commit sequence.
-- [Engineering Standards](engineering/engineering-standards.md): reusable backend/frontend code rules and product-kind rendering rules.
-- [Frontend Development Plan](engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
-- [Optimization Plan](engineering/optimization-plan.md): backend optimization roadmap for speed, quality, profiling, blueprints, and observability.
-- [Prompt Caching and Instructions](engineering/prompt-caching-and-instructions.md): prompt architecture and Codex/OpenAI instruction strategy.
+- Product behavior: [Functional Specification](product/functional-specification.md).
+- Product names and data surfaces: [Product Family](product/product-family.md).
+- System boundaries and deployment topology: [High-Level Design](engineering/high-level-design.md).
+- Python modules, contracts, and runtime sequences: [Low-Level Design](engineering/low-level-design.md).
+- Current phase and future objectives: [Roadmap](engineering/roadmap.md).
+- Local commands: [Local Development](operations/local-development.md).
+- Hosted environment configuration: [Deployment Guide](operations/deployment.md).
 
-## Operations
-
-- [Phase 1 Usage](operations/phase1-usage.md): local setup, CLI generation, benchmark, and Docker Compose usage.
-- [Phase 2 Closeout](operations/phase2-closeout.md): full-stack completion checklist, local login, reviewer smoke tests, and Phase 3 handoff.
-- [Deployment Guide](operations/deployment.md): Render API, Supabase Postgres, Vercel frontend, and LLM key policy setup.
-- [Phase 3 Graph-Boom Plan](operations/phase3-graph-boom.md): active graph data implementation checklist, backend contracts, and done criteria.
+`instructions.md` and `AGENTS.md` are repository-level operating instructions,
+not product documentation. `understanding.md` is the backend and systems learning
+log; it records significant design reasoning rather than routine change history.
