@@ -36,6 +36,7 @@ from databoom.api.auth import (
     verify_password,
 )
 from databoom.api.models import (
+    ApprovedPlanRunRequest,
     AppUserResponse,
     CollectionArtifactResponse,
     DocumentPreviewResponse,
@@ -48,6 +49,8 @@ from databoom.api.models import (
     LLMProviderPolicyResponse,
     LoginRequest,
     LoginResponse,
+    PlanReviewRequest,
+    ProductPlanProposalRequest,
     ProductPlanResponse,
     ProductResponse,
     ProductRunRequest,
@@ -75,6 +78,11 @@ from databoom.api.models import (
     WorkspaceTopValueResponse,
     WorkspaceUniqueConstraintResponse,
 )
+from databoom.api.plans import (
+    planner_request_from_product,
+    review_plan,
+    run_request_from_approved_plan,
+)
 from databoom.api.products import ProductCatalogEntry, get_product, list_products
 from databoom.api.runs import (
     execute_generation_run,
@@ -92,6 +100,7 @@ from databoom.api.workspaces import (
 from databoom.core.config import Settings
 from databoom.ingest.postgres import load_postgres_schema
 from databoom.llm import resolve_llm_provider_policy
+from databoom.planning import PlanningService, PlanProposal
 from databoom.profiling import (
     ConnectionTest,
     SourceProfile,
@@ -507,6 +516,116 @@ def subscribe(
 
 
 @router.post(
+    "/products/{product_id}/plans",
+    response_model=PlanProposal,
+    status_code=status.HTTP_201_CREATED,
+    tags=["plans"],
+)
+def create_product_plan(
+    request: Request,
+    product_id: str,
+    payload: ProductPlanProposalRequest,
+    user: AppUserResponse = app_user_dependency,
+) -> PlanProposal:
+    """Create and persist a dry-run proposal without generating records."""
+
+    product = _get_product_or_404(product_id)
+    store = _state_store(request)
+    if store.get_subscription(user.email, product.id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="subscribe to this product before planning a run",
+        )
+    source = _validate_source_for_product(request, payload.source_id, product)
+    try:
+        planner_request = planner_request_from_product(product, payload, source=source)
+        proposal = PlanningService(request.app.state.settings).propose(
+            planner_request,
+            user_api_key=payload.user_api_key,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    existing = store.get_plan(user.email, proposal.plan_id)
+    if existing is not None:
+        return existing
+    store.save_plan(user.email, proposal)
+    return proposal
+
+
+@router.get("/plans", response_model=tuple[PlanProposal, ...], tags=["plans"])
+def list_plans(
+    request: Request,
+    product_id: str | None = Query(default=None),
+    user: AppUserResponse = app_user_dependency,
+) -> tuple[PlanProposal, ...]:
+    """List the authenticated user's proposals, optionally by product."""
+
+    plans = _state_store(request).list_plans(user.email)
+    if product_id is None:
+        return plans
+    return tuple(plan for plan in plans if plan.product_id == product_id)
+
+
+@router.get("/plans/{plan_id}", response_model=PlanProposal, tags=["plans"])
+def plan_detail(
+    request: Request,
+    plan_id: str,
+    user: AppUserResponse = app_user_dependency,
+) -> PlanProposal:
+    """Return one proposal owned by the authenticated user."""
+
+    return _owned_plan_or_404(request, user, plan_id)
+
+
+@router.post("/plans/{plan_id}/review", response_model=PlanProposal, tags=["plans"])
+def review_product_plan(
+    request: Request,
+    plan_id: str,
+    payload: PlanReviewRequest,
+    user: AppUserResponse = app_user_dependency,
+) -> PlanProposal:
+    """Apply an explicit approve or reject decision to a draft proposal."""
+
+    plan = _owned_plan_or_404(request, user, plan_id)
+    try:
+        reviewed = review_plan(plan, status=payload.status, reviewer=user.email)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    _state_store(request).save_plan(user.email, reviewed)
+    return reviewed
+
+
+@router.post(
+    "/plans/{plan_id}/runs/async",
+    response_model=GenerationRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["plans"],
+)
+def execute_approved_plan(
+    request: Request,
+    plan_id: str,
+    payload: ApprovedPlanRunRequest,
+    user: AppUserResponse = app_user_dependency,
+) -> GenerationRunResponse:
+    """Start generation from an approved and persisted plan."""
+
+    plan = _owned_plan_or_404(request, user, plan_id)
+    product = _get_product_or_404(plan.product_id)
+    source = _validate_source_for_product(request, payload.source_id, product)
+    try:
+        run_payload = run_request_from_approved_plan(plan, source_id=payload.source_id)
+        return request.app.state.async_run_manager.submit_product_run(
+            product=product,
+            payload=run_payload,
+            settings=request.app.state.settings,
+            state_store=_state_store(request),
+            source=source,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+
+@router.post(
     "/products/{product_id}/runs",
     response_model=GenerationRunResponse,
     status_code=status.HTTP_201_CREATED,
@@ -887,6 +1006,17 @@ def _state_store(request: Request) -> StateStore:
     return request.app.state.state_store
 
 
+def _owned_plan_or_404(
+    request: Request,
+    user: AppUserResponse,
+    plan_id: str,
+) -> PlanProposal:
+    plan = _state_store(request).get_plan(user.email, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+    return plan
+
+
 def _product_response(product: ProductCatalogEntry) -> ProductResponse:
     return ProductResponse(
         id=product.id,
@@ -1015,9 +1145,7 @@ def _workspace_source_profile_response(profile: SourceProfile) -> WorkspaceSourc
                 parent_columns=relationship.parent_columns,
                 parent_key_count=relationship.parent_key_count,
                 child_row_count=relationship.child_row_count,
-                distinct_parent_keys_referenced=(
-                    relationship.distinct_parent_keys_referenced
-                ),
+                distinct_parent_keys_referenced=(relationship.distinct_parent_keys_referenced),
                 min_children_per_parent=relationship.min_children_per_parent,
                 max_children_per_parent=relationship.max_children_per_parent,
                 average_children_per_parent=relationship.average_children_per_parent,

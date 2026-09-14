@@ -419,6 +419,7 @@ def _running_product_response(
 
     return GenerationRunResponse(
         run_id=run_id,
+        plan_id=payload.plan_id,
         retry_of_run_id=retry_of_run_id,
         kind=product.kind,
         status=RunStatus.RUNNING,
@@ -555,6 +556,7 @@ def _failed_response(
         )
     return GenerationRunResponse(
         run_id=run_id,
+        plan_id=payload.plan_id,
         retry_of_run_id=retry_of_run_id,
         kind=product.kind,
         status=RunStatus.FAILED,

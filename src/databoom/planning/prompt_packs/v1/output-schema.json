@@ -11,7 +11,7 @@
         "properties": {
           "name": {"type": "string"},
           "kind": {"type": "string", "enum": ["table", "collection", "node", "edge"]},
-          "target_count": {"type": "integer", "minimum": 0, "maximum": 10000000},
+          "target_count": {"type": "integer", "minimum": 0, "maximum": 1000000},
           "strategy": {"type": "string"},
           "notes": {"type": "string"}
         },

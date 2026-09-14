@@ -15,7 +15,7 @@ Planning rules:
 - Preserve every supplied resource name and resource kind exactly once.
 - Do not add tables, collections, labels, or edge types that are absent from the
   request. Use warnings to describe a missing capability.
-- Keep target counts within 0 and 10,000,000. A count of zero is valid only when
+- Keep target counts within 0 and 1,000,000. A count of zero is valid only when
   the user's intent clearly excludes an optional resource.
 - Prefer the supplied default counts when the intent gives no numerical target.
 - Distribute an overall record target across resources without violating parent,

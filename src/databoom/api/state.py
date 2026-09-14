@@ -50,6 +50,7 @@ from databoom.api.workspaces import (
     workspace_source_to_payload,
 )
 from databoom.core.config import Settings
+from databoom.planning import PlanProposal
 from databoom.profiling import (
     SourceProfile,
     source_profile_from_payload,
@@ -97,6 +98,17 @@ runs_table = Table(
     Column("run_id", String(64), primary_key=True),
     Column("payload", JSON, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False, index=True),
+)
+
+plans_table = Table(
+    "databoom_plans",
+    metadata,
+    Column("plan_id", String(80), primary_key=True),
+    Column("user_email", String(320), primary_key=True, index=True),
+    Column("product_id", String(120), nullable=False, index=True),
+    Column("payload", JSON, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, index=True),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
 workspace_sources_table = Table(
@@ -158,6 +170,15 @@ class StateStore(Protocol):
     def get_run(self, run_id: str) -> GenerationRunResponse | None:
         """Return one generation run by ID."""
 
+    def save_plan(self, user_email: str, plan: PlanProposal) -> None:
+        """Persist or replace a plan owned by one user."""
+
+    def list_plans(self, user_email: str) -> tuple[PlanProposal, ...]:
+        """List plan proposals owned by one user."""
+
+    def get_plan(self, user_email: str, plan_id: str) -> PlanProposal | None:
+        """Return an owned plan without exposing another user's proposal."""
+
     def save_workspace_source(self, source: WorkspaceSource) -> None:
         """Persist or replace a workspace source."""
 
@@ -183,6 +204,7 @@ class MemoryStateStore:
         self._sessions: dict[str, AppUserResponse] = {}
         self._subscriptions: dict[str, dict[str, SubscriptionResponse]] = {}
         self._runs: dict[str, GenerationRunResponse] = {}
+        self._plans: dict[str, dict[str, PlanProposal]] = {}
         self._workspace_sources: dict[str, WorkspaceSource] = {
             source.id: source for source in default_workspace_sources()
         }
@@ -205,9 +227,9 @@ class MemoryStateStore:
         return self._sessions.get(token)
 
     def save_subscription(self, subscription: SubscriptionResponse) -> None:
-        self._subscriptions.setdefault(subscription.user_email, {})[
-            subscription.product_id
-        ] = subscription
+        self._subscriptions.setdefault(subscription.user_email, {})[subscription.product_id] = (
+            subscription
+        )
 
     def list_subscriptions(self, user_email: str) -> tuple[SubscriptionResponse, ...]:
         return tuple(self._subscriptions.get(user_email, {}).values())
@@ -223,6 +245,15 @@ class MemoryStateStore:
 
     def get_run(self, run_id: str) -> GenerationRunResponse | None:
         return self._runs.get(run_id)
+
+    def save_plan(self, user_email: str, plan: PlanProposal) -> None:
+        self._plans.setdefault(user_email, {})[plan.plan_id] = plan
+
+    def list_plans(self, user_email: str) -> tuple[PlanProposal, ...]:
+        return tuple(self._plans.get(user_email, {}).values())
+
+    def get_plan(self, user_email: str, plan_id: str) -> PlanProposal | None:
+        return self._plans.get(user_email, {}).get(plan_id)
 
     def save_workspace_source(self, source: WorkspaceSource) -> None:
         self._workspace_sources[source.id] = source
@@ -388,6 +419,45 @@ class SQLAlchemyStateStore:
                 select(runs_table.c.payload).where(runs_table.c.run_id == run_id)
             ).scalar_one_or_none()
         return GenerationRunResponse.model_validate(payload) if payload else None
+
+    def save_plan(self, user_email: str, plan: PlanProposal) -> None:
+        payload = plan.model_dump(mode="json")
+        with self.engine.begin() as connection:
+            connection.execute(
+                delete(plans_table).where(
+                    plans_table.c.plan_id == plan.plan_id,
+                    plans_table.c.user_email == user_email,
+                )
+            )
+            connection.execute(
+                insert(plans_table).values(
+                    plan_id=plan.plan_id,
+                    user_email=user_email,
+                    product_id=plan.product_id,
+                    payload=payload,
+                    created_at=plan.created_at,
+                    updated_at=datetime.now(UTC),
+                )
+            )
+
+    def list_plans(self, user_email: str) -> tuple[PlanProposal, ...]:
+        with self.engine.begin() as connection:
+            rows = connection.execute(
+                select(plans_table.c.payload)
+                .where(plans_table.c.user_email == user_email)
+                .order_by(plans_table.c.created_at.desc())
+            )
+            return tuple(PlanProposal.model_validate(row[0]) for row in rows)
+
+    def get_plan(self, user_email: str, plan_id: str) -> PlanProposal | None:
+        with self.engine.begin() as connection:
+            payload = connection.execute(
+                select(plans_table.c.payload).where(
+                    plans_table.c.user_email == user_email,
+                    plans_table.c.plan_id == plan_id,
+                )
+            ).scalar_one_or_none()
+        return PlanProposal.model_validate(payload) if payload else None
 
     def save_workspace_source(self, source: WorkspaceSource) -> None:
         payload = workspace_source_to_payload(source)

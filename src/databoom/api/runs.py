@@ -167,7 +167,7 @@ def execute_product_generation_run(
             # value generation keep deterministic fallback behavior.
             relationship_hints = _relationship_hints_from_source_profile(source_profile)
             column_hints = _column_hints_from_source_profile(source_profile)
-            return execute_generation_run(
+            run = execute_generation_run(
                 GenerationRunRequest(
                     schema_ddl=schema_ddl,
                     row_counts=payload.row_counts
@@ -187,6 +187,7 @@ def execute_product_generation_run(
                 relationship_hints=relationship_hints,
                 column_hints=column_hints,
             )
+            return run.model_copy(update={"plan_id": payload.plan_id})
         case DataProductKind.DOCUMENT:
             return execute_document_generation_run(
                 product,
@@ -246,6 +247,7 @@ def execute_document_generation_run(
 
     return GenerationRunResponse(
         run_id=run_id,
+        plan_id=payload.plan_id,
         kind=DataProductKind.DOCUMENT,
         status=RunStatus.COMPLETED,
         created_at=created_at,
@@ -315,6 +317,7 @@ def execute_graph_generation_run(
 
     return GenerationRunResponse(
         run_id=run_id,
+        plan_id=payload.plan_id,
         kind=DataProductKind.GRAPH,
         status=RunStatus.COMPLETED,
         created_at=created_at,

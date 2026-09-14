@@ -65,7 +65,7 @@ class PlanResourceInput(PlanningModel):
 
     name: str = Field(min_length=1, max_length=200)
     kind: PlanResourceKind
-    default_count: int = Field(ge=0, le=10_000_000)
+    default_count: int = Field(ge=0, le=1_000_000)
     attributes: tuple[str, ...] = ()
     source_resource: str | None = None
     target_resource: str | None = None
@@ -113,7 +113,7 @@ class PlanResource(PlanningModel):
 
     name: str = Field(min_length=1, max_length=200)
     kind: PlanResourceKind
-    target_count: int = Field(ge=0, le=10_000_000)
+    target_count: int = Field(ge=0, le=1_000_000)
     strategy: str = Field(min_length=1, max_length=200)
     notes: str = Field(default="", max_length=1_000)
 

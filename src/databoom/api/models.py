@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from databoom.generation import DomainProfile, OutputFormat
 from databoom.llm.provider import LLMProviderMode
+from databoom.planning import PlanReviewStatus
 
 
 class HealthResponse(BaseModel):
@@ -473,6 +474,7 @@ class ProductRunRequest(BaseModel):
     seed: str = "dashboard-demo"
     output_formats: tuple[str, ...] | None = None
     source_id: str | None = None
+    plan_id: str | None = None
 
     @field_validator("row_counts")
     @classmethod
@@ -482,8 +484,8 @@ class ProductRunRequest(BaseModel):
                 raise ValueError("row count table names cannot be empty")
             if row_count < 0:
                 raise ValueError("row counts cannot be negative")
-            if row_count > 10_000:
-                raise ValueError("dashboard product runs are limited to 10,000 rows per table")
+            if row_count > 1_000_000:
+                raise ValueError("product runs are limited to 1,000,000 rows per resource")
         return value
 
     @field_validator("output_formats")
@@ -497,6 +499,64 @@ class ProductRunRequest(BaseModel):
         if value is not None and any(not item.strip() for item in value):
             raise ValueError("output formats cannot be empty")
         return value
+
+
+class ProductPlanProposalRequest(BaseModel):
+    """Create a reviewable product generation plan without executing it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    intent: str = Field(min_length=1, max_length=4_000)
+    row_counts: dict[str, int] = Field(default_factory=dict)
+    seed: str = Field(default="dashboard-plan", min_length=1, max_length=256)
+    output_formats: tuple[str, ...] | None = None
+    source_id: str | None = None
+    user_api_key: SecretStr | None = None
+
+    @field_validator("row_counts")
+    @classmethod
+    def validate_plan_row_counts(cls, value: dict[str, int]) -> dict[str, int]:
+        for resource_name, row_count in value.items():
+            if not resource_name.strip():
+                raise ValueError("row count resource names cannot be empty")
+            if row_count < 0 or row_count > 1_000_000:
+                raise ValueError("planned row counts must be between 0 and 1,000,000")
+        return value
+
+    @field_validator("output_formats")
+    @classmethod
+    def require_plan_output_formats(
+        cls,
+        value: tuple[str, ...] | None,
+    ) -> tuple[str, ...] | None:
+        if value is not None and not value:
+            raise ValueError("at least one output format is required")
+        if value is not None and any(not item.strip() for item in value):
+            raise ValueError("output formats cannot be empty")
+        return value
+
+
+class PlanReviewRequest(BaseModel):
+    """Approve or reject a draft generation plan."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: PlanReviewStatus
+
+    @field_validator("status")
+    @classmethod
+    def reject_draft_transition(cls, value: PlanReviewStatus) -> PlanReviewStatus:
+        if value == PlanReviewStatus.DRAFT:
+            raise ValueError("review status must be approved or rejected")
+        return value
+
+
+class ApprovedPlanRunRequest(BaseModel):
+    """Execute an approved proposal against an optional compatible source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str | None = None
 
 
 class GenerationRunRequest(BaseModel):
@@ -673,6 +733,7 @@ class GenerationRunResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     run_id: str
+    plan_id: str | None = None
     retry_of_run_id: str | None = None
     kind: DataProductKind = DataProductKind.RELATIONAL
     status: RunStatus
