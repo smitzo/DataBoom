@@ -6,7 +6,6 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  ShieldCheck,
   Settings,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,19 +18,9 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { clearSession, type Session } from "@/lib/session";
 
 const navItems = [
-  {
-    href: "/dashboard",
-    label: "Workspace",
-    description: "Generate and preview data",
-    icon: LayoutDashboard,
-  },
-  { href: "/runs", label: "Runs", description: "History and artifacts", icon: BarChart3 },
-  {
-    href: "/settings",
-    label: "Settings",
-    description: "Account and providers",
-    icon: Settings,
-  },
+  { href: "/dashboard", label: "Workspace", icon: LayoutDashboard },
+  { href: "/runs", label: "Runs", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppShell({ session, children }: { session: Session; children: ReactNode }) {
@@ -58,7 +47,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
               : "flex items-center justify-between gap-3"
           }
         >
-          {isNavCollapsed ? <BrandMark size="sm" /> : <BrandLogo size="md" sublabel="Product console" />}
+          {isNavCollapsed ? <BrandMark size="sm" /> : <BrandLogo size="md" />}
           <button
             aria-label={isNavCollapsed ? "Expand navigation" : "Collapse navigation"}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
@@ -83,19 +72,16 @@ export function AppShell({ session, children }: { session: Session; children: Re
                 href={item.href}
                 title={item.label}
                 className={`flex rounded-xl border text-sm transition ${
-                  isNavCollapsed ? "h-11 items-center justify-center px-0 py-0" : "items-start gap-3 px-3 py-2.5"
+                  isNavCollapsed ? "h-11 items-center justify-center px-0 py-0" : "h-11 items-center gap-3 px-3"
                 } ${
                   active
                     ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
                     : "border-transparent text-zinc-500 hover:border-white/10 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
-                <Icon className={`${isNavCollapsed ? "h-4 w-4" : "mt-0.5 h-4 w-4"} shrink-0`} />
+                <Icon className="h-4 w-4 shrink-0" />
                 {isNavCollapsed ? null : (
-                  <span>
-                    <span className="block font-semibold">{item.label}</span>
-                    <span className="mt-1 block text-xs text-zinc-600">{item.description}</span>
-                  </span>
+                  <span className="font-semibold">{item.label}</span>
                 )}
               </Link>
             );
@@ -119,8 +105,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
             </div>
           ) : (
             <>
-              <p className="text-xs font-semibold uppercase text-zinc-500">Signed in</p>
-              <p className="mt-2 text-sm font-semibold text-white">{session.user.name}</p>
+              <p className="text-sm font-semibold text-white">{session.user.name}</p>
               <p className="text-xs text-zinc-500">{session.user.email}</p>
             </>
           )}
@@ -139,39 +124,45 @@ export function AppShell({ session, children }: { session: Session; children: Re
 
       <div className={isNavCollapsed ? "lg:pl-20" : "lg:pl-64"}>
         <header className="sticky top-0 z-30 border-b border-white/10 bg-[#050714]/85 backdrop-blur-xl">
-          <div className="flex min-h-16 items-center justify-between gap-4 px-5 sm:px-8">
+          <div className="flex min-h-14 items-center justify-between gap-4 px-4 sm:px-6">
             <BrandLogo
               size="sm"
-              sublabel="Console"
               className="lg:hidden [--text-primary:#ffffff] [--text-faint:#71717a]"
             />
             <div className="hidden lg:block">
-              <Breadcrumbs className="mb-1" />
-              <p className="text-sm font-semibold text-zinc-200">Data operations workspace</p>
-              <p className="text-xs text-zinc-500">Generate, validate, preview, export.</p>
+              <Breadcrumbs />
             </div>
             <div className="flex items-center gap-2">
-              <span className="hidden h-10 items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 text-xs font-semibold uppercase text-emerald-100 md:inline-flex">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Workspace
-              </span>
-              <span className="hidden rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-zinc-200 xl:inline-flex">
-                {session.user.name}
-              </span>
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-md border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 lg:hidden"
+                  aria-label={item.label}
+                  className={`grid h-9 w-9 place-items-center rounded-lg border transition lg:hidden ${
+                    pathname === item.href || pathname.startsWith(`${item.href}/`)
+                      ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+                      : "border-white/10 text-zinc-400 hover:text-white"
+                  }`}
+                  title={item.label}
                 >
-                  {item.label}
+                  <item.icon className="h-4 w-4" />
                 </Link>
               ))}
+              <span
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-cyan-100"
+                title={session.user.name}
+              >
+                {session.user.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)}
+              </span>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-none px-4 py-5 sm:px-6">{children}</div>
+        <div className="mx-auto max-w-none px-3 py-3 sm:px-4">{children}</div>
       </div>
     </main>
   );

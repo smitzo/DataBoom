@@ -646,10 +646,10 @@ export function DataWorkspace({ session }: { session: Session }) {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-[calc(100vh-6rem)] place-items-center rounded-xl border border-white/10 bg-zinc-950">
+      <div className="grid min-h-[calc(100vh-5rem)] place-items-center rounded-xl border border-white/10 bg-zinc-950">
         <div className="flex items-center gap-3 text-sm font-semibold text-zinc-300">
           <Loader2 className="h-5 w-5 animate-spin text-cyan-200" />
-          Loading DataBoom Workspace
+          Loading workspace
         </div>
       </div>
     );
@@ -786,48 +786,30 @@ function ProductWorkspacePicker({
   onSelectProduct: (product: Product) => void;
 }) {
   return (
-    <section className="min-h-[calc(100vh-5.5rem)] rounded-2xl border border-white/10 bg-[#070b16] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
-      <div className="grid min-h-[calc(100vh-8rem)] gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(34rem,1.35fr)] xl:items-stretch">
-        <div className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+    <section className="min-h-[calc(100vh-5rem)] rounded-xl border border-white/10 bg-[#070b16] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)] sm:p-7">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex flex-col gap-3 border-b border-white/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">
-              Product workspaces
+              Workspaces
             </p>
-            <h1 className="mt-4 max-w-2xl text-4xl font-semibold leading-tight text-white lg:text-5xl">
-              Pick the data surface before you run the engine.
+            <h1 className="mt-2 text-3xl font-semibold text-white sm:text-4xl">
+              Choose a data engine
             </h1>
-            <p className="mt-5 max-w-xl text-sm leading-6 text-zinc-400">
-              Each workspace opens with only the controls, previews, and artifacts that match that
-              product. Relational data stays table-first. Document data stays JSON-first.
-            </p>
           </div>
-
-          <div className="mt-10 grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
-            {[
-              ["Table-Boom", "Tables, keys, CSV and SQL"],
-              ["Docu-Boom", "Documents, JSON and NDJSON"],
-              ["Focused", "One product workspace at a time"],
-            ].map(([label, detail]) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-4">
-                <p className="text-sm font-semibold text-white">{label}</p>
-                <p className="mt-2 text-xs leading-5 text-zinc-500">{detail}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-zinc-500">Table, document, graph, or masking.</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {sourceWarning ? (
-            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/10 p-5 text-sm leading-6 text-amber-100 sm:col-span-2">
+            <div className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100 sm:col-span-2">
               {sourceWarning}
             </div>
           ) : null}
           {products.length === 0 ? (
-            <div className="rounded-2xl border border-red-300/25 bg-red-300/10 p-6 sm:col-span-2">
+            <div className="rounded-xl border border-red-300/25 bg-red-300/10 p-5 sm:col-span-2">
               <p className="text-lg font-semibold text-red-100">Product catalog did not load.</p>
-              <p className="mt-3 text-sm leading-6 text-red-100/75">
-                {error ?? "Start or restart the backend API, then refresh this dashboard."}
-              </p>
+              <p className="mt-2 text-sm text-red-100/75">{error ?? "Backend unavailable."}</p>
             </div>
           ) : null}
           {products.map((product) => {
@@ -838,43 +820,39 @@ function ProductWorkspacePicker({
             return (
               <button
                 key={product.id}
-                className={`group flex min-h-64 flex-col justify-between rounded-2xl border p-5 text-left transition ${
+                className={`group flex min-h-44 flex-col justify-between rounded-xl border p-5 text-left transition duration-200 ${
                   selected
-                    ? "border-cyan-300/45 bg-cyan-300/10 shadow-[0_0_44px_rgba(34,211,238,0.12)]"
-                    : "border-white/10 bg-white/[0.035] hover:border-cyan-300/30 hover:bg-cyan-300/[0.055]"
+                    ? "border-cyan-300/45 bg-cyan-300/10 shadow-[0_14px_40px_rgba(34,211,238,0.08)]"
+                    : "border-white/10 bg-white/[0.025] hover:-translate-y-0.5 hover:border-cyan-300/30 hover:bg-cyan-300/[0.05]"
                 }`}
                 onClick={() => onSelectProduct(product)}
               >
                 <span>
                   <span className="flex items-start justify-between gap-4">
-                    <span className="grid h-12 w-12 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
                       <Icon className="h-5 w-5" />
                     </span>
                     <span
-                      className={`rounded-full border px-3 py-1 text-[0.68rem] font-semibold uppercase ${
+                      className={`inline-flex items-center gap-2 text-xs font-semibold ${
                         product.status === "active"
-                          ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-200"
-                          : "border-sky-300/25 bg-sky-300/10 text-sky-200"
+                          ? "text-emerald-200"
+                          : "text-sky-200"
                       }`}
                     >
+                      <span className={`h-2 w-2 rounded-full ${product.status === "active" ? "bg-emerald-300" : "bg-sky-300"}`} />
                       {product.status}
                     </span>
                   </span>
-                  <span className="mt-5 block text-2xl font-semibold text-white">
-                    {product.name}
-                  </span>
-                  <span className="mt-2 block text-sm text-zinc-500">{product.module}</span>
-                  <span className="mt-4 block text-sm leading-6 text-zinc-400">
-                    {product.description}
-                  </span>
+                  <span className="mt-4 block text-xl font-semibold text-white">{product.name}</span>
+                  <span className="mt-1 block text-sm text-zinc-500">{kindLabel(product.kind)}</span>
                 </span>
 
-                <span className="mt-6 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
-                  <span className="text-xs font-semibold uppercase text-zinc-500">
+                <span className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                  <span className="text-xs text-zinc-500">
                     {resourceCount} {product.kind === "document" ? "collections" : "resources"}
                   </span>
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">
-                    {subscribed ? "Open workspace" : "Preview workspace"}
+                    {subscribed ? "Open" : "Preview"}
                     <PanelLeftOpen className="h-4 w-4 transition group-hover:translate-x-0.5" />
                   </span>
                 </span>
