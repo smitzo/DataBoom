@@ -27,3 +27,7 @@ services:
         value: gpt-4.1-mini
       - key: DATABOOM_LLM_REQUEST_TOKEN_LIMIT
         value: "4000"
+      - key: DATABOOM_LLM_TIMEOUT_SECONDS
+        value: "20"
+      - key: DATABOOM_LLM_MAX_RETRIES
+        value: "1"
