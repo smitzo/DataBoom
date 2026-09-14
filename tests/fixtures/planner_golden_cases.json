@@ -1,0 +1,88 @@
+[
+  {
+    "name": "relational_parent_child",
+    "request": {
+      "product_id": "table-boom",
+      "product_kind": "relational",
+      "intent": "Generate customers and their orders.",
+      "seed": "golden-relational",
+      "output_formats": ["csv", "sql"],
+      "resources": [
+        {"name": "customers", "kind": "table", "default_count": 100},
+        {"name": "orders", "kind": "table", "default_count": 250}
+      ]
+    },
+    "expected": {
+      "summary": "Generate 350 relational records across 2 resources.",
+      "strategies": {
+        "customers": "schema-aware deterministic rows",
+        "orders": "schema-aware deterministic rows"
+      },
+      "constraints": [
+        "Use the supplied seed for repeatable output.",
+        "Validate every artifact before marking the run complete.",
+        "Generate parent tables before dependent child tables."
+      ]
+    }
+  },
+  {
+    "name": "document_collections",
+    "request": {
+      "product_id": "docu-boom",
+      "product_kind": "document",
+      "intent": "Generate customer documents and activity events.",
+      "seed": "golden-document",
+      "output_formats": ["json", "ndjson"],
+      "resources": [
+        {"name": "customers", "kind": "collection", "default_count": 80},
+        {"name": "events", "kind": "collection", "default_count": 160}
+      ]
+    },
+    "expected": {
+      "summary": "Generate 240 document records across 2 resources.",
+      "strategies": {
+        "customers": "nested deterministic documents",
+        "events": "nested deterministic documents"
+      },
+      "constraints": [
+        "Use the supplied seed for repeatable output.",
+        "Validate every artifact before marking the run complete.",
+        "Keep document references inside generated collection IDs."
+      ]
+    }
+  },
+  {
+    "name": "graph_nodes_and_edges",
+    "request": {
+      "product_id": "graph-boom",
+      "product_kind": "graph",
+      "intent": "Generate accounts, transactions, and initiation edges.",
+      "seed": "golden-graph",
+      "output_formats": ["json", "csv"],
+      "resources": [
+        {"name": "Account", "kind": "node", "default_count": 50},
+        {"name": "Transaction", "kind": "node", "default_count": 100},
+        {
+          "name": "INITIATED",
+          "kind": "edge",
+          "default_count": 150,
+          "source_resource": "Account",
+          "target_resource": "Transaction"
+        }
+      ]
+    },
+    "expected": {
+      "summary": "Generate 300 graph records across 3 resources.",
+      "strategies": {
+        "Account": "stable labeled nodes",
+        "Transaction": "stable labeled nodes",
+        "INITIATED": "endpoint-safe deterministic edges"
+      },
+      "constraints": [
+        "Use the supplied seed for repeatable output.",
+        "Validate every artifact before marking the run complete.",
+        "Reject dangling edge endpoints and duplicate node IDs."
+      ]
+    }
+  }
+]
