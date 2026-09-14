@@ -153,6 +153,7 @@ export type Subscription = {
 
 export type GenerationRun = {
   run_id: string;
+  plan_id: string | null;
   kind: "relational" | "document" | "graph" | "masking";
   status: "pending" | "running" | "completed" | "failed";
   created_at: string;
@@ -245,6 +246,47 @@ export type GraphPreview = {
   run_id: string;
   nodes: Record<string, unknown>[];
   edges: Record<string, unknown>[];
+};
+
+export type PlanResource = {
+  name: string;
+  kind: "table" | "collection" | "node" | "edge";
+  target_count: number;
+  strategy: string;
+  notes: string;
+};
+
+export type PlanProposal = {
+  plan_id: string;
+  planner_version: string;
+  product_id: string;
+  product_kind: "relational" | "document" | "graph";
+  intent: string;
+  seed: string;
+  output_formats: string[];
+  decision: {
+    summary: string;
+    resources: PlanResource[];
+    constraints: string[];
+    warnings: string[];
+  };
+  telemetry: {
+    mode: "deterministic" | "openai";
+    model: string | null;
+    prompt_pack_version: string;
+    schema_fingerprint: string;
+    prompt_cache_key: string;
+    input_tokens: number;
+    cached_input_tokens: number;
+    cache_write_tokens: number;
+    output_tokens: number;
+    latency_ms: number;
+    fallback_reason: string | null;
+  };
+  review_status: "draft" | "approved" | "rejected";
+  reviewed_by: string | null;
+  created_at: string;
+  reviewed_at: string | null;
 };
 
 let cachedApiBaseUrl: string | null = null;
@@ -428,6 +470,59 @@ export async function createAsyncProductRun(
     {
       method: "POST",
       body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function createProductPlan(
+  token: string,
+  productId: string,
+  payload: {
+    intent: string;
+    row_counts: Record<string, number>;
+    seed: string;
+    output_formats: string[];
+    source_id?: string;
+    user_api_key?: string;
+  },
+) {
+  return apiRequest<PlanProposal>(
+    `/products/${productId}/plans`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function getPlans(token: string, productId?: string) {
+  const params = productId ? `?${new URLSearchParams({ product_id: productId })}` : "";
+  return apiRequest<PlanProposal[]>(`/plans${params}`, {}, token);
+}
+
+export async function reviewPlan(
+  token: string,
+  planId: string,
+  status: "approved" | "rejected",
+) {
+  return apiRequest<PlanProposal>(
+    `/plans/${planId}/review`,
+    {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    },
+    token,
+  );
+}
+
+export async function executeApprovedPlan(token: string, planId: string, sourceId?: string) {
+  return apiRequest<GenerationRun>(
+    `/plans/${planId}/runs/async`,
+    {
+      method: "POST",
+      body: JSON.stringify({ source_id: sourceId }),
     },
     token,
   );

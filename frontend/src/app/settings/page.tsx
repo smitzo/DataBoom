@@ -9,6 +9,7 @@ import { AuthGate } from "@/components/auth-gate";
 import type { LlmPolicy } from "@/lib/api";
 import { getLlmPolicy, resolveLlmPolicy } from "@/lib/api";
 import type { Session } from "@/lib/session";
+import { getSessionLlmKey, setSessionLlmKey } from "@/lib/llm-key";
 
 export default function SettingsPage() {
   return (
@@ -26,6 +27,7 @@ function SettingsContent({ session }: { session: Session }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setUserApiKey(getSessionLlmKey());
     getLlmPolicy(session.token)
       .then(setPolicy)
       .catch((caughtError) => {
@@ -42,7 +44,7 @@ function SettingsContent({ session }: { session: Session }) {
     try {
       const nextPolicy = await resolveLlmPolicy(session.token, userApiKey);
       setPolicy(nextPolicy);
-      setUserApiKey("");
+      setSessionLlmKey(userApiKey);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to resolve key policy");
     } finally {
@@ -123,7 +125,8 @@ function SettingsContent({ session }: { session: Session }) {
               Use my API key for this request
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-500">
-              Paste a key to resolve request mode. DataBoom does not store it in this MVP flow.
+              The key is kept only in this browser tab and sent directly with planning requests.
+              DataBoom does not persist it in the backend.
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <input

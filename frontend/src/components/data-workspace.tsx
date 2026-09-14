@@ -28,6 +28,7 @@ import {
   Share2,
   Sparkles,
   Table2,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -37,6 +38,7 @@ import type {
   DocumentPreview,
   GenerationRun,
   GraphPreview,
+  PlanProposal,
   Product,
   Subscription,
   TablePreview,
@@ -45,10 +47,12 @@ import type {
 } from "@/lib/api";
 import {
   apiUrl,
-  createAsyncProductRun,
+  createProductPlan,
+  executeApprovedPlan,
   getDocumentPreview,
   getGraphPreview,
   getProducts,
+  getPlans,
   getRun,
   getRunArtifacts,
   getRuns,
@@ -57,15 +61,17 @@ import {
   getWorkspaceSources,
   profileWorkspaceSource,
   refreshWorkspaceSource,
+  reviewPlan,
   saveWorkspaceSource,
   subscribeToProduct,
   testWorkspaceConnection,
 } from "@/lib/api";
+import { getSessionLlmKey } from "@/lib/llm-key";
 import type { Session } from "@/lib/session";
 
 type PreviewMap = Record<string, TablePreview>;
 type DocumentPreviewMap = Record<string, DocumentPreview>;
-type AgentStatus = "idle" | "subscribing" | "generating" | "complete" | "error";
+type AgentStatus = "idle" | "subscribing" | "planning" | "generating" | "complete" | "error";
 type WorkspaceMode = "catalog" | "product";
 type ViewFormat = "table" | "csv" | "sql" | "json" | "ndjson" | "graph" | "masked";
 
@@ -82,6 +88,8 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [workspaceSources, setWorkspaceSources] = useState<WorkspaceSource[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [runs, setRuns] = useState<GenerationRun[]>([]);
+  const [plans, setPlans] = useState<PlanProposal[]>([]);
+  const [currentPlan, setCurrentPlan] = useState<PlanProposal | null>(null);
   const [artifacts, setArtifacts] = useState<ArtifactList | null>(null);
   const [previews, setPreviews] = useState<PreviewMap>({});
   const [documentPreviews, setDocumentPreviews] = useState<DocumentPreviewMap>({});
@@ -303,10 +311,11 @@ export function DataWorkspace({ session }: { session: Session }) {
     setError(null);
     setSourceWarning(null);
     try {
-      const [nextProducts, nextSubscriptions, nextRuns] = await Promise.all([
+      const [nextProducts, nextSubscriptions, nextRuns, nextPlans] = await Promise.all([
         getProducts(),
         getSubscriptions(session.token),
         getRuns(),
+        getPlans(session.token),
       ]);
       let nextSources: WorkspaceSource[];
       try {
@@ -331,12 +340,18 @@ export function DataWorkspace({ session }: { session: Session }) {
       const firstRun = firstProduct
         ? newestRuns.find((run) => runMatchesProduct(run, firstProduct))
         : newestRuns[0];
+      const firstPlan = nextPlans.find((plan) => plan.product_id === firstProductId) ?? null;
       const firstConnection = workspaceConnectionsForProduct(firstProduct, nextSources)[0] ?? null;
 
       setProducts(nextProducts);
       setWorkspaceSources(nextSources);
       setSubscriptions(nextSubscriptions);
       setRuns(nextRuns);
+      setPlans(nextPlans);
+      setCurrentPlan(firstPlan);
+      if (firstPlan) {
+        setPrompt(firstPlan.intent);
+      }
       setSelectedProductId(firstProductId);
       setSelectedConnectionId(firstConnection?.id ?? "");
       setSelectedRunId(firstRun?.run_id ?? null);
@@ -360,6 +375,9 @@ export function DataWorkspace({ session }: { session: Session }) {
     setSelectedProductId(product.id);
     setSourceRefreshMessage(null);
     setSourceProfile(null);
+    const productPlan = plans.find((plan) => plan.product_id === product.id) ?? null;
+    setCurrentPlan(productPlan);
+    setPrompt(productPlan?.intent ?? "Generate realistic data for the selected product");
     const matchingRun = runs.slice().reverse().find((run) => runMatchesProduct(run, product));
     const nextConnection = workspaceConnectionsForProduct(product, workspaceSources)[0] ?? null;
     setSelectedRunId(matchingRun?.run_id ?? null);
@@ -542,7 +560,7 @@ export function DataWorkspace({ session }: { session: Session }) {
     }
   }
 
-  async function generate() {
+  async function createPlan() {
     if (!selectedProduct) {
       return;
     }
@@ -551,26 +569,46 @@ export function DataWorkspace({ session }: { session: Session }) {
       return;
     }
 
-    setStatus("generating");
+    setStatus("planning");
     setError(null);
     try {
-      const sourceId =
-        selectedConnection && !selectedConnection.id.endsWith("-local-demo")
-          ? selectedConnection.id
-          : undefined;
-      const run = await createAsyncProductRun(session.token, selectedProduct.id, {
-        row_counts: selectedConnection
-          ? Object.fromEntries(
-              selectedConnection.resources.map((resource) => [
-                resource.name,
-                Math.min(resource.estimated_rows, 10_000),
-              ]),
-            )
-          : selectedProduct.default_row_counts,
+      const proposal = await createProductPlan(session.token, selectedProduct.id, {
+        intent: prompt.trim(),
+        row_counts: requestedRowCounts(selectedConnection, selectedProduct),
         seed: `${selectedProduct.id}-workspace`,
         output_formats: downloadOptions(activeKind).map((option) => option.id),
-        source_id: sourceId,
+        source_id: workspaceSourceId(selectedConnection),
+        user_api_key: getSessionLlmKey() || undefined,
       });
+      setPlans((current) => upsertPlan(current, proposal));
+      setCurrentPlan(proposal);
+      setStatus("idle");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to plan generation");
+      setStatus("error");
+    }
+  }
+
+  async function approveAndGenerate() {
+    if (!currentPlan) {
+      return;
+    }
+
+    setStatus("planning");
+    setError(null);
+    try {
+      const approved =
+        currentPlan.review_status === "draft"
+          ? await reviewPlan(session.token, currentPlan.plan_id, "approved")
+          : currentPlan;
+      setPlans((current) => upsertPlan(current, approved));
+      setCurrentPlan(approved);
+      setStatus("generating");
+      const run = await executeApprovedPlan(
+        session.token,
+        approved.plan_id,
+        workspaceSourceId(selectedConnection),
+      );
       setRuns((current) => upsertRun(current, run));
       setSelectedRunId(run.run_id);
       setSelectedResource(runResources(run)[0] ?? null);
@@ -578,6 +616,31 @@ export function DataWorkspace({ session }: { session: Session }) {
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to generate data");
       setStatus("error");
+    }
+  }
+
+  async function rejectCurrentPlan() {
+    if (!currentPlan || currentPlan.review_status !== "draft") {
+      setCurrentPlan(null);
+      return;
+    }
+    setStatus("planning");
+    setError(null);
+    try {
+      const rejected = await reviewPlan(session.token, currentPlan.plan_id, "rejected");
+      setPlans((current) => upsertPlan(current, rejected));
+      setCurrentPlan(rejected);
+      setStatus("idle");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to reject plan");
+      setStatus("error");
+    }
+  }
+
+  function changePrompt(value: string) {
+    setPrompt(value);
+    if (currentPlan && value !== currentPlan.intent) {
+      setCurrentPlan(null);
     }
   }
 
@@ -685,9 +748,12 @@ export function DataWorkspace({ session }: { session: Session }) {
 
         <AgentPanel
           artifacts={artifacts}
+          currentPlan={currentPlan}
           insight={insight}
-          onGenerate={generate}
-          onPromptChange={setPrompt}
+          onApproveAndGenerate={approveAndGenerate}
+          onCreatePlan={createPlan}
+          onPromptChange={changePrompt}
+          onRejectPlan={rejectCurrentPlan}
           onSubscribe={subscribe}
           prompt={prompt}
           run={selectedRun}
@@ -2027,9 +2093,12 @@ function PlannedSurface({ product }: { product: Product | null }) {
 
 function AgentPanel({
   artifacts,
+  currentPlan,
   insight,
-  onGenerate,
+  onApproveAndGenerate,
+  onCreatePlan,
   onPromptChange,
+  onRejectPlan,
   onSubscribe,
   prompt,
   run,
@@ -2042,9 +2111,12 @@ function AgentPanel({
   visibleRows,
 }: {
   artifacts: ArtifactList | null;
+  currentPlan: PlanProposal | null;
   insight: Insight | null;
-  onGenerate: () => void;
+  onApproveAndGenerate: () => void;
+  onCreatePlan: () => void;
   onPromptChange: (value: string) => void;
+  onRejectPlan: () => void;
   onSubscribe: () => void;
   prompt: string;
   run: GenerationRun | null;
@@ -2056,7 +2128,11 @@ function AgentPanel({
   subscribed: boolean;
   visibleRows: number;
 }) {
-  const busy = status === "generating" || status === "subscribing" || run?.status === "running";
+  const busy =
+    status === "planning" ||
+    status === "generating" ||
+    status === "subscribing" ||
+    run?.status === "running";
   const runState = runStateLabel(run);
   const runStateClass =
     run?.status === "running"
@@ -2108,41 +2184,57 @@ function AgentPanel({
           </div>
           <textarea
             className="h-20 w-full resize-none rounded-lg border border-white/10 bg-[#0b1020] p-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-700 focus:border-cyan-300/45"
+            disabled={busy}
             onChange={(event) => onPromptChange(event.target.value)}
             value={prompt}
           />
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="truncate text-xs font-semibold text-zinc-500">
-              {selectedProduct?.kind ?? "No product"} · {visibleRows} preview rows
-            </span>
-            {subscribed ? (
-              <button
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
-                onClick={onGenerate}
-              >
-                {status === "generating" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                {status === "generating" ? "Generating" : "Generate"}
-              </button>
-            ) : (
-              <button
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
-                onClick={onSubscribe}
-              >
-                {status === "subscribing" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-                {selectedProduct?.status === "planned" ? "Planned" : "Subscribe"}
-              </button>
-            )}
-          </div>
+          {currentPlan ? (
+            <PlanReviewCard
+              busy={busy}
+              onApproveAndGenerate={onApproveAndGenerate}
+              onReject={onRejectPlan}
+              plan={currentPlan}
+              status={status}
+            />
+          ) : (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="truncate text-xs font-semibold text-zinc-500">
+                {selectedProduct?.kind ?? "No product"} · {visibleRows} preview rows
+              </span>
+              {subscribed ? (
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={
+                    busy ||
+                    !prompt.trim() ||
+                    !selectedProduct ||
+                    selectedProduct.status !== "active"
+                  }
+                  onClick={onCreatePlan}
+                >
+                  {status === "planning" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {status === "planning" ? "Planning" : "Review plan"}
+                </button>
+              ) : (
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
+                  onClick={onSubscribe}
+                >
+                  {status === "subscribing" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  {selectedProduct?.status === "planned" ? "Planned" : "Subscribe"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2208,6 +2300,113 @@ function AgentPanel({
         <InsightPanel insight={insight} />
       </div>
     </aside>
+  );
+}
+
+function PlanReviewCard({
+  busy,
+  onApproveAndGenerate,
+  onReject,
+  plan,
+  status,
+}: {
+  busy: boolean;
+  onApproveAndGenerate: () => void;
+  onReject: () => void;
+  plan: PlanProposal;
+  status: AgentStatus;
+}) {
+  const totalRecords = plan.decision.resources.reduce(
+    (total, resource) => total + resource.target_count,
+    0,
+  );
+  const isDraft = plan.review_status === "draft";
+  const isRejected = plan.review_status === "rejected";
+  const plannerLabel = plan.telemetry.mode === "openai" ? "LLM-assisted" : "Deterministic";
+
+  return (
+    <div className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase text-cyan-200">Plan review</p>
+          <p className="mt-1 text-sm leading-5 text-zinc-200">{plan.decision.summary}</p>
+        </div>
+        <span className="shrink-0 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-semibold uppercase text-zinc-300">
+          {plan.review_status}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-md border border-white/10 bg-black/20 p-2">
+          <span className="text-zinc-500">Target rows</span>
+          <p className="mt-1 font-semibold text-white">{formatNumber(totalRecords)}</p>
+        </div>
+        <div className="rounded-md border border-white/10 bg-black/20 p-2">
+          <span className="text-zinc-500">Planner</span>
+          <p className="mt-1 font-semibold text-white">{plannerLabel}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-xs">
+        {plan.decision.resources.map((resource) => (
+          <div className="flex items-center justify-between gap-3" key={resource.name}>
+            <span className="truncate text-zinc-400">{resource.name}</span>
+            <span className="shrink-0 font-semibold text-zinc-200">
+              {formatNumber(resource.target_count)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {plan.decision.warnings.length > 0 ? (
+        <p className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/[0.07] p-2 text-xs leading-5 text-amber-100">
+          {plan.decision.warnings[0]}
+        </p>
+      ) : null}
+
+      <p className="mt-3 text-xs text-zinc-500">
+        {plan.telemetry.cached_input_tokens > 0
+          ? `${formatNumber(plan.telemetry.cached_input_tokens)} cached input tokens`
+          : `${plan.telemetry.latency_ms} ms planning latency`}
+      </p>
+
+      {isRejected ? (
+        <p className="mt-3 text-xs leading-5 text-zinc-400">
+          Edit the generation brief to propose a new plan.
+        </p>
+      ) : (
+        <div className="mt-3 flex items-center justify-end gap-2">
+          {isDraft ? (
+            <button
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-zinc-300 transition hover:border-rose-300/30 hover:text-rose-200 disabled:opacity-50"
+              disabled={busy}
+              onClick={onReject}
+            >
+              <X className="h-3.5 w-3.5" />
+              Reject
+            </button>
+          ) : null}
+          <button
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-cyan-300 px-3 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-50"
+            disabled={busy}
+            onClick={onApproveAndGenerate}
+          >
+            {status === "planning" || status === "generating" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            {status === "planning"
+              ? "Approving"
+              : status === "generating"
+                ? "Generating"
+                : isDraft
+                  ? "Approve and generate"
+                  : "Generate plan"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2484,6 +2683,30 @@ function upsertRun(runs: GenerationRun[], run: GenerationRun) {
     return [...runs, run];
   }
   return runs.map((item) => (item.run_id === run.run_id ? run : item));
+}
+
+function upsertPlan(plans: PlanProposal[], plan: PlanProposal) {
+  const remaining = plans.filter((item) => item.plan_id !== plan.plan_id);
+  return [plan, ...remaining];
+}
+
+function requestedRowCounts(connection: WorkspaceSource | null, product: Product) {
+  const counts = connection
+    ? Object.fromEntries(
+        connection.resources.map((resource) => [
+          resource.name,
+          Math.min(Math.max(resource.estimated_rows, 0), 1_000_000),
+        ]),
+      )
+    : product.default_row_counts;
+  return counts;
+}
+
+function workspaceSourceId(connection: WorkspaceSource | null) {
+  if (!connection || connection.id.endsWith("-local-demo")) {
+    return undefined;
+  }
+  return connection.id;
 }
 
 function runAgentStatus(run: GenerationRun): AgentStatus {
