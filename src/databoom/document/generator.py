@@ -18,12 +18,13 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from databoom.document.models import DocumentCollectionSpec, DocumentFieldSpec
-from databoom.generation import SeedManager
+from databoom.generation import LocaleProfile, SeedManager
+from databoom.generation.contexts import PersonContext, PersonContextProvider
 
 ProgressCallback = Callable[[int, str], None]
 
@@ -88,12 +89,14 @@ class DocumentGenerator:
         collections: tuple[DocumentCollectionSpec, ...],
         row_counts: dict[str, int],
         seed: int | str,
+        locale: LocaleProfile = LocaleProfile.EN_US,
         output_dir: Path,
         progress_callback: ProgressCallback | None = None,
     ) -> None:
         self.collections = collections
         self.row_counts = row_counts
         self.seed_manager = SeedManager(seed)
+        self.person_contexts = PersonContextProvider(self.seed_manager, locale)
         self.output_dir = output_dir
         self.generated_ids: dict[str, list[str]] = {}
         self.progress_callback = progress_callback
@@ -192,8 +195,18 @@ class DocumentGenerator:
         collection: DocumentCollectionSpec,
         row_index: int,
     ) -> dict[str, Any]:
+        person_context = self.person_contexts.for_row(
+            collection.name,
+            _field_names(collection.fields),
+            row_index,
+        )
         return {
-            field.name: self._value_for(collection.name, field, row_index)
+            field.name: self._value_for(
+                collection.name,
+                field,
+                row_index,
+                person_context=person_context,
+            )
             for field in collection.fields
         }
 
@@ -202,10 +215,18 @@ class DocumentGenerator:
         collection_name: str,
         field: DocumentFieldSpec,
         row_index: int,
+        *,
+        person_context: PersonContext | None,
     ) -> Any:
         """Generate one document field value from its declarative field kind."""
 
         stream = self.seed_manager.stream("document", collection_name, field.name, row_index)
+        if person_context is not None:
+            context_value = person_context.value_for(field.name)
+            if context_value is not None:
+                return (
+                    context_value.isoformat() if isinstance(context_value, date) else context_value
+                )
         match field.kind:
             case "object_id":
                 return _object_id(
@@ -222,14 +243,24 @@ class DocumentGenerator:
                 )
             case "object":
                 return {
-                    child.name: self._value_for(collection_name, child, row_index)
+                    child.name: self._value_for(
+                        collection_name,
+                        child,
+                        row_index,
+                        person_context=person_context,
+                    )
                     for child in field.fields
                 }
             case "array":
                 item_count = stream.randint(1, 3)
                 return [
                     {
-                        child.name: self._value_for(collection_name, child, row_index * 10 + offset)
+                        child.name: self._value_for(
+                            collection_name,
+                            child,
+                            row_index * 10 + offset,
+                            person_context=person_context,
+                        )
                         for child in field.item_fields
                     }
                     for offset in range(item_count)
@@ -283,3 +314,14 @@ def _object_id(seed: int) -> str:
 
 def _choice(stream, values: tuple[Any, ...]) -> Any:
     return values[stream.randrange(len(values))]
+
+
+def _field_names(fields: tuple[DocumentFieldSpec, ...]) -> tuple[str, ...]:
+    """Flatten nested document field names for person-shape detection."""
+
+    names: list[str] = []
+    for field in fields:
+        names.append(field.name)
+        names.extend(_field_names(field.fields))
+        names.extend(_field_names(field.item_fields))
+    return tuple(names)

@@ -23,7 +23,13 @@ import typer
 from databoom.core.config import get_settings
 from databoom.core.logging import configure_logging
 from databoom.export import ArtifactExporter, load_export_manifest
-from databoom.generation import DomainProfile, GenerationPlan, OutputFormat, create_generation_plan
+from databoom.generation import (
+    DomainProfile,
+    GenerationPlan,
+    LocaleProfile,
+    OutputFormat,
+    create_generation_plan,
+)
 from databoom.ingest import parse_postgres_ddl
 from databoom.validation import validate_export
 
@@ -108,6 +114,13 @@ def generate(
             help="Semantic domain profile for generated values.",
         ),
     ] = DomainProfile.GENERAL,
+    locale: Annotated[
+        LocaleProfile,
+        typer.Option(
+            "--locale",
+            help="Locale profile for correlated identity and location values.",
+        ),
+    ] = LocaleProfile.EN_US,
     formats: Annotated[
         list[OutputFormat] | None,
         typer.Option(
@@ -126,6 +139,7 @@ def generate(
         default_row_count=default_row_count,
         seed=seed,
         domain=domain,
+        locale=locale,
         output_formats=tuple(formats or [OutputFormat.CSV]),
     )
     manifest = ArtifactExporter(generation_plan, output_dir).export()
@@ -191,6 +205,13 @@ def plan_command(
             help="Semantic domain profile for generated values.",
         ),
     ] = DomainProfile.GENERAL,
+    locale: Annotated[
+        LocaleProfile,
+        typer.Option(
+            "--locale",
+            help="Locale profile for correlated identity and location values.",
+        ),
+    ] = LocaleProfile.EN_US,
     formats: Annotated[
         list[OutputFormat] | None,
         typer.Option(
@@ -207,6 +228,7 @@ def plan_command(
         default_row_count=default_row_count,
         seed=seed,
         domain=domain,
+        locale=locale,
         output_formats=tuple(formats or [OutputFormat.CSV]),
     )
     plan_json = generation_plan.model_dump_json(indent=2)
@@ -268,6 +290,13 @@ def validate_command(
             help="Semantic domain profile for the expected plan.",
         ),
     ] = DomainProfile.GENERAL,
+    locale: Annotated[
+        LocaleProfile,
+        typer.Option(
+            "--locale",
+            help="Locale profile expected in generated identity and location values.",
+        ),
+    ] = LocaleProfile.EN_US,
     formats: Annotated[
         list[OutputFormat] | None,
         typer.Option(
@@ -288,6 +317,7 @@ def validate_command(
         default_row_count=default_row_count,
         seed=seed,
         domain=domain,
+        locale=locale,
         output_formats=tuple(formats or [OutputFormat.CSV]),
     )
     manifest = load_export_manifest(manifest_path)
@@ -314,6 +344,7 @@ def _build_generation_plan(
     default_row_count: int,
     seed: str,
     domain: DomainProfile,
+    locale: LocaleProfile,
     output_formats: tuple[OutputFormat, ...],
 ) -> GenerationPlan:
     database = parse_postgres_ddl(schema_path.read_text(encoding="utf-8"))
@@ -323,6 +354,7 @@ def _build_generation_plan(
         default_row_count=default_row_count,
         seed=seed,
         domain=domain,
+        locale=locale,
         output_formats=output_formats,
     )
 

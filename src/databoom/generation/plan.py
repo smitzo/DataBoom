@@ -20,7 +20,7 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from databoom.generation.domains import DomainProfile
+from databoom.generation.domains import DomainProfile, LocaleProfile
 from databoom.schema import ColumnSchema, DatabaseSchema, TableSchema, build_relationship_graph
 from databoom.schema.models import TypeFamily
 
@@ -181,11 +181,10 @@ class GenerationPlan(PlanModel):
 
     seed: int | str
     domain: DomainProfile = DomainProfile.GENERAL
+    locale: LocaleProfile = LocaleProfile.EN_US
     output_formats: tuple[OutputFormat, ...]
     tables: tuple[TablePlan, ...]
-    foreign_key_strategy: ForeignKeySelectionStrategy = (
-        ForeignKeySelectionStrategy.BALANCED_FANOUT
-    )
+    foreign_key_strategy: ForeignKeySelectionStrategy = ForeignKeySelectionStrategy.BALANCED_FANOUT
     relationship_hints: tuple[RelationshipFanoutHint, ...] = ()
     column_hints: tuple[ColumnProfileHint, ...] = ()
 
@@ -214,6 +213,7 @@ def create_generation_plan(
     default_row_count: int = 10,
     seed: int | str = 0,
     domain: DomainProfile = DomainProfile.GENERAL,
+    locale: LocaleProfile = LocaleProfile.EN_US,
     output_formats: tuple[OutputFormat, ...] = (OutputFormat.CSV,),
     foreign_key_strategy: ForeignKeySelectionStrategy = (
         ForeignKeySelectionStrategy.BALANCED_FANOUT
@@ -251,6 +251,7 @@ def create_generation_plan(
     return GenerationPlan(
         seed=seed,
         domain=domain,
+        locale=locale,
         output_formats=output_formats,
         tables=table_plans,
         foreign_key_strategy=foreign_key_strategy,

@@ -271,7 +271,11 @@ class RowGenerator:
         return cls(
             plan=plan,
             seed_manager=seed_manager,
-            value_generator=ValueGenerator(seed_manager, domain=plan.domain),
+            value_generator=ValueGenerator(
+                seed_manager,
+                domain=plan.domain,
+                locale=plan.locale,
+            ),
         )
 
     def iter_records(self) -> Iterator[GeneratedRecord]:
@@ -294,6 +298,11 @@ class RowGenerator:
 
         row: GeneratedRow = {}
         foreign_key_values = self._foreign_key_values_for_row(table, row_index)
+        person_context = self.value_generator.person_context_for(
+            table.table_name,
+            tuple(column.name for column in table.columns),
+            row_index,
+        )
 
         for column in table.columns:
             if column.strategy == ColumnStrategy.FOREIGN_KEY:
@@ -303,6 +312,7 @@ class RowGenerator:
                     table.table_name,
                     column,
                     row_index,
+                    person_context=person_context,
                 )
         return row
 
@@ -364,11 +374,15 @@ def _profile_parent_indexes(
     parent_count: int,
     child_row_count: int,
 ) -> tuple[int, ...]:
-    frequencies = tuple(
-        (frequency.child_count, frequency.parent_frequency)
-        for frequency in source.fanout_hint.child_count_frequencies
-        if frequency.parent_frequency > 0
-    ) if source.fanout_hint is not None else ()
+    frequencies = (
+        tuple(
+            (frequency.child_count, frequency.parent_frequency)
+            for frequency in source.fanout_hint.child_count_frequencies
+            if frequency.parent_frequency > 0
+        )
+        if source.fanout_hint is not None
+        else ()
+    )
     if not frequencies:
         return ()
 

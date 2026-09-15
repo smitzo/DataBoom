@@ -3,6 +3,7 @@ import pytest
 from databoom.generation import (
     ChildCountFrequency,
     ForeignKeySelectionStrategy,
+    LocaleProfile,
     ParentKeyStore,
     RelationshipFanoutHint,
     RowGenerationError,
@@ -195,6 +196,93 @@ def test_row_generator_is_repeatable_for_same_plan() -> None:
     assert first == second
 
 
+@pytest.mark.parametrize(
+    ("locale", "country", "phone_prefix", "postcode_length"),
+    [
+        (LocaleProfile.EN_US, "US", "+1", 5),
+        (LocaleProfile.EN_IN, "IN", "+91", 6),
+    ],
+)
+def test_row_generator_keeps_person_and_location_columns_consistent(
+    locale: LocaleProfile,
+    country: str,
+    phone_prefix: str,
+    postcode_length: int,
+) -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE customers (
+            id bigint PRIMARY KEY,
+            first_name text NOT NULL,
+            last_name text NOT NULL,
+            full_name text NOT NULL,
+            gender text NOT NULL,
+            age integer NOT NULL,
+            date_of_birth date NOT NULL,
+            email text NOT NULL,
+            phone text NOT NULL,
+            city text NOT NULL,
+            state text NOT NULL,
+            country text NOT NULL,
+            postal_code text NOT NULL
+        );
+        """
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"customers": 20},
+        seed="locale-consistency",
+        locale=locale,
+    )
+
+    rows = rows_by_table(RowGenerator.from_plan(plan).iter_records())["public.customers"]
+
+    for row in rows:
+        assert row["full_name"] == f"{row['first_name']} {row['last_name']}"
+        assert str(row["email"]).endswith("@example.test")
+        assert str(row["phone"]).startswith(phone_prefix)
+        assert row["country"] == country
+        assert len(str(row["postal_code"])) == postcode_length
+        assert row["gender"] in {"female", "male"}
+        assert 18 <= int(row["age"]) <= 85
+        assert 2025 - row["date_of_birth"].year in {int(row["age"]), int(row["age"]) + 1}
+
+
+def test_indian_locale_uses_indian_geography() -> None:
+    database = parse_postgres_ddl(
+        """
+        CREATE TABLE patients (
+            id bigint PRIMARY KEY,
+            full_name text NOT NULL,
+            city text NOT NULL,
+            state text NOT NULL,
+            country text NOT NULL,
+            postal_code text NOT NULL
+        );
+        """
+    )
+    plan = create_generation_plan(
+        database,
+        row_counts={"patients": 50},
+        seed="india-profile",
+        locale=LocaleProfile.EN_IN,
+    )
+
+    rows = rows_by_table(RowGenerator.from_plan(plan).iter_records())["public.patients"]
+    expected_city_regions = {
+        "Mumbai": "Maharashtra",
+        "New Delhi": "Delhi",
+        "Bengaluru": "Karnataka",
+        "Hyderabad": "Telangana",
+        "Chennai": "Tamil Nadu",
+        "Kolkata": "West Bengal",
+        "Pune": "Maharashtra",
+    }
+
+    assert all(row["state"] == expected_city_regions[row["city"]] for row in rows)
+    assert all(row["country"] == "IN" for row in rows)
+
+
 def test_row_generator_preserves_composite_foreign_keys() -> None:
     database = parse_postgres_ddl(
         """
@@ -214,14 +302,8 @@ def test_row_generator_preserves_composite_foreign_keys() -> None:
     plan = create_generation_plan(database, row_counts={"memberships": 4, "events": 10}, seed=9)
 
     tables = rows_by_table(RowGenerator.from_plan(plan).iter_records())
-    membership_keys = {
-        (row["tenant_id"], row["user_id"])
-        for row in tables["public.memberships"]
-    }
-    event_keys = {
-        (row["tenant_id"], row["user_id"])
-        for row in tables["public.events"]
-    }
+    membership_keys = {(row["tenant_id"], row["user_id"]) for row in tables["public.memberships"]}
+    event_keys = {(row["tenant_id"], row["user_id"]) for row in tables["public.events"]}
 
     assert event_keys <= membership_keys
 

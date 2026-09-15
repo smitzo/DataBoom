@@ -43,6 +43,8 @@ def test_cli_generate_writes_artifacts(tmp_path) -> None:
             "sql",
             "--seed",
             "demo",
+            "--locale",
+            "en-IN",
         ],
     )
 
@@ -70,12 +72,15 @@ def test_cli_plan_prints_generation_plan(tmp_path) -> None:
             "csv",
             "--seed",
             "demo",
+            "--locale",
+            "en-IN",
         ],
     )
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["seed"] == "demo"
+    assert payload["locale"] == "en-IN"
     assert [table["table_name"] for table in payload["tables"]] == [
         "public.accounts",
         "public.users",

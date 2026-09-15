@@ -1,4 +1,10 @@
-from databoom.generation import DomainProfile, SeedManager, ValueGenerator
+from databoom.generation import (
+    DomainProfile,
+    LocaleProfile,
+    SeedManager,
+    ValueGenerator,
+    locale_from_intent,
+)
 from databoom.generation.plan import ColumnPlan, ColumnStrategy
 from databoom.schema import TypeFamily
 
@@ -65,3 +71,9 @@ def test_generation_plan_carries_domain_profile() -> None:
     plan = create_generation_plan(database, domain=DomainProfile.FINANCIAL)
 
     assert plan.domain == DomainProfile.FINANCIAL
+
+
+def test_locale_is_inferred_from_explicit_country_or_city_language() -> None:
+    assert locale_from_intent("Generate Indian customers in Mumbai") == LocaleProfile.EN_IN
+    assert locale_from_intent("Generate customers in the United States") == LocaleProfile.EN_US
+    assert locale_from_intent("Generate customers") == LocaleProfile.EN_US

@@ -18,6 +18,55 @@ class DomainProfile(StrEnum):
     HEALTHCARE = "healthcare"
 
 
+class LocaleProfile(StrEnum):
+    """Cultural and geographic profile for generated person data."""
+
+    EN_US = "en-US"
+    EN_IN = "en-IN"
+
+
+def locale_from_intent(
+    intent: str,
+    *,
+    fallback: LocaleProfile = LocaleProfile.EN_US,
+) -> LocaleProfile:
+    """Infer a supported locale from explicit country or city language.
+
+    This deterministic resolver keeps locale selection available when hosted LLM
+    planning is disabled. An explicit API locale still takes precedence.
+    """
+
+    normalized = intent.casefold()
+    india_markers = (
+        "india",
+        "indian",
+        "bharat",
+        "mumbai",
+        "delhi",
+        "bengaluru",
+        "bangalore",
+        "hyderabad",
+        "chennai",
+        "kolkata",
+        "pune",
+    )
+    us_markers = (
+        "united states",
+        "u.s.",
+        "usa",
+        "american",
+        "new york",
+        "los angeles",
+        "chicago",
+        "seattle",
+    )
+    if any(marker in normalized for marker in india_markers):
+        return LocaleProfile.EN_IN
+    if any(marker in normalized for marker in us_markers):
+        return LocaleProfile.EN_US
+    return fallback
+
+
 class DomainValueProvider(Protocol):
     """Protocol for domain-specific value providers."""
 

@@ -22,12 +22,18 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
-from databoom.generation.domains import DomainProfile, DomainValueProvider, provider_for
+from databoom.generation.contexts import PersonContext, PersonContextProvider
+from databoom.generation.domains import (
+    DomainProfile,
+    DomainValueProvider,
+    LocaleProfile,
+    provider_for,
+)
 from databoom.generation.plan import ColumnPlan, ColumnStrategy
 from databoom.generation.seed import SeedManager
 from databoom.schema.models import TypeFamily
 
-type GeneratedValue = str | int | float | bool | datetime | dict[str, Any] | None
+type GeneratedValue = str | int | float | bool | date | datetime | dict[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -40,19 +46,35 @@ class ValueGenerator:
 
     seed_manager: SeedManager
     domain: DomainProfile = DomainProfile.GENERAL
+    locale: LocaleProfile = LocaleProfile.EN_US
     null_probability: float = 0.0
     provider: DomainValueProvider = field(init=False)
+    person_contexts: PersonContextProvider = field(init=False)
 
     def __post_init__(self) -> None:
         if not 0 <= self.null_probability <= 1:
             raise ValueError("null probability must be between 0 and 1")
         object.__setattr__(self, "provider", provider_for(self.domain))
+        object.__setattr__(
+            self,
+            "person_contexts",
+            PersonContextProvider(self.seed_manager, self.locale),
+        )
 
-    def value_for(self, table_name: str, column: ColumnPlan, row_index: int) -> GeneratedValue:
+    def value_for(
+        self,
+        table_name: str,
+        column: ColumnPlan,
+        row_index: int,
+        *,
+        person_context: PersonContext | None = None,
+    ) -> GeneratedValue:
         """Generate one type-compatible value for a table column and row index.
 
-        Source profile evidence runs before domain fallbacks because observed
-        column shape is stronger than a broad industry profile guess.
+        Correlated person context runs before independent profile hints for
+        identity and location fields. Profile evidence still drives unrelated
+        columns, but it cannot split one synthetic person across incompatible
+        names, ages, or locations.
         """
 
         if row_index < 0:
@@ -69,6 +91,10 @@ class ValueGenerator:
 
         if column.strategy == ColumnStrategy.PRIMARY_KEY:
             return self._primary_key_value(table_name, column, row_index)
+        if person_context is not None:
+            context_value = person_context.value_for(column.name)
+            if context_value is not None:
+                return context_value
         # Profile hints are source-specific evidence. They intentionally run
         # before broad domain providers like financial or healthcare defaults.
         if (
@@ -82,6 +108,16 @@ class ValueGenerator:
         if (profiled_value := self._profiled_top_value(table_name, column, row_index)) is not None:
             return profiled_value
         return self._generated_value(table_name, column, row_index)
+
+    def person_context_for(
+        self,
+        table_name: str,
+        column_names: tuple[str, ...],
+        row_index: int,
+    ) -> PersonContext | None:
+        """Build the shared identity/location context for one person-shaped row."""
+
+        return self.person_contexts.for_row(table_name, column_names, row_index)
 
     def _primary_key_value(
         self,
