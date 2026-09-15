@@ -2,13 +2,8 @@
 
 import {
   ArrowLeft,
-  BarChart3,
   Check,
-  CheckCircle2,
   ChevronDown,
-  CircleAlert,
-  Clock3,
-  Filter,
   Database,
   Download,
   Eye,
@@ -21,14 +16,10 @@ import {
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
-  Play,
   Rows3,
   Search,
-  Send,
-  Share2,
   Sparkles,
   Table2,
-  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -68,10 +59,15 @@ import {
 } from "@/lib/api";
 import { getSessionLlmKey } from "@/lib/llm-key";
 import type { Session } from "@/lib/session";
+import {
+  WorkspaceRunPanel,
+  type WorkspaceAgentStatus,
+  type WorkspaceAgentStep,
+  type WorkspaceInsight,
+} from "@/components/workspace/workspace-run-panel";
 
 type PreviewMap = Record<string, TablePreview>;
 type DocumentPreviewMap = Record<string, DocumentPreview>;
-type AgentStatus = "idle" | "subscribing" | "planning" | "generating" | "complete" | "error";
 type WorkspaceMode = "catalog" | "product";
 type ViewFormat = "table" | "csv" | "sql" | "json" | "ndjson" | "graph" | "masked";
 
@@ -102,7 +98,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [viewFormat, setViewFormat] = useState<ViewFormat>("table");
   const [downloadFormats, setDownloadFormats] = useState<ViewFormat[]>(["csv"]);
   const [prompt, setPrompt] = useState("Generate realistic data for the selected product");
-  const [status, setStatus] = useState<AgentStatus>("idle");
+  const [status, setStatus] = useState<WorkspaceAgentStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [sourceWarning, setSourceWarning] = useState<string | null>(null);
   const [sourceRefreshMessage, setSourceRefreshMessage] = useState<string | null>(null);
@@ -117,6 +113,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   const [isProfilingSource, setIsProfilingSource] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorkspaceRailCollapsed, setIsWorkspaceRailCollapsed] = useState(false);
+  const [isRunPanelOpen, setIsRunPanelOpen] = useState(false);
 
   useEffect(() => {
     loadWorkspace();
@@ -303,8 +300,12 @@ export function DataWorkspace({ session }: { session: Session }) {
     [selectedDocumentPreview, selectedTablePreview],
   );
   const workspaceGridClass = isWorkspaceRailCollapsed
-    ? "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[8rem_minmax(0,1fr)_22rem]"
-    : "flex min-h-[calc(100vh-5.5rem)] flex-col xl:grid xl:grid-cols-[18rem_minmax(0,1fr)_22rem]";
+    ? isRunPanelOpen
+      ? "flex min-h-[calc(100vh-5rem)] flex-col xl:grid xl:grid-cols-[8rem_minmax(0,1fr)_20rem]"
+      : "flex min-h-[calc(100vh-5rem)] flex-col xl:grid xl:grid-cols-[8rem_minmax(0,1fr)]"
+    : isRunPanelOpen
+      ? "flex min-h-[calc(100vh-5rem)] flex-col xl:grid xl:grid-cols-[16rem_minmax(0,1fr)_20rem]"
+      : "flex min-h-[calc(100vh-5rem)] flex-col xl:grid xl:grid-cols-[16rem_minmax(0,1fr)]";
 
   async function loadWorkspace() {
     setIsLoading(true);
@@ -323,7 +324,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       } catch {
         nextSources = fallbackWorkspaceSources(nextProducts);
         setSourceWarning(
-          "Using local demo workspaces. Restart the backend to load workspace sources from the API.",
+          "Connected sources are unavailable. Showing local workspaces.",
         );
       }
       const newestRuns = nextRuns.slice().reverse();
@@ -569,6 +570,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       return;
     }
 
+    setIsRunPanelOpen(true);
     setStatus("planning");
     setError(null);
     try {
@@ -594,6 +596,7 @@ export function DataWorkspace({ session }: { session: Session }) {
       return;
     }
 
+    setIsRunPanelOpen(true);
     setStatus("planning");
     setError(null);
     try {
@@ -669,7 +672,7 @@ export function DataWorkspace({ session }: { session: Session }) {
   }
 
   return (
-    <section className="min-h-[calc(100vh-5.5rem)] overflow-hidden rounded-2xl border border-cyan-300/10 bg-[#050917] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
+    <section className="min-h-[calc(100vh-5rem)] overflow-hidden rounded-xl border border-cyan-300/10 bg-[#050917] shadow-[0_20px_70px_rgba(0,0,0,0.32)]">
       <div className={workspaceGridClass}>
         <WorkspaceSidebar
           activeKind={activeKind}
@@ -681,7 +684,6 @@ export function DataWorkspace({ session }: { session: Session }) {
           isTestingConnection={isTestingConnection}
           onToggleCollapse={() => setIsWorkspaceRailCollapsed((current) => !current)}
           product={selectedProduct}
-          products={products}
           resourceNames={resourceNames}
           selectedConnection={selectedConnection}
           selectedConnectionId={selectedConnectionId}
@@ -693,7 +695,6 @@ export function DataWorkspace({ session }: { session: Session }) {
           sourceRefreshMessage={sourceRefreshMessage}
           sourceSchemaNames={sourceSchemaNames}
           onBackToProducts={() => setWorkspaceMode("catalog")}
-          onChooseProduct={chooseProduct}
           onProfileSource={profileSelectedSource}
           onRefreshSource={refreshSelectedSource}
           onSaveSource={saveSelectedSource}
@@ -721,8 +722,9 @@ export function DataWorkspace({ session }: { session: Session }) {
             artifacts={artifacts}
             downloadFormats={downloadFormats}
             onDownloadFormatsChange={setDownloadFormats}
+            onToggleRunPanel={() => setIsRunPanelOpen((current) => !current)}
             onViewFormatChange={setViewFormat}
-            product={selectedProduct}
+            runPanelOpen={isRunPanelOpen}
             viewFormat={viewFormat}
           />
 
@@ -732,7 +734,7 @@ export function DataWorkspace({ session }: { session: Session }) {
             </div>
           ) : null}
 
-          <div className="workspace-scrollbar-dark h-[calc(100vh-19.5rem)] min-h-[34rem] overflow-auto bg-[#080d1b]">
+          <div className="workspace-scrollbar-dark h-[calc(100vh-13.5rem)] min-h-[34rem] overflow-auto bg-[#080d1b]">
             <DataSurface
               activeKind={activeKind}
               documentPreview={selectedDocumentPreview}
@@ -746,25 +748,25 @@ export function DataWorkspace({ session }: { session: Session }) {
           </div>
         </main>
 
-        <AgentPanel
-          artifacts={artifacts}
-          currentPlan={currentPlan}
-          insight={insight}
-          onApproveAndGenerate={approveAndGenerate}
-          onCreatePlan={createPlan}
-          onPromptChange={changePrompt}
-          onRejectPlan={rejectCurrentPlan}
-          onSubscribe={subscribe}
-          prompt={prompt}
-          run={selectedRun}
-          selectedConnection={selectedConnection}
-          selectedProduct={selectedProduct}
-          sourceProfile={sourceProfile}
-          status={status}
-          steps={agentSteps}
-          subscribed={subscribed}
-          visibleRows={visibleRows}
-        />
+        {isRunPanelOpen ? (
+          <WorkspaceRunPanel
+            currentPlan={currentPlan}
+            insight={insight}
+            onApproveAndGenerate={approveAndGenerate}
+            onClose={() => setIsRunPanelOpen(false)}
+            onCreatePlan={createPlan}
+            onPromptChange={changePrompt}
+            onRejectPlan={rejectCurrentPlan}
+            onSubscribe={subscribe}
+            prompt={prompt}
+            run={selectedRun}
+            selectedProduct={selectedProduct}
+            status={status}
+            steps={agentSteps}
+            subscribed={subscribed}
+            visibleRows={visibleRows}
+          />
+        ) : null}
       </div>
     </section>
   );
@@ -875,7 +877,6 @@ function WorkspaceSidebar({
   isTestingConnection,
   onToggleCollapse,
   product,
-  products,
   resourceNames,
   selectedConnection,
   selectedConnectionId,
@@ -887,7 +888,6 @@ function WorkspaceSidebar({
   sourceRefreshMessage,
   sourceSchemaNames,
   onBackToProducts,
-  onChooseProduct,
   onProfileSource,
   onRefreshSource,
   onSaveSource,
@@ -908,7 +908,6 @@ function WorkspaceSidebar({
   isTestingConnection: boolean;
   onToggleCollapse: () => void;
   product: Product | null;
-  products: Product[];
   resourceNames: string[];
   selectedConnection: WorkspaceSource | null;
   selectedConnectionId: string;
@@ -920,7 +919,6 @@ function WorkspaceSidebar({
   sourceRefreshMessage: string | null;
   sourceSchemaNames: string;
   onBackToProducts: () => void;
-  onChooseProduct: (product: Product) => void;
   onProfileSource: () => void;
   onRefreshSource: () => void;
   onSaveSource: () => void;
@@ -998,58 +996,32 @@ function WorkspaceSidebar({
     <aside className="bg-[#060a16] text-zinc-100">
       <div className="border-b border-cyan-300/10 px-4 py-4">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase text-zinc-500">Explorer</p>
-            <p className="mt-1 text-sm font-semibold text-white">
-              {product?.name ?? kindLabel(activeKind)}
-            </p>
+          <p className="truncate text-sm font-semibold text-white">
+            {product?.name ?? kindLabel(activeKind)}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              aria-label="Product catalog"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-white"
+              onClick={onBackToProducts}
+              title="Product catalog"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              aria-label="Collapse workspace rail"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
+              onClick={onToggleCollapse}
+              title="Collapse workspace rail"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            aria-label="Collapse workspace rail"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-zinc-400 transition hover:border-cyan-300/30 hover:text-cyan-100"
-            onClick={onToggleCollapse}
-            title="Collapse workspace rail"
-          >
-            <PanelLeftClose className="h-4 w-4" />
-          </button>
         </div>
       </div>
 
-      <div className="space-y-5 p-4">
-        <section className="rounded-xl border border-cyan-300/10 bg-white/[0.035] p-3">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-            Product workspace
-          </p>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-100">
-              <ProductIcon className="h-5 w-5" />
-            </span>
-            <label className="min-w-0 flex-1">
-              <span className="sr-only">Product</span>
-              <select
-                className="h-11 w-full rounded-lg border border-white/10 bg-[#0b1020] px-3 text-sm font-semibold text-zinc-100 outline-none transition focus:border-cyan-300/40"
-                onChange={(event) => {
-                  const nextProduct = products.find((item) => item.id === event.target.value);
-                  if (nextProduct) {
-                    onChooseProduct(nextProduct);
-                  }
-                }}
-                value={product?.id ?? ""}
-              >
-                {products.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <p className="mt-3 text-xs leading-5 text-zinc-500">
-            {product?.module ?? kindLabel(activeKind)}
-          </p>
-        </section>
-
-        <details className="group rounded-xl border border-cyan-300/10 bg-white/[0.025] p-3" open>
+      <div className="space-y-4 p-3">
+        <details className="group rounded-xl border border-cyan-300/10 bg-white/[0.025] p-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-emerald-300/25 bg-emerald-300/10 text-emerald-100">
@@ -1057,10 +1029,10 @@ function WorkspaceSidebar({
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold text-white">
-                  Source setup
+                  {selectedConnection?.name ?? "Database"}
                 </span>
                 <span className="mt-1 block truncate text-xs text-zinc-500">
-                  {selectedConnection?.engine ?? fallbackEngine(activeKind)}
+                  {selectedConnection?.engine ?? fallbackEngine(activeKind)} · {connectionOptions.length} sources
                 </span>
               </span>
             </span>
@@ -1089,9 +1061,6 @@ function WorkspaceSidebar({
                 <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-100">
                   <span className="h-2 w-2 rounded-full bg-emerald-300" />
                   Connected
-                </span>
-                <span className="text-[0.68rem] font-semibold uppercase text-emerald-200/70">
-                  View details
                 </span>
               </div>
               <p className="truncate text-xs font-semibold text-zinc-200">
@@ -1180,7 +1149,7 @@ function WorkspaceSidebar({
           </div>
         </details>
 
-        <details className="group rounded-xl border border-white/10 bg-white/[0.02] p-3" open>
+        <details className="group p-1" open>
           <summary className="flex cursor-pointer list-none items-center justify-between px-1">
             <span className="text-xs font-semibold uppercase text-zinc-600">{resourceLabel}</span>
             <span className="inline-flex items-center gap-2 text-xs text-zinc-600">
@@ -1188,7 +1157,7 @@ function WorkspaceSidebar({
               <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
             </span>
           </summary>
-          <div className="workspace-scrollbar-dark mt-3 max-h-[39vh] space-y-1.5 overflow-auto pr-1">
+          <div className="workspace-scrollbar-dark mt-3 max-h-[55vh] space-y-1 overflow-auto pr-1">
             {resourceNames.map((tableName) => (
               <button
                 key={tableName}
@@ -1292,106 +1261,49 @@ function WorkspaceOverview({
 
   return (
     <section className="border-b border-cyan-300/10 bg-[#080d1b]">
-      <div className="grid gap-4 px-5 py-5 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
-              {product ? <Database className="h-5 w-5" /> : <Rows3 className="h-5 w-5" />}
-            </span>
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold text-white">
-                {product?.name ?? "DataBoom workspace"}
+      <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
+            {product ? <Database className="h-5 w-5" /> : <Rows3 className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="truncate text-xl font-semibold text-white">
+                {product?.name ?? "Workspace"}
               </h1>
-              <p className="mt-1 truncate text-sm text-zinc-500">
-                {connection?.engine ?? kindLabel(product?.kind ?? "relational")} ·{" "}
-                {connection?.name ?? "No database selected"}
-              </p>
+              {run ? <span className="text-xs font-semibold text-emerald-200">{runState}</span> : null}
             </div>
+            <p className="mt-1 truncate text-sm text-zinc-500">
+              {connection?.name ?? "No database selected"}
+              {schemaLabels.length ? ` · ${schemaLabels.join(", ")}` : ""}
+              {sourceProfile ? ` · ${formatNumber(sourceProfile.total_rows)} profiled rows` : ""}
+            </p>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500">
-            <span className="truncate">
-              {connection?.host ?? "local workspace"}
-            </span>
-            <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
-            <span className="truncate">
-              {schemaLabels.length ? schemaLabels.join(", ") : "schema pending"}
-            </span>
-            <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
-            <span>
-              {connection?.refreshed_at
-                ? `Last sync ${formatDateTime(connection.refreshed_at)}`
-                : "Awaiting schema refresh"}
-            </span>
-            {sourceProfile ? (
-              <>
-                <span className="hidden h-1 w-1 rounded-full bg-zinc-700 sm:block" />
-                <span>{formatNumber(sourceProfile.total_rows)} source rows profiled</span>
-              </>
-            ) : null}
-          </div>
-
-          {run ? (
-            <div className="mt-3">
-              <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-zinc-500">
-                <span className="truncate">
-                  Latest run · {run.run_id} · {runState}
-                </span>
-                <span className="text-cyan-200">{progress}%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          ) : null}
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-4 2xl:w-[32rem]">
-          <OverviewMetric
-            icon={Database}
-            label="Planned records"
-            value={formatNumber(plannedRecords)}
-          />
-          <OverviewMetric
-            icon={Layers3}
-            label={product?.kind === "document" ? "Collections" : "Resources"}
-            value={String(resourceCount)}
-          />
-          <OverviewMetric
-            icon={BarChart3}
-            label="Preview rows"
-            value={String(visibleRows)}
-          />
-          <OverviewMetric
-            icon={Rows3}
-            label="Generated"
-            value={formatNumber(run?.generated_rows ?? 0)}
-          />
-        </div>
+        <dl className="grid grid-cols-4 divide-x divide-white/10 rounded-lg border border-white/10 bg-white/[0.025] py-2 xl:min-w-[28rem]">
+          {[
+            ["Planned", formatNumber(plannedRecords)],
+            [product?.kind === "document" ? "Collections" : "Resources", String(resourceCount)],
+            ["Preview", String(visibleRows)],
+            ["Generated", formatNumber(run?.generated_rows ?? 0)],
+          ].map(([label, value]) => (
+            <div className="min-w-0 px-3" key={label}>
+              <dt className="truncate text-[0.65rem] font-semibold uppercase text-zinc-600">{label}</dt>
+              <dd className="mt-1 truncate text-sm font-semibold text-zinc-200">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
+      {run ? (
+        <div className="h-0.5 bg-white/[0.06]">
+          <div
+            className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      ) : null}
     </section>
-  );
-}
-
-function OverviewMetric({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[0.68rem] font-semibold uppercase text-zinc-500">{label}</p>
-        <Icon className="h-4 w-4 text-cyan-300" />
-      </div>
-      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
-    </div>
   );
 }
 
@@ -1402,8 +1314,9 @@ function WorkspaceToolbar({
   artifacts,
   downloadFormats,
   onDownloadFormatsChange,
+  onToggleRunPanel,
   onViewFormatChange,
-  product,
+  runPanelOpen,
   viewFormat,
 }: {
   run: GenerationRun | null;
@@ -1412,8 +1325,9 @@ function WorkspaceToolbar({
   artifacts: ArtifactList | null;
   downloadFormats: ViewFormat[];
   onDownloadFormatsChange: (formats: ViewFormat[]) => void;
+  onToggleRunPanel: () => void;
   onViewFormatChange: (format: ViewFormat) => void;
-  product: Product | null;
+  runPanelOpen: boolean;
   viewFormat: ViewFormat;
 }) {
   const resource =
@@ -1421,23 +1335,21 @@ function WorkspaceToolbar({
     run?.collections.find((item) => item.collection_name === selectedResource);
   const selectedView = viewOptions(activeKind).find((option) => option.id === viewFormat);
 
-  const tabs = ["Preview", "Columns", "Profile", "Lineage", "Queries", "History", "Settings"];
-
   return (
     <header className="border-b border-cyan-300/10 bg-[#080d1b]">
-      <div className="flex min-h-16 flex-col gap-3 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex min-h-16 flex-col gap-3 px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-lg font-semibold text-white">
               {selectedResource ? shortTableName(selectedResource) : "Data workspace"}
             </h2>
-            <span className="rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 text-xs font-semibold text-zinc-400">
-              {resource ? `${resource.row_count} records` : "No run"}
-            </span>
+            {resource ? (
+              <span className="rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 text-xs font-semibold text-zinc-400">
+                {resource.row_count} records
+              </span>
+            ) : null}
           </div>
-          <p className="mt-1 truncate text-xs text-zinc-500">
-            {run ? run.run_id : "Select a source, then generate a run"}
-          </p>
+          {run ? <p className="mt-1 truncate text-xs text-zinc-500">{run.run_id}</p> : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -1451,34 +1363,18 @@ function WorkspaceToolbar({
             artifacts={artifacts}
             selectedFormats={downloadFormats}
             onSelectedFormatsChange={onDownloadFormatsChange}
-            product={product}
           />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 border-t border-white/5 px-5 py-3 xl:flex-row xl:items-center xl:justify-between">
-        <nav className="workspace-scrollbar-dark flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              className={`h-9 shrink-0 rounded-lg px-4 text-sm font-semibold transition ${
-                tab === "Preview"
-                  ? "bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/25"
-                  : "text-zinc-500 hover:bg-white/[0.045] hover:text-zinc-200"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
-        <div className="flex flex-wrap items-center gap-2">
-          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
-          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
-            <Share2 className="h-4 w-4" />
-            Share
+          <button
+            aria-label={runPanelOpen ? "Close run panel" : "Open run panel"}
+            className={`grid h-10 w-10 place-items-center rounded-lg border transition ${
+              runPanelOpen
+                ? "border-cyan-300/35 bg-cyan-300/12 text-cyan-100"
+                : "border-white/10 bg-white/[0.035] text-zinc-300 hover:border-cyan-300/30 hover:text-cyan-100"
+            }`}
+            onClick={onToggleRunPanel}
+            title={runPanelOpen ? "Close run panel" : "Open run panel"}
+          >
+            <Sparkles className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -1545,13 +1441,11 @@ function DownloadFormatMenu({
   artifacts,
   selectedFormats,
   onSelectedFormatsChange,
-  product,
 }: {
   activeKind: Product["kind"];
   artifacts: ArtifactList | null;
   selectedFormats: ViewFormat[];
   onSelectedFormatsChange: (formats: ViewFormat[]) => void;
-  product: Product | null;
 }) {
   const options = downloadOptions(activeKind);
   const selectedCount = selectedFormats.length;
@@ -1580,12 +1474,7 @@ function DownloadFormatMenu({
       </summary>
       <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-cyan-300/10 bg-[#0b1020] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
         <div className="mb-3">
-          <p className="text-sm font-semibold text-white">
-            {product?.name ?? "Product"} exports
-          </p>
-          <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Select one or more formats, then download matching artifacts.
-          </p>
+          <p className="text-sm font-semibold text-white">Export formats</p>
         </div>
 
         <div className="space-y-1.5">
@@ -1831,14 +1720,7 @@ function DataTable({
   return (
     <div className="flex h-full min-w-0 flex-col bg-[#080d1b]">
       <div className="flex flex-col gap-3 border-b border-white/10 bg-[#0a1020] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-semibold text-zinc-400">
-            {filteredRows.length} preview rows
-          </span>
-          <button className="rounded-md border border-white/10 bg-white/[0.035] px-2.5 py-1 text-xs font-semibold text-zinc-400 transition hover:border-cyan-300/35 hover:text-cyan-100">
-            Columns
-          </button>
-        </div>
+        <span className="text-xs font-semibold text-zinc-500">{filteredRows.length} preview rows</span>
         <label className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 text-sm text-zinc-500 focus-within:border-cyan-300/45 lg:w-72">
           <Search className="h-4 w-4 shrink-0" />
           <input
@@ -2061,575 +1943,15 @@ function PlannedSurface({ product }: { product: Product | null }) {
           {product?.name ?? "Planned product"}
         </p>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          This product is visible in the catalog but its runtime workspace is planned for a later
-          phase.
+          This engine is not available in the current release.
         </p>
       </div>
     </div>
   );
 }
 
-function AgentPanel({
-  artifacts,
-  currentPlan,
-  insight,
-  onApproveAndGenerate,
-  onCreatePlan,
-  onPromptChange,
-  onRejectPlan,
-  onSubscribe,
-  prompt,
-  run,
-  selectedConnection,
-  selectedProduct,
-  sourceProfile,
-  status,
-  steps,
-  subscribed,
-  visibleRows,
-}: {
-  artifacts: ArtifactList | null;
-  currentPlan: PlanProposal | null;
-  insight: Insight | null;
-  onApproveAndGenerate: () => void;
-  onCreatePlan: () => void;
-  onPromptChange: (value: string) => void;
-  onRejectPlan: () => void;
-  onSubscribe: () => void;
-  prompt: string;
-  run: GenerationRun | null;
-  selectedConnection: WorkspaceSource | null;
-  selectedProduct: Product | null;
-  sourceProfile: WorkspaceSourceProfile | null;
-  status: AgentStatus;
-  steps: AgentStep[];
-  subscribed: boolean;
-  visibleRows: number;
-}) {
-  const busy =
-    status === "planning" ||
-    status === "generating" ||
-    status === "subscribing" ||
-    run?.status === "running";
-  const runState = runStateLabel(run);
-  const runStateClass =
-    run?.status === "running"
-      ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
-      : run?.validation?.passed
-        ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
-        : "border-white/10 bg-white/[0.05] text-zinc-400";
-
-  return (
-    <aside className="flex min-h-full flex-col bg-[#060a16] text-zinc-100">
-      <div className="border-b border-cyan-300/10 bg-[#060a16] px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Run builder</p>
-            <h2 className="mt-1 truncate text-lg font-semibold text-white">
-              {selectedProduct?.name ?? "Select a product"}
-            </h2>
-          </div>
-          <span
-            className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${runStateClass}`}
-          >
-            {run?.status === "running" ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : run?.validation?.passed ? (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            ) : (
-              <CircleAlert className="h-3.5 w-3.5" />
-            )}
-            {runState}
-          </span>
-        </div>
-
-        <GenerationPulse active={busy} />
-        <SourceMetadataCard
-          connection={selectedConnection}
-          product={selectedProduct}
-          profile={sourceProfile}
-        />
-
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-3">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold uppercase text-zinc-500">
-              Generation brief
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              deterministic seed
-            </span>
-          </div>
-          <textarea
-            className="h-20 w-full resize-none rounded-lg border border-white/10 bg-[#0b1020] p-3 text-sm leading-6 text-zinc-100 outline-none transition placeholder:text-zinc-700 focus:border-cyan-300/45"
-            disabled={busy}
-            onChange={(event) => onPromptChange(event.target.value)}
-            value={prompt}
-          />
-          {currentPlan ? (
-            <PlanReviewCard
-              busy={busy}
-              onApproveAndGenerate={onApproveAndGenerate}
-              onReject={onRejectPlan}
-              plan={currentPlan}
-              status={status}
-            />
-          ) : (
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="truncate text-xs font-semibold text-zinc-500">
-                {selectedProduct?.kind ?? "No product"} · {visibleRows} preview rows
-              </span>
-              {subscribed ? (
-                <button
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={
-                    busy ||
-                    !prompt.trim() ||
-                    !selectedProduct ||
-                    selectedProduct.status !== "active"
-                  }
-                  onClick={onCreatePlan}
-                >
-                  {status === "planning" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4" />
-                  )}
-                  {status === "planning" ? "Planning" : "Review plan"}
-                </button>
-              ) : (
-                <button
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={busy || !selectedProduct || selectedProduct.status !== "active"}
-                  onClick={onSubscribe}
-                >
-                  {status === "subscribing" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                  {selectedProduct?.status === "planned" ? "Planned" : "Subscribe"}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="workspace-scrollbar-dark min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
-          <p className="text-xs font-semibold uppercase text-zinc-500">Quick actions</p>
-          <div className="mt-3 space-y-2">
-            <button className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100">
-              <Share2 className="h-4 w-4" />
-              Share dataset
-            </button>
-            <button
-              className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/40 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!run}
-              onClick={() =>
-                downloadSelectedArtifacts(
-                  artifacts,
-                  downloadOptions(selectedProduct?.kind ?? "relational").map((option) => option.id),
-                )
-              }
-            >
-              <Download className="h-4 w-4" />
-              Download data
-            </button>
-          </div>
-        </section>
-
-        <details className="rounded-xl border border-white/10 bg-white/[0.035] p-3" open>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-white">
-            Generation steps
-            <ChevronDown className="h-4 w-4 text-zinc-500" />
-          </summary>
-          <div className="mt-3 space-y-2">
-            {steps.map((step) => (
-              <div key={step.label} className="rounded-lg border border-white/10 bg-[#0b1020] p-3">
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 grid h-5 w-5 place-items-center rounded-full ${
-                      step.state === "active"
-                        ? "bg-cyan-300/15 text-cyan-100"
-                        : step.state === "done"
-                          ? "bg-emerald-300/15 text-emerald-100"
-                          : "bg-white/[0.06] text-zinc-500"
-                    }`}
-                  >
-                    {step.state === "active" ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    )}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-100">{step.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">{step.detail}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </details>
-
-        <RunSummary run={run} visibleRows={visibleRows} />
-        <InsightPanel insight={insight} />
-      </div>
-    </aside>
-  );
-}
-
-function PlanReviewCard({
-  busy,
-  onApproveAndGenerate,
-  onReject,
-  plan,
-  status,
-}: {
-  busy: boolean;
-  onApproveAndGenerate: () => void;
-  onReject: () => void;
-  plan: PlanProposal;
-  status: AgentStatus;
-}) {
-  const totalRecords = plan.decision.resources.reduce(
-    (total, resource) => total + resource.target_count,
-    0,
-  );
-  const isDraft = plan.review_status === "draft";
-  const isRejected = plan.review_status === "rejected";
-  const plannerLabel = plan.telemetry.mode === "openai" ? "LLM-assisted" : "Deterministic";
-
-  return (
-    <div className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase text-cyan-200">Plan review</p>
-          <p className="mt-1 text-sm leading-5 text-zinc-200">{plan.decision.summary}</p>
-        </div>
-        <span className="shrink-0 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-semibold uppercase text-zinc-300">
-          {plan.review_status}
-        </span>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-md border border-white/10 bg-black/20 p-2">
-          <span className="text-zinc-500">Target rows</span>
-          <p className="mt-1 font-semibold text-white">{formatNumber(totalRecords)}</p>
-        </div>
-        <div className="rounded-md border border-white/10 bg-black/20 p-2">
-          <span className="text-zinc-500">Planner</span>
-          <p className="mt-1 font-semibold text-white">{plannerLabel}</p>
-        </div>
-      </div>
-
-      <div className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-xs">
-        {plan.decision.resources.map((resource) => (
-          <div className="flex items-center justify-between gap-3" key={resource.name}>
-            <span className="truncate text-zinc-400">{resource.name}</span>
-            <span className="shrink-0 font-semibold text-zinc-200">
-              {formatNumber(resource.target_count)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {plan.decision.warnings.length > 0 ? (
-        <p className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/[0.07] p-2 text-xs leading-5 text-amber-100">
-          {plan.decision.warnings[0]}
-        </p>
-      ) : null}
-
-      <p className="mt-3 text-xs text-zinc-500">
-        {plan.telemetry.cached_input_tokens > 0
-          ? `${formatNumber(plan.telemetry.cached_input_tokens)} cached input tokens`
-          : `${plan.telemetry.latency_ms} ms planning latency`}
-      </p>
-
-      {isRejected ? (
-        <p className="mt-3 text-xs leading-5 text-zinc-400">
-          Edit the generation brief to propose a new plan.
-        </p>
-      ) : (
-        <div className="mt-3 flex items-center justify-end gap-2">
-          {isDraft ? (
-            <button
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-zinc-300 transition hover:border-rose-300/30 hover:text-rose-200 disabled:opacity-50"
-              disabled={busy}
-              onClick={onReject}
-            >
-              <X className="h-3.5 w-3.5" />
-              Reject
-            </button>
-          ) : null}
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-cyan-300 px-3 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-50"
-            disabled={busy}
-            onClick={onApproveAndGenerate}
-          >
-            {status === "planning" || status === "generating" ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Send className="h-3.5 w-3.5" />
-            )}
-            {status === "planning"
-              ? "Approving"
-              : status === "generating"
-                ? "Generating"
-                : isDraft
-                  ? "Approve and generate"
-                  : "Generate plan"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function GenerationPulse({ active }: { active: boolean }) {
-  return (
-    <div className="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 py-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100">
-          {active ? (
-            <Loader2 className="h-4 w-4 animate-spin text-cyan-200" />
-          ) : (
-            <Clock3 className="h-4 w-4 text-cyan-200" />
-          )}
-          {active ? "Generation in progress" : "Generator ready"}
-        </span>
-        <span className="text-xs font-semibold uppercase text-cyan-200/75">
-          async engine
-        </span>
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div
-          className={`h-full rounded-full ${
-            active
-              ? "w-2/3 animate-pulse bg-cyan-500"
-              : "w-full bg-gradient-to-r from-emerald-500 to-cyan-500"
-          }`}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SourceMetadataCard({
-  connection,
-  product,
-  profile,
-}: {
-  connection: WorkspaceSource | null;
-  product: Product | null;
-  profile: WorkspaceSourceProfile | null;
-}) {
-  const resourceLabel =
-    product?.kind === "document"
-      ? "Collections"
-      : product?.kind === "graph"
-        ? "Graph resources"
-        : "Tables";
-  const schemaLabels = connection ? sourceSchemaLabels(connection) : [];
-
-  return (
-    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold uppercase text-zinc-500">Source context</span>
-        <Database className="h-4 w-4 text-cyan-300" />
-      </div>
-      <div className="mt-3 space-y-2 text-xs">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-zinc-500">Database</span>
-          <span className="max-w-36 truncate font-semibold text-zinc-100">
-            {connection?.name ?? "Not selected"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-zinc-500">{resourceLabel}</span>
-          <span className="font-semibold text-zinc-100">
-            {connection?.resources.length ?? 0}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-zinc-500">Schema</span>
-          <span className="max-w-36 truncate font-semibold text-zinc-100">
-            {schemaLabels.length ? schemaLabels.join(", ") : "Not refreshed"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-zinc-500">Refreshed</span>
-          <span className="font-semibold text-zinc-100">
-            {connection?.refreshed_at ? formatDateTime(connection.refreshed_at) : "Pending"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-zinc-500">Profile</span>
-          <span className="font-semibold text-zinc-100">
-            {profile ? `${formatNumber(profile.total_rows)} rows` : "Optional"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RunSummary({ run, visibleRows }: { run: GenerationRun | null; visibleRows: number }) {
-  if (!run) {
-    return (
-      <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-        <h3 className="text-sm font-semibold text-white">Run summary</h3>
-        <p className="mt-2 text-sm leading-6 text-zinc-500">No generated run selected.</p>
-      </section>
-    );
-  }
-
-  const progress = progressPercent(run);
-
-  return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-white">Run summary</h3>
-        <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-xs font-semibold text-zinc-400">
-          {run.status}
-        </span>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Metric label="Rows" value={String(run.total_rows)} />
-        <Metric label="Generated" value={`${run.generated_rows}/${run.total_rows}`} />
-        <Metric
-          label={
-            run.kind === "document" ? "Collections" : run.kind === "graph" ? "Resources" : "Tables"
-          }
-          value={String(run.table_count)}
-        />
-        <Metric label="Preview" value={String(visibleRows)} />
-        <Metric
-          label={run.status === "running" ? "Expected" : "Duration"}
-          value={
-            run.status === "running"
-              ? formatDuration(run.expected_seconds)
-              : formatDuration(totalRunSeconds(run))
-          }
-        />
-        <Metric label="Rate" value={formatRate(run.rows_per_second)} />
-      </div>
-      <div className="mt-4">
-        <div className="mb-1 flex items-center justify-between text-xs font-semibold text-zinc-500">
-          <span>Progress</span>
-          <span>{progress}%</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        {run.status === "running" ? (
-          <p className="mt-2 truncate text-xs font-semibold text-zinc-500">
-            {run.current_resource
-              ? `${formatOperationName(run.current_operation ?? "generate")} · ${shortTableName(
-                  run.current_resource,
-                )}`
-              : formatOperationName(run.current_operation ?? "starting")}
-            {run.remaining_seconds !== null
-              ? ` · ${formatDuration(run.remaining_seconds)} remaining`
-              : ""}
-          </p>
-        ) : null}
-      </div>
-      <div className="mt-4 space-y-2">
-        {runResourcesWithCounts(run).map((resource) => (
-          <div key={resource.name} className="flex items-center justify-between gap-3 text-sm">
-            <span className="truncate text-zinc-400">{shortTableName(resource.name)}</span>
-            <span className="font-semibold text-zinc-100">{resource.rowCount}</span>
-          </div>
-        ))}
-      </div>
-      {run.operation_timings.length ? (
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <p className="text-xs font-semibold uppercase text-zinc-400">Operation timings</p>
-          <div className="mt-2 space-y-2">
-            {run.operation_timings.map((timing) => (
-              <div
-                key={timing.operation}
-                className="flex items-center justify-between gap-3 text-xs"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${statusDotClass(timing.status)}`} />
-                  <span className="truncate font-semibold text-zinc-400">
-                    {formatOperationName(timing.operation)}
-                  </span>
-                </span>
-                <span className="shrink-0 font-semibold text-zinc-100">
-                  {formatDuration(timing.elapsed_seconds)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-[#0b1020] p-2">
-      <p className="text-[0.68rem] font-semibold uppercase text-zinc-400">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-zinc-100">{value}</p>
-    </div>
-  );
-}
-
-function InsightPanel({ insight }: { insight: Insight | null }) {
-  if (!insight) {
-    return (
-      <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-zinc-400" />
-          <h3 className="text-sm font-semibold text-white">Data insight</h3>
-        </div>
-        <p className="mt-2 text-sm leading-6 text-zinc-500">No distribution available.</p>
-      </section>
-    );
-  }
-
-  return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-      <div className="flex items-center gap-2">
-        <Search className="h-4 w-4 text-cyan-300" />
-        <h3 className="text-sm font-semibold text-white">{insight.title}</h3>
-      </div>
-      <div className="mt-4 space-y-3">
-        {insight.values.map((item) => (
-          <div key={item.label}>
-            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-              <span className="truncate font-semibold text-zinc-300">{item.label}</span>
-              <span className="text-zinc-400">{item.count}</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-cyan-600" style={{ width: `${item.percent}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-type AgentStep = {
-  label: string;
-  detail: string;
-  state: "done" | "active" | "waiting";
-};
-
-type Insight = {
-  title: string;
-  values: { label: string; count: number; percent: number }[];
-};
+type AgentStep = WorkspaceAgentStep;
+type Insight = WorkspaceInsight;
 
 async function loadTablePreviewSafe(runId: string, tableName: string) {
   try {
@@ -2687,7 +2009,7 @@ function workspaceSourceId(connection: WorkspaceSource | null) {
   return connection.id;
 }
 
-function runAgentStatus(run: GenerationRun): AgentStatus {
+function runAgentStatus(run: GenerationRun): WorkspaceAgentStatus {
   if (run.status === "running" || run.status === "pending") {
     return "generating";
   }
@@ -2834,7 +2156,7 @@ function delay(milliseconds: number) {
 }
 
 function buildAgentSteps(
-  status: AgentStatus,
+  status: WorkspaceAgentStatus,
   run: GenerationRun | null,
   product: Product | null,
   connection: WorkspaceSource | null,

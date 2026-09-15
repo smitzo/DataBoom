@@ -149,7 +149,7 @@ export function AppShell({ session, children }: { session: Session; children: Re
                 </Link>
               ))}
               <span
-                className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-cyan-100"
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-cyan-100 lg:hidden"
                 title={session.user.name}
               >
                 {session.user.name
