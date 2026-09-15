@@ -1,16 +1,11 @@
 import {
-  BarChart3,
   CheckCircle2,
+  ChevronDown,
   Database,
-  Download,
-  Eye,
   FileJson,
-  Filter,
   GitBranch,
+  Layers3,
   Rows3,
-  Search,
-  Settings,
-  Share2,
   ShieldCheck,
   Sparkles,
   Table2,
@@ -24,15 +19,15 @@ export function DemoWorkspaceDashboard({ workspace }: { workspace: DemoWorkspace
   const isPlanned = workspace.kind === "planned";
 
   return (
-    <section className="mx-auto max-w-[1760px] px-5 py-8 sm:px-8 lg:px-12 xl:px-16">
-      <div className="overflow-hidden rounded-2xl border border-cyan-300/10 bg-[#050917] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
-        <div className="grid min-h-[calc(100vh-12rem)] lg:grid-cols-[18rem_minmax(0,1fr)_22rem]">
+    <section className="mx-auto max-w-[1760px] px-3 py-5 sm:px-6 sm:py-8 lg:px-8 xl:px-10">
+      <div className="overflow-hidden rounded-xl border border-cyan-300/10 bg-[#050917] shadow-[0_24px_90px_rgba(0,0,0,0.38)]">
+        <div className="grid min-w-0 xl:grid-cols-[17rem_minmax(0,1fr)]">
           <DemoExplorer workspace={workspace} />
 
-          <main className="min-w-0 border-y border-cyan-300/10 bg-[#080d1b] text-zinc-100 lg:border-x lg:border-y-0">
+          <main className="min-w-0 border-t border-cyan-300/10 bg-[#080d1b] text-zinc-100 xl:border-l xl:border-t-0">
             <DemoHeader workspace={workspace} />
-            <DemoToolbar isDocument={isDocument} workspace={workspace} />
-            <div className="workspace-scrollbar-dark h-[calc(100vh-27rem)] min-h-[34rem] overflow-auto bg-[#080d1b]">
+            <DemoResourceBar workspace={workspace} />
+            <div className="workspace-scrollbar-dark min-h-[32rem] max-h-[44rem] overflow-auto bg-[#080d1b]">
               {isPlanned ? (
                 <PlannedDemo workspace={workspace} />
               ) : isDocument ? (
@@ -41,9 +36,8 @@ export function DemoWorkspaceDashboard({ workspace }: { workspace: DemoWorkspace
                 <TableDemo workspace={workspace} />
               )}
             </div>
+            <DemoQualityBar workspace={workspace} />
           </main>
-
-          <DemoInspector workspace={workspace} />
         </div>
       </div>
     </section>
@@ -51,78 +45,78 @@ export function DemoWorkspaceDashboard({ workspace }: { workspace: DemoWorkspace
 }
 
 function DemoExplorer({ workspace }: { workspace: DemoWorkspace }) {
-  const ResourceIcon = workspace.kind === "document" ? FileJson : Table2;
+  const ResourceIcon = workspace.kind === "document" ? FileJson : workspace.kind === "graph" ? GitBranch : Table2;
 
   return (
     <aside className="bg-[#060a16] text-zinc-100">
-      <div className="border-b border-cyan-300/10 px-4 py-4">
-        <p className="text-xs font-semibold uppercase text-zinc-500">Explorer</p>
-        <p className="mt-1 text-sm font-semibold text-white">{workspace.name}</p>
-      </div>
+      <details className="group" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 border-b border-cyan-300/10 px-4 py-4 marker:hidden">
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+              Demo source
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">{workspace.database}</p>
+          </div>
+          <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 transition group-open:rotate-180" />
+        </summary>
 
-      <div className="space-y-5 p-4">
-        <section className="rounded-xl border border-cyan-300/10 bg-white/[0.035] p-3">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-            Source setup
-          </p>
-          <div className="mt-3 rounded-lg border border-emerald-300/15 bg-emerald-300/10 p-3">
-            <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-1">
+          <section className="rounded-lg border border-emerald-300/15 bg-emerald-300/[0.07] p-3">
+            <div className="flex items-center justify-between gap-3">
               <span className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-100">
                 <span className="h-2 w-2 rounded-full bg-emerald-300" />
                 Connected
               </span>
-              <span className="text-[0.68rem] font-semibold uppercase text-emerald-200/70">
-                Demo source
+              <span className="text-[0.68rem] font-semibold uppercase text-emerald-200/60">
+                {workspace.locale}
               </span>
             </div>
-            <p className="truncate text-xs font-semibold text-zinc-200">
-              {workspace.engine} · {workspace.host}
-            </p>
-            <p className="mt-2 text-xs leading-5 text-zinc-500">
-              {workspace.database} · {workspace.schema}
-            </p>
-          </div>
-        </section>
+            <p className="mt-3 truncate text-xs font-semibold text-zinc-200">{workspace.engine}</p>
+            <p className="mt-1 truncate text-xs text-zinc-500">{workspace.schema}</p>
+          </section>
 
-        <section className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-semibold uppercase text-zinc-600">
-              {workspace.kind === "document" ? "Collections" : "Tables"}
-            </span>
-            <span className="text-xs text-zinc-600">{workspace.resources.length}</span>
-          </div>
-          <div className="mt-3 space-y-1.5">
-            {workspace.resources.map((resource, index) => (
-              <button
-                key={resource.name}
-                className={`flex h-11 w-full items-center justify-between gap-2 rounded-lg px-2.5 text-left text-sm transition ${
-                  index === 0
-                    ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
-                    : "text-zinc-400 hover:bg-white/[0.05] hover:text-white"
-                }`}
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <ResourceIcon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{resource.name}</span>
-                </span>
-                <span className="shrink-0 rounded-full bg-white/[0.06] px-2 py-0.5 text-[0.68rem] font-semibold text-zinc-500">
-                  {resource.count}
-                </span>
-              </button>
-            ))}
-            {workspace.resources.length === 0 ? (
-              <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-zinc-500">
-                This engine is on the product roadmap.
-              </p>
-            ) : null}
-          </div>
-        </section>
+          <section>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                {resourceLabel(workspace)}
+              </span>
+              <span className="text-xs text-zinc-600">{workspace.resources.length}</span>
+            </div>
+            <div className="mt-2 space-y-1.5">
+              {workspace.resources.map((resource, index) => (
+                <div
+                  key={resource.name}
+                  className={`flex h-10 items-center justify-between gap-2 rounded-lg px-2.5 text-sm ${
+                    index === 0
+                      ? "bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/25"
+                      : "text-zinc-400"
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ResourceIcon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{resource.name}</span>
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold text-zinc-500">
+                    {resource.count.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+              {workspace.resources.length === 0 ? (
+                <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-zinc-500">
+                  Scheduled for a later phase.
+                </p>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      </details>
 
+      <div className="border-t border-white/[0.06] p-4">
         <Link
           href="/demos"
           className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-white/10 text-sm font-semibold text-zinc-300 transition hover:border-cyan-300/30 hover:text-cyan-100"
         >
-          Back to demos
+          All demos
         </Link>
       </div>
     </aside>
@@ -130,113 +124,78 @@ function DemoExplorer({ workspace }: { workspace: DemoWorkspace }) {
 }
 
 function DemoHeader({ workspace }: { workspace: DemoWorkspace }) {
-  const Icon = workspace.kind === "document" ? FileJson : workspace.kind === "planned" ? Sparkles : Database;
+  const Icon =
+    workspace.kind === "document"
+      ? FileJson
+      : workspace.kind === "graph"
+        ? GitBranch
+        : workspace.kind === "planned"
+          ? Sparkles
+          : Database;
 
   return (
-    <section className="border-b border-cyan-300/10 bg-[#080d1b]">
-      <div className="grid gap-4 px-5 py-5 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-center">
+    <header className="border-b border-cyan-300/10 px-4 py-5 sm:px-5">
+      <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-100">
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold text-white">{workspace.name}</h1>
-              <p className="mt-1 truncate text-sm text-zinc-500">
-                {workspace.engine} · {workspace.database} · {workspace.schema}
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold text-white sm:text-2xl">{workspace.name}</h1>
+                {workspace.kind !== "planned" ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-300" aria-label="Validated" />
+                ) : null}
+              </div>
+              <p className="mt-1 truncate text-xs text-zinc-500 sm:text-sm">
+                {workspace.database} · {workspace.schema} · {workspace.locale}
               </p>
             </div>
           </div>
-          <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-zinc-500">
-              <span className="truncate">Latest run · demo-workspace · Validated</span>
-              <span className="text-cyan-200">{workspace.kind === "planned" ? "0" : "100"}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
-                style={{ width: workspace.kind === "planned" ? "12%" : "100%" }}
-              />
-            </div>
-          </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-4 2xl:w-[32rem]">
-          <DemoMetric icon={Rows3} label="Rows" value={String(workspace.rows)} />
-          <DemoMetric icon={Database} label={workspace.kind === "document" ? "Collections" : "Tables"} value={String(workspace.resources.length)} />
-          <DemoMetric icon={BarChart3} label="Columns" value={String(workspace.columns)} />
-          <DemoMetric icon={Download} label="Artifacts" value={String(workspace.artifacts)} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function DemoToolbar({ isDocument, workspace }: { isDocument: boolean; workspace: DemoWorkspace }) {
-  const tabs = ["Preview", "Columns", "Profile", "Lineage", "Queries", "History", "Settings"];
-  const activeView = isDocument ? "JSON" : "Table";
-
-  return (
-    <header className="border-b border-cyan-300/10 bg-[#080d1b]">
-      <div className="flex min-h-16 flex-col gap-3 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold text-white">
-              {workspace.resources[0]?.name ?? workspace.name}
-            </h2>
-            <span className="rounded-md border border-white/10 bg-white/[0.05] px-2 py-1 text-xs font-semibold text-zinc-400">
-              {workspace.resources[0]?.count ?? 0} records
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-zinc-500">{workspace.description}</p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-300/12 px-3 text-sm font-semibold text-cyan-100">
-            <Eye className="h-4 w-4" />
-            View · {activeView}
-          </button>
-          <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-200">
-            <Download className="h-4 w-4" />
-            Download
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 border-t border-white/5 px-5 py-3 xl:flex-row xl:items-center xl:justify-between">
-        <nav className="workspace-scrollbar-dark flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              className={`h-9 shrink-0 rounded-lg px-4 text-sm font-semibold transition ${
-                tab === "Preview"
-                  ? "bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/25"
-                  : "text-zinc-500 hover:bg-white/[0.045] hover:text-zinc-200"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
-        <div className="flex flex-wrap items-center gap-2">
-          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300">
-            <Filter className="h-4 w-4" />
-            Filter
-          </button>
-          <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300">
-            <Search className="h-4 w-4" />
-            Search
-          </button>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 2xl:w-[34rem]">
+          <DemoMetric icon={Rows3} label="Records" value={workspace.rows.toLocaleString()} />
+          <DemoMetric icon={Layers3} label={resourceLabel(workspace)} value={String(workspace.resources.length)} />
+          <DemoMetric icon={Table2} label="Fields" value={String(workspace.columns)} />
+          <DemoMetric icon={ShieldCheck} label="Validation" value={workspace.kind === "planned" ? "Planned" : "Passed"} />
         </div>
       </div>
     </header>
   );
 }
 
+function DemoResourceBar({ workspace }: { workspace: DemoWorkspace }) {
+  const resource = workspace.resources[0];
+  const view = workspace.kind === "document" ? "JSON documents" : workspace.kind === "graph" ? "Node preview" : "Table preview";
+
+  return (
+    <div className="flex min-h-16 flex-col gap-2 border-b border-white/[0.07] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="truncate text-base font-semibold text-white sm:text-lg">
+            {resource?.name ?? workspace.name}
+          </h2>
+          {resource ? (
+            <span className="rounded-md bg-white/[0.06] px-2 py-1 text-xs font-semibold text-zinc-400">
+              {resource.count.toLocaleString()} records
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-1 truncate text-xs text-zinc-500">{workspace.description}</p>
+      </div>
+      <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-200">
+        {view}
+      </span>
+    </div>
+  );
+}
+
 function TableDemo({ workspace }: { workspace: DemoWorkspace }) {
   return (
     <div className="workspace-scrollbar-dark min-h-full overflow-auto">
-      <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+      <table className="min-w-[1080px] border-separate border-spacing-0 text-left text-sm">
         <thead className="sticky top-0 z-10 bg-[#101727] shadow-[0_1px_0_rgba(255,255,255,0.08)]">
           <tr>
             <th className="w-14 border-b border-r border-white/10 px-3 py-3 text-xs font-semibold text-zinc-500">
@@ -245,41 +204,41 @@ function TableDemo({ workspace }: { workspace: DemoWorkspace }) {
             {workspace.tableColumns.map((column) => (
               <th
                 key={column}
-                className="min-w-44 border-b border-r border-white/10 px-3 py-3 align-bottom"
+                className="min-w-36 border-b border-r border-white/10 px-3 py-3 align-bottom"
               >
                 <span className="block text-sm font-semibold text-zinc-100">{column}</span>
-                <span className="mt-1 block text-[0.68rem] font-semibold uppercase text-zinc-400">
-                  {column === "id" ? "integer" : "text"}
+                <span className="mt-1 block text-[0.68rem] font-semibold uppercase text-zinc-500">
+                  {column === "id" ? "identifier" : "text"}
                 </span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {workspace.tableRows.map((row, index) => {
-            const rowTone = (index + 1) % 2 === 0 ? "bg-white/[0.035]" : "bg-transparent";
-            return (
-              <tr key={row.id} className={`${rowTone} hover:bg-cyan-300/[0.08]`}>
-                <td className="border-b border-r border-white/[0.06] px-3 py-3 text-xs font-semibold text-zinc-500">
-                  {index + 1}
+          {workspace.tableRows.map((row, index) => (
+            <tr
+              key={row.id ?? String(index)}
+              className={`${(index + 1) % 2 === 0 ? "bg-white/[0.045]" : "bg-transparent"} hover:bg-cyan-300/[0.08]`}
+            >
+              <td className="border-b border-r border-white/[0.06] px-3 py-3 text-xs font-semibold text-zinc-500">
+                {index + 1}
+              </td>
+              {workspace.tableColumns.map((column) => (
+                <td
+                  key={column}
+                  className="max-w-72 truncate border-b border-r border-white/[0.06] px-3 py-3 text-zinc-300"
+                >
+                  {column === "status" || column === "risk_band" ? (
+                    <span className={`rounded-md px-2 py-1 text-xs font-semibold ${demoStatusClass(row[column])}`}>
+                      {row[column]}
+                    </span>
+                  ) : (
+                    row[column]
+                  )}
                 </td>
-                {workspace.tableColumns.map((column) => (
-                  <td
-                    key={column}
-                    className="max-w-72 truncate border-b border-r border-white/[0.06] px-3 py-3 text-zinc-300"
-                  >
-                    {column === "status" ? (
-                      <span className={`rounded-md px-2 py-1 text-xs font-semibold ${demoStatusClass(row[column])}`}>
-                        {row[column]}
-                      </span>
-                    ) : (
-                      row[column]
-                    )}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
+              ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
@@ -288,14 +247,14 @@ function TableDemo({ workspace }: { workspace: DemoWorkspace }) {
 
 function DocumentDemo({ workspace }: { workspace: DemoWorkspace }) {
   return (
-    <div className="grid gap-4 p-5 xl:grid-cols-2">
+    <div className="grid gap-3 p-4 lg:grid-cols-2 2xl:grid-cols-3">
       {workspace.documents.map((document, index) => (
-        <article key={index} className="rounded-xl border border-white/10 bg-white/[0.035]">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Document {index + 1}</p>
-            <p className="text-xs font-semibold text-zinc-500">{workspace.resources[0]?.name}</p>
+        <article key={String(document._id ?? index)} className="min-w-0 rounded-lg border border-white/10 bg-white/[0.035]">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <p className="text-xs font-semibold text-zinc-300">Customer {index + 1}</p>
+            <p className="text-[0.68rem] font-semibold uppercase text-zinc-600">JSON</p>
           </div>
-          <pre className="workspace-scrollbar-dark max-h-96 overflow-auto p-4 text-xs leading-5 text-zinc-200">
+          <pre className="workspace-scrollbar-dark max-h-80 overflow-auto p-3 text-xs leading-5 text-zinc-300">
             {JSON.stringify(document, null, 2)}
           </pre>
         </article>
@@ -306,9 +265,9 @@ function DocumentDemo({ workspace }: { workspace: DemoWorkspace }) {
 
 function PlannedDemo({ workspace }: { workspace: DemoWorkspace }) {
   return (
-    <div className="grid h-full place-items-center px-6 text-center">
+    <div className="grid min-h-[32rem] place-items-center px-6 text-center">
       <div className="max-w-lg">
-        <Sparkles className="mx-auto h-10 w-10 text-zinc-600" />
+        <Sparkles className="mx-auto h-9 w-9 text-zinc-600" />
         <p className="mt-4 text-lg font-semibold text-white">{workspace.name}</p>
         <p className="mt-2 text-sm leading-6 text-zinc-500">{workspace.description}</p>
       </div>
@@ -316,83 +275,13 @@ function PlannedDemo({ workspace }: { workspace: DemoWorkspace }) {
   );
 }
 
-function DemoInspector({ workspace }: { workspace: DemoWorkspace }) {
+function DemoQualityBar({ workspace }: { workspace: DemoWorkspace }) {
   return (
-    <aside className="flex min-h-full flex-col bg-[#060a16] text-zinc-100">
-      <div className="border-b border-cyan-300/10 px-4 py-4">
-        <p className="text-xs font-semibold uppercase text-zinc-500">Quick actions</p>
-        <div className="mt-3 space-y-2">
-          <button className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300">
-            <GitBranch className="h-4 w-4" />
-            View lineage
-          </button>
-          <button className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-sm font-semibold text-cyan-100">
-            <Download className="h-4 w-4" />
-            Download data
-          </button>
-          <button className="inline-flex h-10 w-full items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-sm font-semibold text-zinc-300">
-            <Share2 className="h-4 w-4" />
-            Share dataset
-          </button>
-        </div>
-      </div>
-
-      <div className="workspace-scrollbar-dark min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white">Run summary</h3>
-            <span className="rounded-md border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-xs font-semibold text-emerald-100">
-              Completed
-            </span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <DemoTinyMetric label="Rows" value={String(workspace.rows)} />
-            <DemoTinyMetric label="Generated" value={`${workspace.rows}/${workspace.rows}`} />
-            <DemoTinyMetric label="Resources" value={String(workspace.resources.length)} />
-            <DemoTinyMetric label="Success" value={workspace.kind === "planned" ? "Planned" : "100%"} />
-          </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-cyan-300" />
-            <h3 className="text-sm font-semibold text-white">Status distribution</h3>
-          </div>
-          <div className="mt-4 space-y-3">
-            {workspace.statusCounts.map((item) => (
-              <div key={item.label}>
-                <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                  <span className="truncate font-semibold text-zinc-300">{item.label}</span>
-                  <span className="text-zinc-400">{item.count}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className={`h-full rounded-full ${item.tone}`}
-                    style={{ width: `${Math.max(6, Math.round((item.count / Math.max(1, workspace.rows)) * 100))}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-            {workspace.statusCounts.length === 0 ? (
-              <p className="text-sm leading-6 text-zinc-500">Distribution appears after the engine is active.</p>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
-          <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-zinc-400" />
-            <h3 className="text-sm font-semibold text-white">Generation</h3>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-zinc-500">
-            Demo runs use deterministic seeds and validated artifacts.
-          </p>
-        </section>
-      </div>
-    </aside>
+    <footer className="grid gap-px border-t border-white/[0.07] bg-white/[0.07] sm:grid-cols-3">
+      <QualityItem label="Locale" value={workspace.locale} />
+      <QualityItem label="Generation" value="Deterministic seed" />
+      <QualityItem label="Integrity" value={workspace.kind === "planned" ? "Policy planned" : "Validated output"} />
+    </footer>
   );
 }
 
@@ -406,37 +295,40 @@ function DemoMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-3">
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[0.68rem] font-semibold uppercase text-zinc-500">{label}</p>
-        <Icon className="h-4 w-4 text-cyan-300" />
+        <p className="truncate text-[0.66rem] font-semibold uppercase text-zinc-500">{label}</p>
+        <Icon className="h-3.5 w-3.5 shrink-0 text-cyan-300" />
       </div>
-      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
+      <p className="mt-1 truncate text-base font-semibold text-white">{value}</p>
     </div>
   );
 }
 
-function DemoTinyMetric({ label, value }: { label: string; value: string }) {
+function QualityItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-[#0b1020] p-2">
-      <p className="text-[0.68rem] font-semibold uppercase text-zinc-400">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-zinc-100">{value}</p>
+    <div className="flex items-center justify-between gap-3 bg-[#060a16] px-4 py-3 text-xs">
+      <span className="font-semibold uppercase tracking-[0.1em] text-zinc-600">{label}</span>
+      <span className="font-semibold text-zinc-300">{value}</span>
     </div>
   );
+}
+
+function resourceLabel(workspace: DemoWorkspace) {
+  if (workspace.kind === "document") return "Collections";
+  if (workspace.kind === "graph") return "Graph sets";
+  return "Tables";
 }
 
 function demoStatusClass(status = "") {
-  if (status === "posted") {
-    return "border border-cyan-300/20 bg-cyan-300/10 text-cyan-100";
+  if (status === "active" || status === "low") {
+    return "border border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
   }
-  if (status === "pending") {
+  if (status === "pending" || status === "medium") {
     return "border border-amber-300/20 bg-amber-300/10 text-amber-100";
   }
-  if (status === "failed") {
+  if (status === "review" || status === "high") {
     return "border border-red-300/20 bg-red-300/10 text-red-100";
-  }
-  if (status === "reversed") {
-    return "border border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100";
   }
   return "border border-white/10 bg-white/[0.06] text-zinc-300";
 }
