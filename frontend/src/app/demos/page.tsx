@@ -29,9 +29,8 @@ export default function DemosPage() {
               </h1>
             </div>
             <p className="max-w-3xl text-base leading-7 text-[color:var(--text-muted)]">
-              Each demo shows the same workspace shape as the app: source explorer, data preview,
-              run builder, validation summary, and export controls. Choose the data surface first,
-              then inspect the generated sample.
+              Explore generated finance, healthcare, and commerce datasets without connecting a
+              source system.
             </p>
           </div>
         </div>
@@ -40,8 +39,8 @@ export default function DemosPage() {
       <Section
         id="demo-workspaces"
         eyebrow="Choose"
-        title="Pick the product workspace you want to inspect."
-        subtitle="Table-Boom and Docu-Boom show active full-stack flows. Graph-Boom and Masker-Boom stay visible as roadmap surfaces."
+        title="Product workspaces"
+        subtitle="Inspect relational and document outputs, validation results, and export formats."
       >
         <div className="grid gap-4 lg:grid-cols-2">
           {demoWorkspaces.map((workspace) => (

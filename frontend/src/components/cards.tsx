@@ -141,7 +141,7 @@ export function ArtifactPanel() {
       <p className="text-lg font-semibold text-[color:var(--text-primary)]">Output formats</p>
       <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
         The engine can export the same run into multiple local artifact types for
-        analysts, backend tests, and database loading.
+        analysis, application tests, and database loading.
       </p>
       <div className="mt-6 space-y-3">
         {formats.map((format) => (

@@ -12,7 +12,7 @@ import { PublicShell } from "@/components/layout";
 
 const briefItems = [
   "Data shape: relational tables, document collections, graph data, or masking.",
-  "Target scale: demo sample, 100k rows, 500k rows, or a larger benchmark.",
+  "Target scale: 100k rows, 500k rows, or a larger benchmark.",
   "Integrity rules: keys, references, document IDs, graph edges, or masking links.",
   "Output contracts: CSV, JSON, SQL, NDJSON, manifest, validation report, or download flow.",
 ];
@@ -91,10 +91,6 @@ export default function ContactPage() {
                 <Send className="h-4 w-4" />
               </button>
 
-              <p className="mt-7 text-sm text-[color:var(--text-faint)]">
-                This scaffold can be wired to email, CRM, or a backend route during
-                deployment hardening.
-              </p>
             </form>
 
             <aside className="space-y-5">
@@ -127,7 +123,7 @@ export default function ContactPage() {
               <ContactRoute
                 icon={GitBranch}
                 title="Read the roadmap"
-                detail="Check what is active, what is hardening next, and what belongs to future phases."
+                detail="Review current capabilities and the delivery roadmap."
                 href="/roadmap"
               />
             </aside>

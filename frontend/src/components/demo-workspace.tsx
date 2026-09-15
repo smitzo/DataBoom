@@ -112,7 +112,7 @@ function DemoExplorer({ workspace }: { workspace: DemoWorkspace }) {
             ))}
             {workspace.resources.length === 0 ? (
               <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-zinc-500">
-                This workspace is planned and will unlock when the product engine is active.
+                This engine is on the product roadmap.
               </p>
             ) : null}
           </div>
@@ -388,7 +388,7 @@ function DemoInspector({ workspace }: { workspace: DemoWorkspace }) {
             <h3 className="text-sm font-semibold text-white">Generation</h3>
           </div>
           <p className="mt-3 text-sm leading-6 text-zinc-500">
-            Demo runs use deterministic seeds, local artifacts, and validation-shaped metadata so the flow stays stable during review.
+            Demo runs use deterministic seeds and validated artifacts.
           </p>
         </section>
       </div>

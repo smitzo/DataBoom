@@ -203,7 +203,7 @@ function ProductDetailContent({ session }: { session: Session }) {
         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
           <h2 className="text-xl font-semibold text-white">Generate data</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Configure record counts, choose output formats, then create real backend artifacts.
+            Configure record counts and output formats, then create validated artifacts.
           </p>
 
           <div className="mt-5 grid gap-3 md:grid-cols-2">

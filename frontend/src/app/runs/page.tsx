@@ -36,8 +36,8 @@ function RunsContent() {
     <>
       <PageHeader
         eyebrow="Runs"
-        title="Generation run history."
-        description="Open a generation run to preview tables or documents and download artifacts."
+        title="Generation history"
+        description="Preview, validate, and export generated datasets."
       />
 
       {error ? (
@@ -47,16 +47,16 @@ function RunsContent() {
       ) : null}
 
       <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <StatTile label="Runs" value={String(runs.length)} hint="Visible backend metadata" />
+        <StatTile label="Runs" value={String(runs.length)} hint="Recorded runs" />
         <StatTile
           label="Rows generated"
           value={String(runs.reduce((total, run) => total + run.total_rows, 0))}
-          hint="Across visible runs"
+          hint="All runs"
         />
         <StatTile
           label="Passed validation"
           value={String(runs.filter((run) => run.validation?.passed).length)}
-          hint="Runs with clean reports"
+          hint="Validated runs"
         />
       </div>
 

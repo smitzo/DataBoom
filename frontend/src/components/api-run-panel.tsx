@@ -190,7 +190,7 @@ export function ApiRunPanel() {
           onClick={createDemoRun}
         >
           {isRunning ? <Activity className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          Generate sample data
+          Generate dataset
         </button>
       </div>
 

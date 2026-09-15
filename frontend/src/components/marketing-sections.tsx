@@ -171,7 +171,7 @@ const questions = [
   {
     question: "How is this different from other synthetic-data platforms?",
     answer:
-      "DataBoom is being built as an open, local-first engine with explicit product surfaces for relational, document, graph, and masking workflows.",
+      "DataBoom is an open, local-first engine with distinct relational, document, graph, and masking workflows.",
   },
   {
     question: "Can DataBoom generate fintech or healthcare-style data?",
@@ -181,12 +181,12 @@ const questions = [
   {
     question: "Do I need to upload production data?",
     answer:
-      "No for the current synthetic generation flow. Phase 1 and Phase 2 focus on schema and profile-driven generation. Source-data masking arrives later through Masker-Boom.",
+      "No. Synthetic generation can run from schemas and profile rules. Masker-Boom handles source-data workflows behind separate controls.",
   },
   {
     question: "What is active today?",
     answer:
-      "Table-Boom and Docu-Boom are active in the full-stack workspace. Graph-Boom and Masker-Boom are visible in the roadmap so their boundaries stay clear.",
+      "Table-Boom and Docu-Boom are available today. Graph-Boom and Masker-Boom are tracked on the product roadmap.",
   },
 ];
 
