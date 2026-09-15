@@ -426,6 +426,7 @@ def _running_product_response(
         created_at=created_at,
         artifact_dir=artifact_dir,
         domain=product.domain,
+        locale=payload.locale,
         output_formats=output_formats,
         total_rows=total_rows,
         table_count=table_count,
@@ -464,6 +465,7 @@ def _planned_table_artifacts(
         row_counts=payload.row_counts or _source_default_counts(source) or product.default_counts,
         seed=payload.seed,
         domain=product.domain,
+        locale=payload.locale,
         output_formats=tuple(OutputFormat(output_format) for output_format in output_formats),
     )
     return tuple(
@@ -550,9 +552,7 @@ def _failed_response(
         table_count = len(nodes) + len(edges)
     else:
         table_count = (
-            len(source.resources)
-            if source
-            else len(product.tables or product.collections)
+            len(source.resources) if source else len(product.tables or product.collections)
         )
     return GenerationRunResponse(
         run_id=run_id,
@@ -564,6 +564,7 @@ def _failed_response(
         completed_at=completed_at,
         artifact_dir=artifact_dir,
         domain=product.domain,
+        locale=payload.locale,
         output_formats=tuple(payload.output_formats or product.output_formats),
         total_rows=total_rows,
         table_count=table_count,

@@ -107,6 +107,7 @@ def execute_generation_run(
         default_row_count=request.default_row_count,
         seed=request.seed,
         domain=request.domain,
+        locale=request.locale,
         output_formats=request.output_formats,
         foreign_key_strategy=effective_foreign_key_strategy,
         relationship_hints=relationship_hints,
@@ -175,6 +176,7 @@ def execute_product_generation_run(
                     or product.default_counts,
                     seed=payload.seed,
                     domain=product.domain,
+                    locale=payload.locale,
                     output_formats=_relational_output_formats(
                         payload.output_formats or product.output_formats
                     ),
@@ -239,6 +241,7 @@ def execute_document_generation_run(
         collections=collections,
         row_counts=row_counts,
         seed=payload.seed,
+        locale=payload.locale,
         output_dir=artifact_dir,
         progress_callback=progress_callback,
     ).generate()
@@ -256,6 +259,7 @@ def execute_document_generation_run(
         manifest_path=result.manifest.manifest_path,
         validation_path=result.validation_path,
         domain=product.domain,
+        locale=payload.locale,
         output_formats=tuple(payload.output_formats or product.output_formats),
         total_rows=result.total_rows,
         table_count=len(result.manifest.collections),
@@ -326,6 +330,7 @@ def execute_graph_generation_run(
         manifest_path=result.manifest.manifest_path,
         validation_path=result.validation_path,
         domain=product.domain,
+        locale=payload.locale,
         output_formats=output_formats,
         total_rows=result.total_rows,
         table_count=len(nodes) + len(edges),
@@ -427,12 +432,7 @@ def _schema_ddl_for_source(source: WorkspaceSource | None) -> str | None:
         if "id" not in columns:
             column_definitions.insert(0, "id bigint PRIMARY KEY")
         columns_sql = ",\n    ".join(column_definitions)
-        statements.append(
-            "CREATE TABLE "
-            f"{_sql_identifier(resource.name)} (\n"
-            f"    {columns_sql}\n"
-            ");"
-        )
+        statements.append(f"CREATE TABLE {_sql_identifier(resource.name)} (\n    {columns_sql}\n);")
     return "\n\n".join(statements)
 
 
@@ -446,8 +446,7 @@ def _document_collections_for_source(
             name=resource.name,
             default_count=resource.estimated_rows,
             fields=tuple(
-                _document_field(column)
-                for column in resource.columns or ("_id", "status")
+                _document_field(column) for column in resource.columns or ("_id", "status")
             ),
         )
         for resource in source.resources
@@ -462,14 +461,10 @@ def _graph_specs_for_source(
         return product.graph_nodes, product.graph_edges
 
     node_resources = tuple(
-        resource
-        for resource in source.resources
-        if resource.resource_type.lower() == "node"
+        resource for resource in source.resources if resource.resource_type.lower() == "node"
     )
     edge_resources = tuple(
-        resource
-        for resource in source.resources
-        if resource.resource_type.lower() == "edge"
+        resource for resource in source.resources if resource.resource_type.lower() == "edge"
     )
     nodes = tuple(
         GraphNodeSpec(
@@ -592,11 +587,7 @@ def _graph_label(value: str) -> str:
 
 
 def _graph_edge_type(value: str) -> str:
-    return "_".join(
-        part.upper()
-        for part in value.replace("-", "_").split("_")
-        if part
-    )
+    return "_".join(part.upper() for part in value.replace("-", "_").split("_") if part)
 
 
 def _sql_identifier(value: str) -> str:
@@ -638,6 +629,7 @@ def _completed_response(
         manifest_path=manifest.manifest_path,
         validation_path=validation_path,
         domain=plan.domain,
+        locale=plan.locale,
         output_formats=tuple(str(output_format) for output_format in plan.output_formats),
         total_rows=plan.total_rows,
         table_count=len(plan.tables),
@@ -700,9 +692,7 @@ def _relational_output_formats(output_formats: tuple[str, ...]) -> tuple[OutputF
         try:
             formats.append(OutputFormat(output_format))
         except ValueError as error:
-            raise ValueError(
-                f"unsupported relational output format: {output_format}"
-            ) from error
+            raise ValueError(f"unsupported relational output format: {output_format}") from error
     return tuple(formats)
 
 

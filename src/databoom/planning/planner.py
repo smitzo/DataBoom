@@ -103,6 +103,7 @@ def proposal_from_decision(
         "product_kind": request.product_kind,
         "intent": request.intent,
         "seed": request.seed,
+        "locale": request.locale,
         "output_formats": request.output_formats,
         "decision": decision.model_dump(mode="json"),
     }
@@ -116,6 +117,7 @@ def proposal_from_decision(
         product_kind=request.product_kind,
         intent=request.intent,
         seed=request.seed,
+        locale=request.locale,
         output_formats=request.output_formats,
         decision=decision,
         telemetry=telemetry,

@@ -21,7 +21,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
-from databoom.generation import DomainProfile, OutputFormat
+from databoom.generation import DomainProfile, LocaleProfile, OutputFormat
 from databoom.llm.provider import LLMProviderMode
 from databoom.planning import PlanReviewStatus
 
@@ -472,6 +472,7 @@ class ProductRunRequest(BaseModel):
 
     row_counts: dict[str, int] = Field(default_factory=dict)
     seed: str = "dashboard-demo"
+    locale: LocaleProfile = LocaleProfile.EN_US
     output_formats: tuple[str, ...] | None = None
     source_id: str | None = None
     plan_id: str | None = None
@@ -509,6 +510,7 @@ class ProductPlanProposalRequest(BaseModel):
     intent: str = Field(min_length=1, max_length=4_000)
     row_counts: dict[str, int] = Field(default_factory=dict)
     seed: str = Field(default="dashboard-plan", min_length=1, max_length=256)
+    locale: LocaleProfile | None = None
     output_formats: tuple[str, ...] | None = None
     source_id: str | None = None
     user_api_key: SecretStr | None = None
@@ -569,6 +571,7 @@ class GenerationRunRequest(BaseModel):
     default_row_count: int = Field(default=10, ge=0)
     seed: str = "0"
     domain: DomainProfile = DomainProfile.GENERAL
+    locale: LocaleProfile = LocaleProfile.EN_US
     output_formats: tuple[OutputFormat, ...] = (OutputFormat.CSV,)
 
     @field_validator("row_counts")
@@ -743,6 +746,7 @@ class GenerationRunResponse(BaseModel):
     manifest_path: Path | None = None
     validation_path: Path | None = None
     domain: DomainProfile
+    locale: LocaleProfile = LocaleProfile.EN_US
     output_formats: tuple[str, ...]
     total_rows: int
     table_count: int

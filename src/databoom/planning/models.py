@@ -21,6 +21,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from databoom.generation.domains import LocaleProfile
+
 
 class PlanningModel(BaseModel):
     """Strict immutable base for planner-domain values."""
@@ -89,6 +91,7 @@ class PlannerRequest(PlanningModel):
     product_kind: ProductKind
     intent: str = Field(min_length=1, max_length=4_000)
     seed: str = Field(min_length=1, max_length=256)
+    locale: LocaleProfile = LocaleProfile.EN_US
     output_formats: tuple[str, ...] = Field(min_length=1)
     resources: tuple[PlanResourceInput, ...] = Field(min_length=1)
 
@@ -159,6 +162,7 @@ class PlanProposal(PlanningModel):
     product_kind: ProductKind
     intent: str
     seed: str
+    locale: LocaleProfile = LocaleProfile.EN_US
     output_formats: tuple[str, ...]
     decision: PlanDecision
     telemetry: PlannerTelemetry

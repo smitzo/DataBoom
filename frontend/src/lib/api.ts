@@ -162,6 +162,7 @@ export type GenerationRun = {
   manifest_path: string | null;
   validation_path: string | null;
   domain: string;
+  locale: "en-US" | "en-IN";
   output_formats: string[];
   total_rows: number;
   table_count: number;
@@ -263,6 +264,7 @@ export type PlanProposal = {
   product_kind: "relational" | "document" | "graph";
   intent: string;
   seed: string;
+  locale: "en-US" | "en-IN";
   output_formats: string[];
   decision: {
     summary: string;
@@ -443,6 +445,7 @@ export async function createProductRun(
     seed: string;
     output_formats: string[];
     source_id?: string;
+    locale?: "en-US" | "en-IN";
   },
 ) {
   return apiRequest<GenerationRun>(
@@ -463,6 +466,7 @@ export async function createAsyncProductRun(
     seed: string;
     output_formats: string[];
     source_id?: string;
+    locale?: "en-US" | "en-IN";
   },
 ) {
   return apiRequest<GenerationRun>(

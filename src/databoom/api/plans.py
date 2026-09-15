@@ -24,6 +24,7 @@ from databoom.api.models import (
 )
 from databoom.api.products import ProductCatalogEntry
 from databoom.api.workspaces import WorkspaceSource
+from databoom.generation import locale_from_intent
 from databoom.planning import (
     PlannerRequest,
     PlanProposal,
@@ -67,6 +68,7 @@ def planner_request_from_product(
         product_kind=ProductKind(product.kind.value),
         intent=payload.intent,
         seed=payload.seed,
+        locale=payload.locale or locale_from_intent(payload.intent),
         output_formats=output_formats,
         resources=resources,
     )
@@ -105,6 +107,7 @@ def run_request_from_approved_plan(
     return ProductRunRequest(
         row_counts={resource.name: resource.target_count for resource in plan.decision.resources},
         seed=plan.seed,
+        locale=plan.locale,
         output_formats=plan.output_formats,
         source_id=source_id,
         plan_id=plan.plan_id,

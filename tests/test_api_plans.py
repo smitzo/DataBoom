@@ -100,6 +100,53 @@ def test_plans_are_private_and_validate_resource_names(tmp_path: Path) -> None:
         assert [plan["plan_id"] for plan in plans.json()] == [plan_id]
 
 
+def test_plan_infers_locale_and_preserves_it_during_execution(tmp_path: Path) -> None:
+    settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")
+    with TestClient(create_app(settings=settings)) as client:
+        token = _register(client, "locale-planner@example.test")
+        _subscribe(client, token, "table-boom")
+        created = client.post(
+            "/products/table-boom/plans",
+            headers=_headers(token),
+            json={
+                "intent": "Generate Indian customers located in Mumbai and Bengaluru.",
+                "row_counts": {
+                    "customers": 4,
+                    "products": 2,
+                    "orders": 4,
+                    "order_items": 4,
+                    "payments": 4,
+                },
+            },
+        )
+
+        assert created.status_code == 201, created.text
+        assert created.json()["locale"] == "en-IN"
+        reviewed = client.post(
+            f"/plans/{created.json()['plan_id']}/review",
+            headers=_headers(token),
+            json={"status": "approved"},
+        )
+        started = client.post(
+            f"/plans/{reviewed.json()['plan_id']}/runs/async",
+            headers=_headers(token),
+            json={},
+        )
+        completed = _wait_for_run(client, started.json()["run_id"])
+
+        assert completed["locale"] == "en-IN"
+        preview = client.get(
+            f"/runs/{completed['run_id']}/preview",
+            params={"table": "customers", "limit": 4},
+        )
+        assert preview.status_code == 200, preview.text
+        assert all(row["phone"].startswith("+91") for row in preview.json()["rows"])
+        assert all(
+            row["full_name"] != f"Full Name {index}"
+            for index, row in enumerate(preview.json()["rows"], 1)
+        )
+
+
 def test_sql_state_store_persists_reviewed_plan(tmp_path: Path) -> None:
     database_url = f"sqlite+pysqlite:///{tmp_path / 'plans.db'}"
     settings = Settings(ENV="test", ARTIFACT_ROOT=tmp_path / "artifacts")

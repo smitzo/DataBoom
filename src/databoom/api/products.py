@@ -156,6 +156,7 @@ DOCU_BOOM_COLLECTIONS = (
         fields=(
             DocumentFieldSpec("_id", "object_id"),
             DocumentFieldSpec("email", "email"),
+            DocumentFieldSpec("phone", "phone"),
             DocumentFieldSpec("status", "status"),
             DocumentFieldSpec(
                 "profile",
@@ -163,6 +164,7 @@ DOCU_BOOM_COLLECTIONS = (
                 fields=(
                     DocumentFieldSpec("first_name", "first_name"),
                     DocumentFieldSpec("last_name", "last_name"),
+                    DocumentFieldSpec("gender", "gender"),
                     DocumentFieldSpec("age", "integer"),
                     DocumentFieldSpec("loyalty_tier", "tier"),
                 ),
@@ -172,6 +174,7 @@ DOCU_BOOM_COLLECTIONS = (
                 "array",
                 item_fields=(
                     DocumentFieldSpec("city", "city"),
+                    DocumentFieldSpec("state", "state"),
                     DocumentFieldSpec("country", "country"),
                     DocumentFieldSpec("postal_code", "postal_code"),
                 ),

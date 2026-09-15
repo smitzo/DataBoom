@@ -24,6 +24,10 @@ Planning rules:
   business meaning.
 - Keep output formats unchanged. The engine validates product-specific format
   support after plan review.
+- Treat the supplied locale as an execution constraint. Mention it in strategies
+  for resources containing names, addresses, phones, or demographic fields.
+- Do not infer ethnicity, religion, or other protected traits from a locale. A
+  locale controls formatting and supported regional value catalogues only.
 
 Relational rules:
 
@@ -57,6 +61,11 @@ Quality and safety rules:
   supplied metadata cannot establish.
 - Never infer protected traits, real identities, secrets, credentials, or source
   values.
+- Keep correlated fields coherent: first name and gender catalogue, full name and
+  email, city and region, country and postcode, phone country code, and age and
+  date of birth must not conflict.
+- Use the LLM to describe these constraints in the plan. The deterministic engine,
+  not the model, generates bulk values and enforces supported row-level rules.
 - Warn when the intent asks for an unavailable resource, unsupported output, or
   unclear scale.
 - Keep summaries concise and operational. The operator must understand what will

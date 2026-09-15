@@ -102,6 +102,7 @@ def test_document_product_flow_generates_json_and_preview(tmp_path: Path) -> Non
         json={
             "row_counts": {"customers": 2, "orders": 3, "events": 4},
             "seed": "document-flow",
+            "locale": "en-IN",
             "output_formats": ["json", "ndjson"],
         },
     )
@@ -127,6 +128,12 @@ def test_document_product_flow_generates_json_and_preview(tmp_path: Path) -> Non
     assert len(preview_payload["documents"]) == 2
     assert "_id" in preview_payload["documents"][0]
     assert "profile" in preview_payload["documents"][0]
+    customer = preview_payload["documents"][0]
+    assert customer["phone"].startswith("+91")
+    assert customer["addresses"][0]["country"] == "IN"
+    assert len(customer["addresses"][0]["postal_code"]) == 6
+    assert customer["profile"]["gender"] in {"female", "male"}
+    assert customer["profile"]["first_name"].casefold() in customer["email"]
 
     artifacts = client.get(f"/runs/{run_payload['run_id']}/artifacts")
     assert artifacts.status_code == 200
@@ -222,7 +229,7 @@ def test_document_preview_falls_back_to_ndjson_when_json_is_incomplete(
         for collection in run.json()["collections"]
         if collection["collection_name"] == "customers"
     )
-    Path(customers["json_path"]).write_text("[\n{\"_id\":", encoding="utf-8")
+    Path(customers["json_path"]).write_text('[\n{"_id":', encoding="utf-8")
 
     preview = client.get(
         f"/runs/{run.json()['run_id']}/document-preview",
