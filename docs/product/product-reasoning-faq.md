@@ -208,7 +208,9 @@ Validation. The engine must check primary keys, foreign keys, required fields, c
 
 ### What makes the generated data realistic?
 
-Realism comes from schema structure, domain-aware column strategies, relationship cardinality, profiling summaries, prompt intent, and later LLM-assisted planning. Realism is not just fake names; it is believable connected behavior across tables.
+Realism comes from schema structure, domain-aware column strategies, relationship cardinality, profiling summaries, reviewed prompt intent, and correlated row contexts. Table-Boom and Docu-Boom currently preserve `en-US` and `en-IN` locale through name, gender, email, phone, city, state, country, postcode, age, and birth-date generation. Realism is not just fake names; it is believable connected behavior within a row and across resources.
+
+This guarantee has a boundary. The engine can enforce declared schema rules and implemented domain invariants. A hidden business rule such as a product, currency, jurisdiction, and risk-band combination requires an explicit constraint, a domain adapter, or a learned joint profile. Independent plausible columns are not presented as proof of production equivalence.
 
 ### What happens when a schema is too complex?
 

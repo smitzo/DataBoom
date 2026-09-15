@@ -20,6 +20,10 @@ each other.
 - System boundaries and deployment topology: [High-Level Design](engineering/high-level-design.md).
 - Python modules, contracts, and runtime sequences: [Low-Level Design](engineering/low-level-design.md).
 - Current phase and future objectives: [Roadmap](engineering/roadmap.md).
+- Statistical and ML model strategy:
+  [Statistical and ML Synthesis Architecture](engineering/statistical-synthesis-architecture.md).
+- Quality metrics, datasets, and release gates:
+  [Quality Evaluation and Benchmarks](engineering/quality-evaluation-and-benchmarks.md).
 - Local commands: [Local Development](operations/local-development.md).
 - Hosted environment configuration: [Deployment Guide](operations/deployment.md).
 

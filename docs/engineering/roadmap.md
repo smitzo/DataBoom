@@ -34,6 +34,41 @@ The current architecture, including planning and approval, is maintained in the
 [Low-Level Design](low-level-design.md). Completed phase evidence is archived
 under `docs/operations/phase-history`.
 
+## Cross-Phase Statistical and ML Quality Program
+
+The five product phases remain the delivery structure. Statistical and ML
+quality is a backend track inside Phases 4 and 5, not a sixth product phase.
+
+Canonical sources:
+
+- [Statistical and ML Synthesis Architecture](statistical-synthesis-architecture.md)
+  owns generation modes, profiles, model candidates, and selection policy.
+- [Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md) owns
+  metrics, datasets, experiment procedure, and release gates.
+
+| Quality stage | Product phase | Outcome | Status |
+| --- | --- | --- | --- |
+| Q0: contracts and measurement | Phase 4 | Profile v2, quality intent, holdout splits, metric registry, and quality report schema. | Next |
+| Q1: statistical synthesis | Phase 4 | Empirical and copula baselines, conditional missingness, seasonality, and source/holdout comparison. | Planned |
+| Q2: controlled populations | Phase 4-5 | Mixtures, clusters, sparsity, tails, international populations, and constraint DSL. | Planned |
+| Q3: model tournament | Phase 5 | Provider-neutral adapters, optional neural candidates, cost estimates, and measured promotion. | Planned |
+| Q4: native complex shapes | Phase 5 | Subject-first relational, temporal, and graph-native candidates and metrics. | Planned |
+| Q5: privacy and operations | Phase 5 | Privacy attack suite, optional DP, model registry, workers, lineage, and drift monitoring. | Planned |
+
+Q0 intentionally changes measurement contracts before generation behavior. It
+creates a trustworthy baseline for every later performance or realism claim.
+
+Recommended first commits:
+
+1. `backend: add statistical profile v2 contracts`
+2. `backend: add data quality intent contracts`
+3. `backend: add grouped holdout split service`
+4. `backend: add quality report and metric registry`
+5. `test: add controlled statistical quality fixtures`
+6. `backend: add empirical statistical synthesizer`
+7. `backend: add gaussian copula synthesizer adapter`
+8. `performance: benchmark statistical candidate tournament`
+
 ## Phase 1: Table-Boom Relational Foundation
 
 Goal: build the deterministic Table-Boom backend engine for PostgreSQL schema-driven generation.
@@ -275,6 +310,15 @@ Technical objectives:
 - Generate and validate graph nodes, edges, labels, properties, and endpoints. `complete`
 - Export graph JSON and node/edge CSV artifacts. `complete`
 - Expose Graph-Boom preview and plan-review surfaces in the workspace. `complete`
+- Preserve reviewed `en-US` and `en-IN` locale through relational and document execution. `complete`
+- Generate correlated identity, age, phone, and geography fields from one row context. `complete`
+
+Quality hardening before privacy policies:
+
+- Rerun the 500k and 1M benchmarks with locale contexts enabled.
+- Add declarative cross-column constraints for business-specific invariants.
+- Add joint source profiling where independent marginals are insufficient.
+- Expand locale adapters through tested catalogues rather than prompt-only rules.
 
 Recommended commits:
 
@@ -293,12 +337,16 @@ Recommended commits:
 
 ## Phase 4: Masker-Boom Privacy, Policies, and Security Hardening
 
-Goal: add Masker-Boom as the privacy and masking service layer for sensitive environments.
+Goal: establish measured statistical quality, then add Masker-Boom as the
+privacy and masking service layer for sensitive environments.
 
 Current status: next phase.
 
 Technical objectives:
 
+- Complete Q0 profile, intent, holdout, metric, and report contracts.
+- Complete Q1 statistical baselines before introducing neural candidates.
+- Label outputs as scenario-faithful or source-faithful.
 - Add policy file format.
 - Add sensitive field detection hints.
 - Add synthetic replacement, hashing, tokenization, redaction, and allowlist reuse.
@@ -312,16 +360,19 @@ Technical objectives:
 
 Recommended commits:
 
-1. `backend: add masker-boom policy model`
-2. `backend: detect likely sensitive fields`
-3. `backend: add stable tokenization policy`
-4. `backend: add redaction and synthetic replacement policies`
-5. `backend: preserve masked relationship integrity`
-6. `backend: validate privacy policy compliance`
-7. `security: remove raw values from profiler logs`
-8. `api: expose privacy policy configuration`
-9. `test: cover policy engine edge cases`
-10. `docs: document masker-boom policy format`
+1. `backend: add statistical profile v2 contracts`
+2. `backend: add quality report and metric registry`
+3. `backend: add empirical statistical synthesizer`
+4. `backend: add masker-boom policy model`
+5. `backend: detect likely sensitive fields`
+6. `backend: add stable tokenization policy`
+7. `backend: add redaction and synthetic replacement policies`
+8. `backend: preserve masked relationship integrity`
+9. `backend: validate privacy policy compliance`
+10. `security: remove raw values from profiler logs`
+11. `api: expose privacy policy configuration`
+12. `test: cover policy engine edge cases`
+13. `docs: document masker-boom policy format`
 
 ## Phase 5: Production Release and Extensibility
 
@@ -337,6 +388,12 @@ Technical objectives:
 - Add deployment documentation.
 - Add adapter boundaries for future MySQL, SQLite, SQL Server, BigQuery, NoSQL stores, graph stores, and object storage.
 - Add release process and versioning.
+- Complete Q2 controlled population and mixture models.
+- Add the Q3 synthesizer adapter registry and candidate tournament.
+- Add Q4 relational, temporal, and graph-native quality where release scope
+  requires it.
+- Complete Q5 privacy evaluation, model lineage, and worker isolation before
+  source-trained models are described as production-ready.
 
 Recommended commits:
 
@@ -348,6 +405,11 @@ Recommended commits:
 6. `cleanup: stabilize public interfaces`
 7. `docs: add deployment guide`
 8. `release: prepare v0.1.0`
+9. `backend: add synthesizer capability registry`
+10. `backend: add model candidate tournament`
+11. `infra: isolate model training workers`
+12. `security: add synthetic privacy attack suite`
+13. `performance: publish quality and cost benchmark manifest`
 
 ## Deployment Objectives
 
@@ -375,3 +437,5 @@ Production deployment should include:
 - Generation should stream rows and avoid holding full datasets in memory.
 - Validation should be chunk-aware where possible.
 - Performance benchmarks must report record count, table count, elapsed time, peak memory, output size, and validation time.
+- Source-trained benchmarks must also report split strategy, fidelity, coverage,
+  downstream utility, empirical privacy diagnostics, fit cost, and model size.

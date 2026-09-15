@@ -8,7 +8,7 @@ DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its catalo
 
 ## Current Phase
 
-Phase 3 is complete: Graph-Boom, provider-neutral assisted planning, versioned prompt packs, cache telemetry, plan review, and approved-plan execution are implemented. Current work starts Phase 4 with Masker-Boom privacy policies and security hardening.
+Phase 3 is complete: Graph-Boom, provider-neutral assisted planning, versioned prompt packs, cache telemetry, plan review, and approved-plan execution are implemented. Current work starts Phase 4 with statistical quality Stage 0, followed by Masker-Boom privacy policies and security hardening.
 
 Before implementation, read:
 
@@ -20,6 +20,8 @@ Before implementation, read:
 - `docs/engineering/high-level-design.md`
 - `docs/engineering/low-level-design.md`
 - `docs/engineering/engineering-standards.md`
+- `docs/engineering/statistical-synthesis-architecture.md`
+- `docs/engineering/quality-evaluation-and-benchmarks.md`
 - `docs/engineering/prompt-caching-and-instructions.md`
 - `docs/product/product-reasoning-faq.md`
 - `understanding.md`
@@ -37,6 +39,13 @@ Before implementation, read:
 - Update documentation when behavior, architecture, prompts, or phase scope changes.
 - Update `understanding.md` for significant architecture, performance, reliability, product-scope, or non-obvious implementation decisions. Do not add entries for tiny mechanical changes, simple variable additions, or routine API calls.
 - Do not introduce broad abstractions unless they support the documented phase roadmap.
+- Distinguish scenario-faithful generation from source-faithful synthesis in
+  contracts, reports, and product wording.
+- Keep statistical and ML implementations behind provider-neutral synthesizer
+  adapters and optional dependency groups. Do not load training libraries in the
+  FastAPI web process.
+- Promote model candidates only through documented holdout quality, privacy,
+  performance, reproducibility, and operational gates.
 
 ## Commit Labels
 
@@ -108,6 +117,8 @@ Phase 3 completed LLM-assisted planning and Graph-Boom:
 
 Phase 4 should introduce Masker-Boom:
 
+- statistical profile v2 and quality-intent contracts,
+- holdout evaluation, quality reports, and statistical baselines,
 - privacy policies,
 - masking and hashing,
 - privacy validation,
@@ -115,6 +126,9 @@ Phase 4 should introduce Masker-Boom:
 
 Phase 5 should finish:
 
+- mixture and optional neural candidate tournaments,
+- relational, temporal, and graph-native quality evaluation,
+- model lineage, privacy attack evaluation, and worker isolation,
 - production deployment,
 - CI,
 - observability,

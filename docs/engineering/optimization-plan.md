@@ -4,6 +4,13 @@ This document is planning only. It defines the optimization roadmap before imple
 
 The goal is to make DataBoom faster, more modular, more measurable, and more realistic at large-scale synthetic data generation. The plan focuses on backend engine architecture first, then source profiling, blueprints, quality reports, and runtime observability.
 
+The canonical design for distributions, model candidates, and selection is the
+[Statistical and ML Synthesis Architecture](statistical-synthesis-architecture.md).
+Metric definitions, public benchmark datasets, experiment procedure, and release
+gates are maintained in
+[Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md). This
+file owns the implementation work tracks and does not duplicate those contracts.
+
 ## Optimization Principles
 
 - Keep product surfaces separate: relational, document, graph, and masking must not share hidden assumptions.
@@ -84,6 +91,8 @@ Todo:
 - [x] Add categorical weighted sampling from top values.
 - [x] Add numeric range sampling from profile min/max.
 - [ ] Add numeric distribution-aware sampling beyond profile min/max.
+- [ ] Add mean, variance, quantiles, adaptive histograms, skew, and tail hints.
+- [ ] Add pairwise correlation, mutual-information, and missingness hints.
 - [x] Add datetime range sampling from profile min/max.
 - [ ] Add datetime seasonality hints from temporal buckets.
 - [ ] Add string pattern hints for emails, phone numbers, codes, and IDs.
@@ -161,12 +170,17 @@ Todo:
 - [ ] Add score bands but avoid pretending one score proves quality.
 - [ ] Surface quality report in API artifacts.
 - [ ] Surface quality report summary in frontend.
+- [ ] Add grouped train, validation, and holdout split contracts.
+- [ ] Add alpha-precision, beta-recall, and authenticity metrics.
+- [ ] Add empirical privacy diagnostics without claiming formal privacy.
+- [ ] Add relational, temporal, document, and graph-native metrics.
+- [ ] Add candidate tournament and versioned acceptance policy.
 
 Recommended commit sequence:
 
-1. `quality: add quality report model`
-2. `quality: compare generated data to source profile`
-3. `quality: score relationship fanout`
+1. `backend: add quality report model`
+2. `backend: compare generated data to source profile`
+3. `backend: score relationship fanout`
 4. `api: expose quality report artifacts`
 5. `frontend: show quality report summary`
 
@@ -195,7 +209,7 @@ Recommended commit sequence:
 
 ## Priority Plan
 
-### First Implementation Batch
+### Completed Relationship Batch
 
 Focus only on backend engine quality and measurable performance.
 
@@ -205,28 +219,42 @@ Focus only on backend engine quality and measurable performance.
 4. Add 1M relational benchmark. `complete`
 5. Update `understanding.md` with why the strategy improves quality and performance.
 
-### Second Implementation Batch
+### Current Measurement Batch
 
 Focus on profile-driven generation.
 
 1. Persist source profile snapshots. `complete`
-2. Add profile hint models.
-3. Use top values and null rates during value generation. `in progress`
-4. Add quality report comparing source profile vs generated output.
+2. Add current profile hint models. `complete`
+3. Use top values, ranges, and null rates during value generation. `complete`
+4. Add versioned profile v2 statistics and holdout split contracts.
+5. Add quality report schema without changing generated output.
+6. Add controlled statistical fixtures that prove metric correctness.
 
-### Third Implementation Batch
+### Statistical Synthesis Batch
 
 Focus on repeatability and productization.
 
-1. Add blueprint schema.
-2. Add blueprint loader.
-3. Move banking, healthcare, and ecommerce demos to blueprints.
-4. Wire API and frontend demo catalog to blueprint metadata.
+1. Add empirical categorical and quantile samplers.
+2. Add a Gaussian copula candidate behind the synthesizer adapter.
+3. Add conditional missingness and temporal seasonality.
+4. Evaluate every candidate against the deterministic baseline and holdout.
+5. Introduce mixture models for clusters, sparse values, and tails.
+
+### Productization Batch
+
+1. Add blueprint schema and loader.
+2. Move banking, healthcare, and ecommerce demos to blueprints.
+3. Add international population mixtures to quality intent.
+4. Wire API and frontend quality summaries to canonical report contracts.
 
 ## What We Should Not Do Yet
 
-- Do not add deep-learning dependencies yet.
-- Do not build a model-training path before deterministic and profile-driven generation are strong.
+- Do not add neural dependencies before profile v2, holdout evaluation,
+  statistical baselines, and promotion gates are complete.
+- Do not put training in the FastAPI process; use optional dependencies and
+  separate workers when source-trained candidates arrive.
+- Do not select a model because it is newer or used elsewhere; select it only
+  after DataBoom benchmark and customer-specific evidence.
 - Do not claim statistical synthesis quality until profile-based fidelity reports exist.
 - Do not add distributed workers before local async runs show a real bottleneck.
 - Do not mix Masker-Boom privacy claims into Table-Boom or Docu-Boom performance work.
@@ -239,6 +267,11 @@ The optimization program is successful when:
 - It generates output from refreshed source metadata rather than static demo schemas.
 - It uses source profiles to influence values and relationships.
 - It reports quality metrics against the source profile.
+- It evaluates source-trained candidates against untouched holdout data.
+- It can represent clusters, sparsity, missingness, tails, dependencies, and
+  international population mixtures through typed quality intent.
+- It promotes the simplest model that passes structural, quality, privacy,
+  performance, and reproducibility gates.
 - It supports repeatable blueprints for major use cases.
 - It keeps memory bounded during large local runs.
 - Every major engine behavior is controlled through explicit strategy/config objects instead of hidden conditionals.

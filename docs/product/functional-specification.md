@@ -137,6 +137,18 @@ The plan should include:
 
 Phase 1 and Phase 2 use deterministic local planning. Phase 3 adds optional LLM-assisted proposals behind the same planner interface, strict output validation, human review, and deterministic fallback.
 
+Future statistical planning must also declare:
+
+- generation mode: `scenario_faithful` or `source_faithful`,
+- population segments and locale weights,
+- requested clusters, sparsity, missingness, outliers, and tail behavior,
+- dependencies or correlations that must be preserved,
+- downstream utility task where one exists,
+- quality, privacy, latency, memory, and cost budgets.
+
+An LLM may translate user intent into this strict contract. It must not bypass
+review, quality gates, constraints, or deterministic execution boundaries.
+
 ### Domain Profiles
 
 DataBoom should support domain profiles so users can request data optimized for a use case without changing the core engine.
@@ -148,6 +160,25 @@ Initial profiles:
 - `healthcare`: patient and clinical data such as medical record numbers, blood types, diagnoses, vitals, and insurance providers.
 
 Domain profiles must remain optional overlays. They should improve semantic realism where possible, while schema constraints, relationship solving, deterministic seeds, and validation stay generic.
+
+### Statistical Quality Modes
+
+DataBoom must label generated data according to its evidence:
+
+- **Scenario-faithful** output follows schema, domain, locale, distribution, and
+  edge-case rules without claiming to have learned production behavior.
+- **Source-faithful** output is trained or calibrated from approved source data
+  and evaluated against an untouched holdout.
+
+The source-trained path should support a portfolio of deterministic,
+statistical, mixture, and optional neural synthesizers. It must select candidates
+through measured fidelity, coverage, utility, privacy, performance, and
+reproducibility gates. No single model is assumed to be best for every dataset.
+
+For international populations, country or locale mixtures must be explicit or
+learned from an approved profile. Locale may control coherent names, addresses,
+phones, dates, postcodes, currencies, and timezones. It must not be used to infer
+protected traits through stereotypes.
 
 ### Relationship-Aware Generation
 
@@ -175,6 +206,12 @@ Validation should check:
 - export readiness.
 
 Later phases should add deeper constraint validation, privacy validation, and statistical validation.
+
+Statistical validation must remain separate from structural validation. A run
+can be structurally valid while statistically poor, or statistically similar
+while violating a hard business constraint. Source-trained releases require a
+quality report with univariate, joint, coverage, shape-specific, utility,
+privacy, performance, and lineage evidence appropriate to the use case.
 
 ### Masking
 
@@ -229,7 +266,8 @@ Out of scope until later:
 - object storage,
 - perfect business-domain semantics,
 - production database mutation,
-- custom model training,
+- custom model training before the statistical quality contracts, holdout
+  evaluation, baseline synthesizers, and candidate promotion policy exist,
 - frontend-heavy workflow.
 
 ## Acceptance Criteria
@@ -248,3 +286,8 @@ DataBoom is useful when:
 - Validation reports are clear and machine-readable.
 - CLI and API workflows are documented.
 - Docker deployment works by the production phases.
+- Scenario-faithful and source-faithful outputs are labeled honestly.
+- A source-trained candidate is evaluated on untouched holdout data and passes
+  structural, quality, privacy, performance, and reproducibility gates.
+- Clusters, sparsity, missingness, outliers, correlations, and international
+  population mixtures can be represented through reviewed typed intent.

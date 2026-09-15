@@ -22,6 +22,8 @@ The current implementation includes Table-Boom relational generation, Docu-Boom 
 - Relationship-aware generation with primary-key and foreign-key preservation.
 - Deterministic seeds.
 - General, financial, and healthcare demo domain profiles.
+- Locale-aware `en-US` and `en-IN` identity generation with correlated names,
+  gender, email, phone, city, region, country, postcode, age, and birth date.
 - CSV, JSON, and SQL local artifact exports.
 - Validation reports and artifact manifests.
 - CLI generation, plan preview, and artifact validation workflows.
@@ -45,6 +47,69 @@ The current implementation includes Table-Boom relational generation, Docu-Boom 
 - 1M-record composite-key relational benchmark harness.
 - Next.js and Tailwind frontend workbench.
 - Render Blueprint for the FastAPI backend, Vercel-ready frontend envs, and Supabase Postgres compatibility.
+
+## Why DataBoom Data Is Realistic
+
+Realistic synthetic data is not a collection of individually plausible cells. A
+row can contain a believable name, phone number, and city and still be unusable
+when those values contradict one another. DataBoom builds realism in layers:
+
+1. **Schema fidelity:** generated values respect SQL types, nullability, primary
+   keys, unique constraints, composite keys, foreign keys, and dependency order.
+2. **Relationship fidelity:** child records reference generated parent records,
+   with balanced or source-profiled fanout instead of arbitrary identifiers.
+3. **Distribution fidelity:** source profiles can preserve null rates, frequent
+   categories, numeric ranges, datetime ranges, and relationship fanout without
+   sending source rows to an LLM.
+4. **Semantic fidelity:** financial, healthcare, and general providers understand
+   domain fields instead of treating every string as interchangeable text.
+5. **Row-level coherence:** one locale-aware person context produces the name,
+   gender, email, phone, city, state, country, postcode, age, and birth date for a
+   row. An Indian profile therefore uses Indian identity and geography rules;
+   a US profile uses US rules.
+6. **Reproducibility and validation:** a deterministic seed recreates the run,
+   while manifests and validators check the exported artifacts after generation.
+
+DataBoom currently ships `en-US` and `en-IN` person contexts. More locales can be
+added as catalog adapters without changing the row, export, or validation engine.
+Known identity, geography, type, and relationship contradictions are prevented by
+engine rules. For an arbitrary business schema, absolute consistency still
+requires explicit constraints or learned joint profiles; DataBoom does not claim
+that a plausible value automatically proves statistical equivalence to production.
+
+## Why ChatGPT Alone Cannot Generate the Same Dataset
+
+An LLM can draft a small sample or interpret a requirement such as “Indian retail
+customers.” It is not a bulk data engine:
+
+- printing hundreds of thousands of rows consumes output tokens on repetitive
+  serialization and can exceed response limits;
+- a model response has no streaming artifact writer, checkpoint, backpressure,
+  or bounded-memory foreign-key registry;
+- exact primary-key, foreign-key, uniqueness, count, and cross-column guarantees
+  are difficult to maintain across a very long response;
+- retries may change previously generated values unless a separate deterministic
+  execution layer owns the seed and rules;
+- prose that looks correct is not a substitute for validating CSV, SQL, JSON,
+  NDJSON, or graph artifacts after they are written.
+
+DataBoom uses an LLM only where it adds leverage: interpreting intent and proposing
+a small, reviewable plan. The deterministic engine then generates, streams,
+validates, previews, and exports every record. If the LLM key is missing or its
+credits are exhausted, deterministic planning and generation remain available.
+
+## Why DataBoom Is More Than Faker or a Prompt
+
+DataBoom can use locale catalogues for primitive values such as first and last
+names. That is useful, but a primitive value provider does not ingest a schema,
+solve table order, preserve composite relationships, reproduce an approved plan,
+stream one million records, or validate exported artifacts. DataBoom provides
+that orchestration layer and keeps value providers replaceable.
+
+The product's differentiator is therefore not a longer list of random names. It
+is the combination of reviewed planning, correlated row contexts, source-aware
+profiles, deterministic high-volume execution, integrity validation, and
+multi-format delivery behind one reusable engine.
 
 ## Roadmap Summary
 
@@ -83,6 +148,7 @@ Generate a dataset:
   --format json \
   --format sql \
   --domain financial \
+  --locale en-IN \
   --seed demo-financial-relational
 ```
 
@@ -95,6 +161,7 @@ Preview the deterministic plan before generation:
   --rows transactions=750 \
   --format csv \
   --domain financial \
+  --locale en-IN \
   --seed demo-financial-relational
 ```
 
@@ -109,6 +176,7 @@ Validate an existing artifact directory without regenerating it:
   --format json \
   --format sql \
   --domain financial \
+  --locale en-IN \
   --seed demo-financial-relational
 ```
 
@@ -170,6 +238,7 @@ curl -X POST http://localhost:8000/runs \
     "schema_ddl": "CREATE TABLE users (id bigint PRIMARY KEY, email text NOT NULL);",
     "row_counts": {"users": 3},
     "seed": "api-demo",
+    "locale": "en-IN",
     "domain": "general",
     "output_formats": ["csv", "json"]
   }'
@@ -324,6 +393,8 @@ docker compose --profile tools run --rm app
 - `docs/engineering/engineering-standards.md`: reusable backend/frontend code standards.
 - `docs/engineering/roadmap.md`: phase status, objectives, and commit sequence.
 - `docs/engineering/optimization-plan.md`: optimization roadmap for engine speed, quality, profiling, blueprints, and observability.
+- `docs/engineering/statistical-synthesis-architecture.md`: scenario/source modes, statistical profiles, model portfolio, selection policy, and ML delivery stages.
+- `docs/engineering/quality-evaluation-and-benchmarks.md`: fidelity, utility, privacy, benchmark datasets, experiment procedure, and release gates.
 - `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
 - `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
 - `docs/operations/local-development.md`: backend/frontend setup, CLI, benchmarks, demos, and Docker usage.

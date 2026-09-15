@@ -16,6 +16,8 @@ This repository is in active implementation. Keep documentation, roadmap status,
 - [Product Reasoning and FAQ](docs/product/product-reasoning-faq.md): 4W1H reasoning, competitive positioning, sensitive-data use cases, and why a dedicated engine is needed.
 - [Engineering Roadmap](docs/engineering/roadmap.md): five-phase status, objectives, deployment goals, and commit sequence.
 - [Optimization Plan](docs/engineering/optimization-plan.md): backend optimization roadmap for speed, quality, profiling, blueprints, and observability.
+- [Statistical and ML Synthesis Architecture](docs/engineering/statistical-synthesis-architecture.md): source-free and source-trained modes, profile contracts, model portfolio, model selection, and ML delivery stages.
+- [Quality Evaluation and Benchmarks](docs/engineering/quality-evaluation-and-benchmarks.md): fidelity, utility, privacy, performance metrics, benchmark datasets, and acceptance gates.
 - [Local Development](docs/operations/local-development.md): local setup, CLI generation, benchmark, and Docker Compose usage.
 - [Frontend Development Plan](docs/engineering/frontend-development.md): phased Next.js workbench roadmap aligned with backend phases.
 - [Design Research](docs/product/design-research.md): product and workflow lessons from adjacent tools.
@@ -34,6 +36,8 @@ This repository is in active implementation. Keep documentation, roadmap status,
 - Phase 3 completed graph data support, assisted planning, prompt telemetry, and plan review.
 - Masker-Boom privacy, masking, redaction, tokenization, and integrity-preserving transformations are intentionally deferred until Phase 4.
 - LLM-assisted planning must stay behind the replaceable planner interface with strict validation, explicit review, and deterministic fallback.
+- ML synthesizers must stay behind a provider-neutral adapter interface. A model is promoted only when holdout evaluation shows that it beats simpler baselines while meeting privacy, performance, reproducibility, and operational gates.
+- Product wording and reports must distinguish scenario-faithful generation from source-faithful synthesis. Source-free generation must not claim that it learned an unknown production distribution.
 - PostgreSQL is the first supported relational database.
 - Deployment readiness is required, not optional.
 
@@ -78,4 +82,10 @@ Before adding a backend or frontend feature, first check whether an existing ser
 
 ## Immediate Next Objective
 
-Start Phase 4 with Masker-Boom policy contracts, sensitive-field classification hints, deterministic masking/tokenization, relationship-preserving transformations, privacy validation, and audit output. Preserve the approved-plan and deterministic-engine boundaries completed in Phase 3.
+Start Phase 4 with the statistical quality Stage 0 contracts and measurement
+layer, then Masker-Boom policy contracts, sensitive-field classification hints,
+deterministic masking/tokenization, relationship-preserving transformations,
+privacy validation, and audit output. Preserve the approved-plan and
+deterministic-engine boundaries completed in Phase 3. Do not add neural model
+dependencies until the statistical baseline and candidate promotion gates are
+implemented.

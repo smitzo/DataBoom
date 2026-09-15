@@ -16,6 +16,12 @@ from broad system boundaries toward implementation detail.
 
 - [Roadmap](roadmap.md): five phases, current status, objectives, and commit order.
 - [Optimization Plan](optimization-plan.md): measured performance and quality work.
+- [Statistical and ML Synthesis Architecture](statistical-synthesis-architecture.md):
+  generation modes, profile contracts, model portfolio, selection policy, and
+  phased statistical/ML delivery.
+- [Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md):
+  fidelity, utility, privacy, performance metrics, benchmark datasets, and
+  release gates.
 - [Frontend Development](frontend-development.md): UI phases aligned with backend
   capability.
 - [LLM Planning and Prompt Caching](prompt-caching-and-instructions.md): versioned

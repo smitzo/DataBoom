@@ -63,7 +63,7 @@ Banking, healthcare, ecommerce, insurance, and SaaS are use cases. They should b
 
 ```mermaid
 flowchart TD
-    Request[Generation intent and metadata] --> ProductResolver[Resolve product and source contract]
+    Request[Generation intent metadata and locale] --> ProductResolver[Resolve product and source contract]
     ProductResolver --> PlannerBoundary[Planner interface]
     PlannerBoundary --> ProviderPolicy{Provider policy}
     ProviderPolicy -->|user or platform key| StructuredPlanner[Structured-output planner]
@@ -74,6 +74,7 @@ flowchart TD
     PlanStore --> Review{Operator review}
     Review -->|rejected| Revise[Revise intent]
     Review -->|approved| ExecutionAdapter[Approved-plan execution adapter]
+    ExecutionAdapter --> LocaleContext[Locale-aware row context]
 
     subgraph RelationalPath[Relational path]
         DDL[DDL or live schema] --> SchemaIngestor[Schema ingestor]
@@ -92,6 +93,8 @@ flowchart TD
     ExecutionAdapter --> RelationalPlan
     ExecutionAdapter --> DocumentPlan
     ExecutionAdapter --> GraphPlan
+    LocaleContext --> RelationalPlan
+    LocaleContext --> DocumentPlan
     RelationalPlan --> SeedManager[Deterministic seed manager]
     DocumentPlan --> SeedManager
     GraphPlan --> SeedManager
@@ -108,6 +111,13 @@ bulk records and cannot execute a run. Generation remains deterministic and
 product-specific after approval, so provider availability and model behavior do
 not become data-integrity dependencies.
 
+Locale is part of the reviewed execution contract, not a suggestion passed to
+every generated row. The planner can infer or confirm locale from intent, while a
+deterministic row-context provider enforces correlated name, gender, phone, age,
+and geography values during Table-Boom and Docu-Boom execution. This keeps the
+LLM outside the high-volume path and lets locale catalogues grow independently of
+export and validation code.
+
 The engine is extendable because each product kind owns its input model and generation strategy, while shared concerns remain reusable:
 
 - catalog resolution,
@@ -118,6 +128,35 @@ The engine is extendable because each product kind owns its input model and gene
 - validation reports,
 - API artifact downloads,
 - frontend preview routing.
+
+### Statistical Synthesis Extension Boundary
+
+The current deterministic generator remains the default execution adapter.
+Source-trained synthesis will extend the pipeline through a provider-neutral
+`SynthesizerAdapter`, a versioned statistical profile, and a quality gate. It
+must not be embedded directly in API routes or product-name branches.
+
+```mermaid
+flowchart LR
+    Source[Approved source or scenario contract] --> Profile[Versioned statistical profile]
+    Profile --> Intent[Reviewed quality intent]
+    Intent --> Selector[Candidate selector]
+    Selector --> Baseline[Deterministic and statistical baselines]
+    Selector --> Optional[Optional mixture and neural adapters]
+    Baseline --> Evaluation[Holdout quality evaluation]
+    Optional --> Evaluation
+    Evaluation --> Gate{Quality, privacy, and cost gates}
+    Gate -->|pass| Runtime[Sampling runtime]
+    Gate -->|fail| Rejected[Rejected candidate]
+    Runtime --> Generator[Constraint and export pipeline]
+```
+
+Scenario-faithful mode does not require source rows or model fitting.
+Source-faithful mode requires train, validation, and untouched holdout data plus
+complete model and report lineage. The full design is maintained in
+[Statistical and ML Synthesis Architecture](statistical-synthesis-architecture.md),
+with gates and datasets in
+[Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md).
 
 ## API Run Flow
 

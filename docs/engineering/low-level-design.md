@@ -30,8 +30,10 @@ flowchart TD
 
     Planning --> Rows[databoom.generation.rows]
     Rows --> Values[databoom.generation.values]
+    Rows --> Contexts[databoom.generation.contexts]
     Rows --> Seed[databoom.generation.seed]
     Values --> Domains[databoom.generation.domains]
+    Contexts --> Domains
 
     Rows --> Export[databoom.export.local]
     GraphBoom --> Seed
@@ -50,6 +52,7 @@ flowchart TD
 | `ColumnProfileHint` | `databoom.generation.plan` | Source-profile statistics attached to individual generated columns. |
 | `RowGenerator` | `databoom.generation.rows` | Streams rows table by table while preserving key relationships. |
 | `ValueGenerator` | `databoom.generation.values` | Generates scalar values from type, profile, domain, and seed rules. |
+| `PersonContext` | `databoom.generation.contexts` | Correlates locale-aware identity, age, phone, and geography values within one row. |
 | `ExportManifest` | `databoom.export.local` | Lists generated artifact paths and row counts. |
 | `ValidationReport` | `databoom.validation.report` | Machine-readable integrity and artifact validation result. |
 | `DocumentCollectionSpec` | `databoom.document.models` | Declarative Docu-Boom collection and field definition. |
@@ -138,8 +141,9 @@ sequenceDiagram
     Ingest->>Schema: DatabaseSchema
     Schema->>Graph: build foreign-key edges
     Graph->>Plan: dependency-ordered tables
-    Client->>Plan: row counts, seed, output formats, profile hints
+    Client->>Plan: row counts, seed, locale, output formats, profile hints
     Plan->>Rows: immutable plan
+    Rows->>Rows: build one person context per person-shaped row
     Rows->>Values: scalar column values
     Rows->>Rows: register parent keys
     Rows->>Rows: resolve child foreign keys
@@ -156,7 +160,7 @@ sequenceDiagram
 3. Both input paths produce the same `DatabaseSchema` contract.
 4. `databoom.schema.graph` builds parent-child edges from foreign keys.
 5. `databoom.generation.plan.create_generation_plan` converts schema into an immutable `GenerationPlan`.
-6. `RowGenerator.from_plan` creates run-local mutable state: seed manager, value generator, and foreign-key registry.
+6. `RowGenerator.from_plan` creates run-local mutable state: seed manager, value generator, person-context provider, and foreign-key registry.
 7. Tables stream in dependency order so parent keys exist before child rows need them.
 8. `ArtifactExporter` writes output files row by row instead of holding the full dataset in memory.
 9. `validate_export` re-reads exported CSV files and verifies row counts, required values, primary keys, foreign keys, and fanout metrics.
@@ -196,7 +200,9 @@ flowchart TD
     NullHit -->|yes| NoneValue[Return None]
     NullHit -->|no| PK
     PK -->|yes| Primary[Generate stable primary key]
-    PK -->|no| Numeric{Profile numeric range?}
+    PK -->|no| Context{Recognized person field?}
+    Context -->|yes| Correlated[Use shared locale-aware row context]
+    Context -->|no| Numeric{Profile numeric range?}
     Numeric -->|yes| ProfileNumber[Generate inside min/max]
     Numeric -->|no| Datetime{Profile datetime range?}
     Datetime -->|yes| ProfileDatetime[Generate inside min/max]
@@ -240,8 +246,9 @@ sequenceDiagram
     participant Disk as Local Disk
 
     API->>Spec: resolve catalog or source collection specs
-    API->>Generator: collections, row counts, seed, output dir
+    API->>Generator: collections, row counts, seed, locale, output dir
     Generator->>Seed: field-level deterministic streams
+    Generator->>Generator: build one person context per document
     Generator->>Generator: generate object IDs
     Generator->>Generator: resolve references from generated IDs
     Generator->>Disk: write collection.json
@@ -249,7 +256,7 @@ sequenceDiagram
     Generator->>Disk: write manifest.json and validation.json
 ```
 
-Docu-Boom is separate from Table-Boom because document data has nested objects, arrays, and object-id references. It should not inherit table-specific assumptions like SQL primary keys or foreign-key constraints.
+Docu-Boom is separate from Table-Boom because document data has nested objects, arrays, and object-id references. It should not inherit table-specific assumptions like SQL primary keys or foreign-key constraints. Table-Boom and Docu-Boom do reuse the same locale-aware person-context provider so nested and tabular identity fields obey the same correlation rules.
 
 ## Graph-Boom Execution
 

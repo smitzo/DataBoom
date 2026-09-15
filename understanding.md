@@ -2493,3 +2493,267 @@ and Docker images ship the same prompt pack and output schema.
 
 This is a small Python packaging choice with a large operational benefit: prompt
 behavior does not depend on where the process happens to start.
+
+## Decision: generate one locale-aware person context per row
+
+### Question
+
+Why are plausible values not automatically realistic data?
+
+### Answer
+
+Realism is a property of relationships between values, not only of each value in
+isolation. `Aditi Iyer`, a US-formatted phone, a Mumbai city, a Karnataka state,
+and a five-digit postcode may each look plausible when inspected separately. As
+one customer record, they contradict one another.
+
+The earlier primitive generator evaluated every column independently. That was
+fast and deterministic, but an independent random stream had no knowledge of what
+another column had selected. DataBoom now creates one `PersonContext` for a
+person-shaped row and lets recognized identity and location columns read from it.
+The context chooses gender before a gender-specific name, one location before the
+city/state/postcode values, and one age before deriving the birth date.
+
+### Question
+
+Why should the LLM choose a locale but not write all locale-specific rows?
+
+### Answer
+
+Locale selection is a planning decision. It can come from an explicit API/CLI
+value or from intent such as “customers in India.” Once selected, locale becomes
+an execution constraint stored in the reviewed plan and run metadata.
+
+Writing rows is a high-volume deterministic operation. Putting an LLM in that hot
+path would add network latency, token cost, rate limits, and non-repeatable output
+to every batch. The local context provider performs constant-time catalogue
+lookups and seeded choices per row, so generation remains streamable and works
+when provider credits or network access are unavailable.
+
+The LLM may explain or propose the locale. The engine owns enforcement.
+
+### Question
+
+Why use locale name catalogues if a catalogue library alone is not the product?
+
+### Answer
+
+A maintained catalogue is the right abstraction for primitive facts such as
+common first and last names. Recreating those lists inside DataBoom would add
+maintenance work without improving the engine.
+
+The catalogue does not know the database schema, dependency graph, foreign keys,
+source distributions, approved plan, export format, or validation contract.
+DataBoom wraps primitive providers in a row context and combines them with those
+system-level responsibilities. This keeps the provider replaceable and prevents
+the architecture from confusing “can return a name” with “can generate a valid
+dataset.”
+
+### Question
+
+Can DataBoom guarantee that no two columns ever contradict each other?
+
+### Answer
+
+It can guarantee declared and implemented invariants. The current person context
+enforces known identity, geography, phone, age, and birth-date relationships.
+Schema planning enforces structural invariants such as key integrity and types.
+
+No generic engine can infer every hidden business rule from column names. For
+example, a loan product may require a particular currency, jurisdiction, risk
+band, and interest-rate combination. Production-grade support for that rule needs
+one of the following:
+
+1. an explicit declarative constraint,
+2. a domain adapter that encodes the rule,
+3. a source-derived joint profile that learns the dependency.
+
+This is why the next quality layer is joint profiling and a constraint DSL, not a
+claim that more independent randomness will eventually become realistic.
+
+### Question
+
+What is the performance cost of correlated rows?
+
+### Answer
+
+The context is created once per row from a named deterministic seed stream. Each
+recognized column performs a dictionary lookup against that context. It does not
+make a network call, scan previous rows, or materialize the full dataset in
+memory. Export remains streaming, and foreign-key storage retains its compressed
+sequential-key path.
+
+This adds a small fixed amount of CPU work per person row while preventing a much
+more expensive class of quality defects. Benchmark claims will be updated only
+after the 500k and 1M harnesses are rerun with locale contexts enabled.
+
+## Decision: use a measured model portfolio instead of one universal synthesizer
+
+### Question
+
+Does DataBoom currently use machine learning, mean, variance, clustering, or a
+trained statistical model?
+
+### Answer
+
+Not yet. The current engine is deterministic and profile-guided, not
+model-trained. It can measure row counts, null rates, distinct counts, ranges,
+frequent values, and relationship fanout. It then uses those hints during seeded
+generation.
+
+That is more informed than unconstrained randomness, but it does not yet learn a
+complete probability distribution. In particular, minimum and maximum values do
+not describe where observations are concentrated. Frequent values do not
+describe every category. Independent column hints do not preserve a dependency
+such as income changing with occupation, region, and age.
+
+The next backend step is measurement, not immediately adding a neural network.
+DataBoom first needs a versioned profile that can represent mean, variance,
+quantiles, histograms, skew, tails, missingness, pairwise dependencies, clusters,
+and cross-table statistics. Without those measurements, the project cannot prove
+whether a new model improved output.
+
+### Question
+
+Why are mean and variance not enough?
+
+### Answer
+
+Mean describes a centre and variance describes average spread around that
+centre. Many very different populations can have the same values.
+
+Imagine two income datasets:
+
+1. one smooth population centred around 60,000,
+2. two clusters centred around 30,000 and 90,000.
+
+They can be constructed with almost the same mean and variance. A generator that
+samples one bell curve would fill the middle with customers who barely exist in
+the second source and would erase both real segments.
+
+The same problem appears with:
+
+- heavy tails, where rare large values matter,
+- structural zeros, where no activity is different from a small amount,
+- conditional missingness, where a field is absent for a reason,
+- outliers, which may be errors or valid rare events,
+- correlations, where individually plausible fields contradict one another.
+
+DataBoom therefore needs quantiles, histograms, skew and tail summaries,
+conditional distributions, and joint metrics in addition to mean and variance.
+
+### Question
+
+Why not choose one powerful GAN or diffusion model for every dataset?
+
+### Answer
+
+Model quality depends on data shape, sample count, cardinality, imbalance,
+relationships, compute budget, and the user's objective. A complex neural model
+can outperform a statistical model on one high-dimensional dataset and perform
+worse on a small, sparse, or simple table. It can also train more slowly, consume
+more memory, be harder to reproduce, or copy rare training records.
+
+DataBoom will use a candidate tournament:
+
+1. deterministic generation remains the scenario baseline,
+2. empirical distributions and a copula become the first source-trained
+   baseline,
+3. mixture models are added for clusters, structural zeros, and tails,
+4. neural candidates are added only when data and deployment budgets justify
+   them,
+5. native relational, temporal, and graph candidates are used for their own
+   data shapes,
+6. candidates are evaluated against untouched holdout data,
+7. the simplest model that passes hard constraints, fidelity, coverage, utility,
+   privacy, performance, and reproducibility gates is promoted.
+
+This is similar to choosing a database index using query evidence rather than
+using the most complicated index type everywhere. Architecture provides the
+options; measurement chooses the production candidate.
+
+### Question
+
+What is the difference between scenario-faithful and source-faithful data?
+
+### Answer
+
+Scenario-faithful generation starts from schema and reviewed intent. It can
+produce coherent Indian and US customers, a requested fraud rate, three customer
+clusters, or a sparse event table. It is excellent for tests and demos because
+the scenario is explicit and repeatable. It cannot prove that those choices
+match an unknown production population.
+
+Source-faithful synthesis learns or calibrates from approved source data. It can
+attempt to preserve measured distributions and dependencies, but it requires
+training, validation, an untouched holdout, model artifacts, quality reports,
+and privacy review.
+
+These modes solve different problems. Calling both simply "realistic" would hide
+what evidence actually exists.
+
+### Question
+
+How will DataBoom generate clustered, sparse, outlier-rich, or international
+data according to a customer's needs?
+
+### Answer
+
+The reviewed plan will contain typed quality intent instead of relying on a
+vague prompt.
+
+For clusters, the intent records segment definitions or requests preservation of
+source-derived mixture weights. The engine generates a segment first and then
+samples dependent fields within that segment.
+
+For sparse data, a hurdle or zero-inflated model first decides whether an event
+or value exists. A second distribution generates the non-zero value. This keeps
+"no event" distinct from "a very small event."
+
+For outliers, the plan records whether they are valid edge cases, heavy-tail
+events, or data errors. The engine models the normal body and rare tail
+separately and measures rare-event coverage.
+
+For international data, the plan records explicit country or locale weights.
+Country is generated before region, city, postcode, phone, currency, and timezone
+so those fields remain coherent. A locale is not used to guess ethnicity,
+religion, or another protected trait. If the customer gives no population mix,
+the planner should ask for review or clearly label the chosen scenario.
+
+### Question
+
+Why do we need a holdout if the goal is generation rather than prediction?
+
+### Answer
+
+A synthesizer can look excellent against the rows it trained on because it
+memorized them. That is a failure, especially for sensitive customer or patient
+data.
+
+DataBoom fits on training data, chooses settings on validation data, and performs
+the final quality comparison against untouched holdout data. If synthetic rows
+are much closer to training records than holdout records, or if membership tests
+can identify training subjects, the privacy report should fail or warn according
+to policy.
+
+The holdout also makes model comparisons fair. Every candidate sees the same
+training information and is judged against the same unseen population evidence.
+
+### Question
+
+Does a high statistical quality score make synthetic data private?
+
+### Answer
+
+No. Fidelity and privacy can oppose each other. A model that reproduces a rare
+patient exactly has high local fidelity and unacceptable disclosure risk.
+
+DataBoom will keep structural validation, statistical quality, downstream
+utility, and privacy as separate report dimensions. Exact matches,
+nearest-neighbor distances, train-versus-holdout distances, rare combinations,
+and membership-inference tests provide empirical evidence. They do not create a
+formal privacy guarantee.
+
+Formal claims require a verified differentially private mechanism with recorded
+epsilon, delta, clipping, and privacy accounting. Differential privacy also
+reduces some utility, so it must be a reviewed policy and measured tradeoff.
