@@ -27,9 +27,19 @@ dev = [
     "pytest>=8.4,<9.0",
     "ruff>=0.14,<1.0",
 ]
+neural-ctgan = [
+    "ctgan==0.12.1",
+]
+ml-sklearn = [
+    "scikit-learn==1.9.0",
+]
+neural-tensorflow = [
+    "tensorflow-cpu==2.21.0",
+]
 
 [project.scripts]
 databoom = "databoom.cli:app"
+databoom-ml = "databoom.synthesis.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/databoom"]
