@@ -18,7 +18,7 @@ type JsonScalar = str | int | float | bool | None
 class SynthesisModel(BaseModel):
     """Strict immutable base for synthesis-domain values."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
 
 class ColumnKind(StrEnum):
@@ -33,6 +33,19 @@ class DataSensitivity(StrEnum):
 
     RESTRICTED = "restricted"
     NON_SENSITIVE = "non_sensitive"
+
+
+class QualityDimension(StrEnum):
+    """Evidence dimensions declared by a reviewed quality intent."""
+
+    STRUCTURAL = "structural"
+    UNIVARIATE = "univariate"
+    DEPENDENCY = "dependency"
+    MISSINGNESS = "missingness"
+    PRIVACY = "privacy"
+    UTILITY = "utility"
+    PERFORMANCE = "performance"
+    REPRODUCIBILITY = "reproducibility"
 
 
 class SplitStrategy(StrEnum):
@@ -127,6 +140,220 @@ class DatasetContract(SynthesisModel):
         if restricted:
             names = ", ".join(restricted)
             raise ValueError(f"restricted columns are not training-eligible: {names}")
+
+
+class DataQualityIntent(SynthesisModel):
+    """Reviewed evidence priorities and bounded Profile v2 configuration."""
+
+    intent_version: str = "1"
+    intent_id: str = Field(default="default-tabular-v1", min_length=1, max_length=100)
+    dataset_contract: DatasetContract
+    required_dimensions: tuple[QualityDimension, ...] = (
+        QualityDimension.STRUCTURAL,
+        QualityDimension.UNIVARIATE,
+        QualityDimension.DEPENDENCY,
+        QualityDimension.MISSINGNESS,
+        QualityDimension.PRIVACY,
+        QualityDimension.PERFORMANCE,
+        QualityDimension.REPRODUCIBILITY,
+    )
+    column_weights: dict[str, float] = Field(default_factory=dict)
+    protected_columns: tuple[str, ...] = ()
+    quantiles: tuple[float, ...] = (0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99)
+    histogram_bins: int = Field(default=10, ge=2, le=100)
+    top_values_limit: int = Field(default=20, ge=1, le=1_000)
+    missingness_patterns_limit: int = Field(default=20, ge=1, le=1_000)
+    sample_row_limit: int = Field(default=10_000, ge=3, le=1_000_000)
+
+    @model_validator(mode="after")
+    def validate_intent(self) -> DataQualityIntent:
+        if len(self.required_dimensions) != len(set(self.required_dimensions)):
+            raise ValueError("quality dimensions must be unique")
+        if tuple(sorted(set(self.quantiles))) != self.quantiles:
+            raise ValueError("quantiles must be unique and sorted")
+        if any(quantile <= 0 or quantile >= 1 for quantile in self.quantiles):
+            raise ValueError("quantiles must be between 0 and 1")
+        known_columns = set(self.dataset_contract.column_names)
+        referenced_columns = set(self.column_weights) | set(self.protected_columns)
+        unknown_columns = sorted(referenced_columns - known_columns)
+        if unknown_columns:
+            raise ValueError(
+                "quality intent references unknown columns: " + ", ".join(unknown_columns)
+            )
+        if len(self.protected_columns) != len(set(self.protected_columns)):
+            raise ValueError("protected columns must be unique")
+        invalid_weights = [
+            name for name, weight in self.column_weights.items() if weight <= 0 or weight > 1
+        ]
+        if invalid_weights:
+            raise ValueError(
+                "column weights must be greater than 0 and at most 1: "
+                + ", ".join(sorted(invalid_weights))
+            )
+        return self
+
+
+class QuantileValue(SynthesisModel):
+    """One sampled numeric quantile."""
+
+    probability: float = Field(gt=0, lt=1)
+    value: float
+
+
+class HistogramBin(SynthesisModel):
+    """One equal-width numeric histogram bucket."""
+
+    lower_bound: float
+    upper_bound: float
+    count: int = Field(ge=0)
+
+
+class NumericProfile(SynthesisModel):
+    """Sampled continuous-column distribution evidence."""
+
+    minimum: float
+    maximum: float
+    mean: float
+    standard_deviation: float
+    skewness: float | None = None
+    quantiles: tuple[QuantileValue, ...]
+    histogram: tuple[HistogramBin, ...]
+    lower_tail_rate: float = Field(ge=0, le=1)
+    upper_tail_rate: float = Field(ge=0, le=1)
+
+
+class CategoryFrequency(SynthesisModel):
+    """One sampled categorical value frequency."""
+
+    value: str = Field(min_length=1)
+    count: int = Field(gt=0)
+    rate: float = Field(gt=0, le=1)
+
+
+class CategoricalProfile(SynthesisModel):
+    """Bounded sampled discrete-column distribution evidence."""
+
+    sampled_distinct_count: int = Field(ge=0)
+    top_values: tuple[CategoryFrequency, ...]
+    other_count: int = Field(ge=0)
+    top_values_coverage: float = Field(ge=0, le=1)
+
+
+class ColumnStatisticalProfile(SynthesisModel):
+    """Profile v2 evidence for one reviewed column."""
+
+    name: str
+    kind: ColumnKind
+    row_count: int = Field(ge=0)
+    null_count: int = Field(ge=0)
+    null_rate: float = Field(ge=0, le=1)
+    sampled_non_null_count: int = Field(ge=0)
+    numeric: NumericProfile | None = None
+    categorical: CategoricalProfile | None = None
+
+    @model_validator(mode="after")
+    def require_matching_summary(self) -> ColumnStatisticalProfile:
+        if self.null_count > self.row_count:
+            raise ValueError("column null count cannot exceed row count")
+        if self.kind == ColumnKind.CONTINUOUS and self.categorical is not None:
+            raise ValueError("continuous columns cannot contain categorical summaries")
+        if self.kind == ColumnKind.DISCRETE and self.numeric is not None:
+            raise ValueError("discrete columns cannot contain numeric summaries")
+        if (
+            self.kind == ColumnKind.CONTINUOUS
+            and self.sampled_non_null_count
+            and self.numeric is None
+        ):
+            raise ValueError("observed continuous values require a numeric summary")
+        if self.kind == ColumnKind.DISCRETE and self.categorical is None:
+            raise ValueError("discrete columns require a categorical summary")
+        return self
+
+
+class MissingnessPattern(SynthesisModel):
+    """One sampled combination of missing columns."""
+
+    columns: tuple[str, ...]
+    count: int = Field(gt=0)
+    rate: float = Field(gt=0, le=1)
+
+
+class DependencyProfile(SynthesisModel):
+    """One sampled pairwise dependency statistic."""
+
+    left_column: str
+    right_column: str
+    metric: str = Field(min_length=1)
+    value: float
+    complete_row_count: int = Field(ge=0)
+
+
+class StatisticalProfile(SynthesisModel):
+    """Versioned, bounded statistical evidence for one reviewed CSV."""
+
+    profile_version: str = "2"
+    profile_id: str = Field(min_length=1, max_length=100)
+    source_name: str = Field(min_length=1)
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_row_count: int = Field(ge=0)
+    sampled_row_count: int = Field(ge=0)
+    sample_row_limit: int = Field(ge=3)
+    sampling_algorithm: str = "hash-priority-v1"
+    sampling_seed: str
+    dataset_contract: DatasetContract
+    quality_intent: DataQualityIntent
+    columns: tuple[ColumnStatisticalProfile, ...]
+    missingness_patterns: tuple[MissingnessPattern, ...] = ()
+    dependencies: tuple[DependencyProfile, ...] = ()
+    warnings: tuple[str, ...] = ()
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @model_validator(mode="after")
+    def validate_profile_shape(self) -> StatisticalProfile:
+        if self.sampled_row_count > self.source_row_count:
+            raise ValueError("sampled row count cannot exceed source row count")
+        if self.sampled_row_count > self.sample_row_limit:
+            raise ValueError("sampled row count cannot exceed sample row limit")
+        names = tuple(column.name for column in self.columns)
+        if names != self.dataset_contract.column_names:
+            raise ValueError("profile columns must match the reviewed dataset contract")
+        if self.quality_intent.dataset_contract != self.dataset_contract:
+            raise ValueError("profile quality intent must match the reviewed dataset contract")
+        if self.sample_row_limit != self.quality_intent.sample_row_limit:
+            raise ValueError("profile sample limit must match its quality intent")
+        if any(column.row_count != self.source_row_count for column in self.columns):
+            raise ValueError("profile column row counts must match the source row count")
+        known_columns = set(names)
+        for pattern in self.missingness_patterns:
+            if not set(pattern.columns) <= known_columns:
+                raise ValueError("missingness pattern references an unknown profile column")
+        for dependency in self.dependencies:
+            if {
+                dependency.left_column,
+                dependency.right_column,
+            } - known_columns:
+                raise ValueError("dependency references an unknown profile column")
+            if dependency.left_column == dependency.right_column:
+                raise ValueError("dependency columns must be distinct")
+        return self
+
+
+class ProfileArtifact(SynthesisModel):
+    """Checksummed relative path to one Profile v2 JSON artifact."""
+
+    path: str = Field(min_length=1)
+    profile_id: str = Field(min_length=1)
+    source_row_count: int = Field(ge=0)
+    sampled_row_count: int = Field(ge=0)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ProfileManifest(SynthesisModel):
+    """Portable integrity manifest for one Profile v2 artifact."""
+
+    manifest_version: str = "1"
+    artifact: ProfileArtifact
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class SplitRatios(SynthesisModel):
@@ -320,6 +547,7 @@ class TournamentRequest(SynthesisModel):
     fit_seed: str = Field(min_length=1, max_length=256)
     evaluation_seed: str = Field(min_length=1, max_length=256)
     policy: EvaluationPolicy = Field(default_factory=EvaluationPolicy)
+    quality_intent: DataQualityIntent | None = None
     overwrite: bool = False
 
     @model_validator(mode="after")
@@ -327,6 +555,11 @@ class TournamentRequest(SynthesisModel):
         names = [candidate.adapter_name for candidate in self.candidates]
         if len(names) != len(set(names)):
             raise ValueError("candidate adapter names must be unique")
+        if (
+            self.quality_intent is not None
+            and self.quality_intent.dataset_contract != self.dataset_contract
+        ):
+            raise ValueError("quality intent dataset contract must match tournament dataset")
         return self
 
 
@@ -358,6 +591,7 @@ class CandidateResult(SynthesisModel):
     model_manifest_path: str | None = None
     sample_path: str | None = None
     quality_report_path: str | None = None
+    synthetic_profile_manifest_path: str | None = None
     quality_report: QualityReport | None = None
     error_type: str | None = None
     error_message: str | None = None
@@ -371,6 +605,9 @@ class TournamentReport(SynthesisModel):
     split_id: str
     sample_row_count: int = Field(gt=0)
     evaluation_seed: str
+    quality_intent_id: str | None = None
+    training_profile_manifest_path: str | None = None
+    holdout_profile_manifest_path: str | None = None
     candidates: tuple[CandidateResult, ...]
     decision: CandidateDecision
     recommended_adapter: str | None = None
