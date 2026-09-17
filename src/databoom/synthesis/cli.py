@@ -10,12 +10,14 @@ import typer
 from databoom.synthesis.adapters import build_default_registry
 from databoom.synthesis.contracts import (
     CandidateConfig,
+    DataQualityIntent,
     DatasetContract,
     EvaluationPolicy,
     SplitRatios,
     SplitRequest,
     TournamentRequest,
 )
+from databoom.synthesis.profiling import create_profile_artifacts, verify_profile_artifact
 from databoom.synthesis.splitting import split_csv_dataset
 from databoom.synthesis.tournament import run_tournament
 
@@ -78,6 +80,60 @@ def split_command(
     typer.echo(f"validation_rows: {manifest.validation.row_count}")
     typer.echo(f"holdout_rows: {manifest.holdout.row_count}")
     typer.echo(f"manifest: {output_dir / 'split-manifest.json'}")
+
+
+@app.command("profile")
+def profile_command(
+    source_path: Annotated[
+        Path,
+        typer.Argument(exists=True, readable=True, help="Reviewed source CSV to profile."),
+    ],
+    contract_path: Annotated[
+        Path,
+        typer.Argument(exists=True, readable=True, help="Reviewed DatasetContract JSON."),
+    ],
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", "-o", help="Directory for Profile v2 artifacts."),
+    ],
+    intent_path: Annotated[
+        Path | None,
+        typer.Option("--intent", exists=True, readable=True, help="DataQualityIntent JSON."),
+    ] = None,
+    seed: Annotated[str, typer.Option("--seed")] = "profile-0",
+    sample_row_limit: Annotated[int, typer.Option("--sample-row-limit", min=3)] = 10_000,
+    histogram_bins: Annotated[int, typer.Option("--histogram-bins", min=2, max=100)] = 10,
+    top_values_limit: Annotated[int, typer.Option("--top-values-limit", min=1)] = 20,
+    overwrite: Annotated[bool, typer.Option("--overwrite")] = False,
+) -> None:
+    """Write bounded, checksummed statistical Profile v2 evidence."""
+
+    dataset = DatasetContract.model_validate_json(contract_path.read_text(encoding="utf-8"))
+    intent = (
+        DataQualityIntent.model_validate_json(intent_path.read_text(encoding="utf-8"))
+        if intent_path is not None
+        else DataQualityIntent(
+            dataset_contract=dataset,
+            sample_row_limit=sample_row_limit,
+            histogram_bins=histogram_bins,
+            top_values_limit=top_values_limit,
+        )
+    )
+    manifest = create_profile_artifacts(
+        source_path,
+        dataset,
+        output_dir,
+        ".",
+        quality_intent=intent,
+        seed=seed,
+        overwrite=overwrite,
+    )
+    profile = verify_profile_artifact(manifest, output_dir)
+    typer.echo(f"profile_id: {profile.profile_id}")
+    typer.echo(f"source_rows: {profile.source_row_count}")
+    typer.echo(f"sampled_rows: {profile.sampled_row_count}")
+    typer.echo(f"profile: {output_dir / manifest.artifact.path}")
+    typer.echo(f"manifest: {output_dir / 'profile-manifest.json'}")
 
 
 @app.command("tournament")

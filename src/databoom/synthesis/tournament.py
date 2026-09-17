@@ -12,6 +12,7 @@ from databoom.synthesis.contracts import (
     CandidateDecision,
     CandidateResult,
     CandidateStatus,
+    DataQualityIntent,
     FitConfig,
     TournamentReport,
     TournamentRequest,
@@ -24,6 +25,7 @@ from databoom.synthesis.io import (
     stable_digest,
     write_model_json,
 )
+from databoom.synthesis.profiling import create_profile_artifacts, verify_profile_artifact
 from databoom.synthesis.splitting import load_split_manifest, verify_split_artifacts
 
 
@@ -69,6 +71,29 @@ def run_tournament(
     split_root = split_manifest_path.parent
     training_csv = resolve_within(split_root, split_manifest.training.path)
     holdout_csv = resolve_within(split_root, split_manifest.holdout.path)
+    quality_intent = request.quality_intent or DataQualityIntent(
+        dataset_contract=request.dataset_contract
+    )
+    training_profile = create_profile_artifacts(
+        training_csv,
+        request.dataset_contract,
+        experiment_root,
+        "profiles/training",
+        quality_intent=quality_intent,
+        seed=request.evaluation_seed,
+        overwrite=request.overwrite,
+    )
+    holdout_profile = create_profile_artifacts(
+        holdout_csv,
+        request.dataset_contract,
+        experiment_root,
+        "profiles/holdout",
+        quality_intent=quality_intent,
+        seed=request.evaluation_seed,
+        overwrite=request.overwrite,
+    )
+    verify_profile_artifact(training_profile, experiment_root)
+    verify_profile_artifact(holdout_profile, experiment_root)
     experiment_id = (
         "experiment_"
         + stable_digest(
@@ -129,6 +154,19 @@ def run_tournament(
             sample_path = resolve_within(experiment_root, sample.path)
             if sha256_file(sample_path) != sample.sha256:
                 raise ValueError("sample artifact checksum mismatch")
+            synthetic_profile_directory = relative_to_root(
+                experiment_root, candidate_dir / "synthetic-profile"
+            )
+            synthetic_profile = create_profile_artifacts(
+                sample_path,
+                request.dataset_contract,
+                experiment_root,
+                synthetic_profile_directory,
+                quality_intent=quality_intent,
+                seed=request.evaluation_seed,
+                overwrite=request.overwrite,
+            )
+            verify_profile_artifact(synthetic_profile, experiment_root)
             quality = evaluate_candidate(
                 adapter_name=candidate.adapter_name,
                 dataset=request.dataset_contract,
@@ -153,6 +191,9 @@ def run_tournament(
                     ),
                     sample_path=sample.path,
                     quality_report_path=relative_to_root(experiment_root, quality_path),
+                    synthetic_profile_manifest_path=(
+                        f"{synthetic_profile_directory}/profile-manifest.json"
+                    ),
                     quality_report=quality,
                 )
             )
@@ -204,6 +245,9 @@ def run_tournament(
         split_id=split_manifest.split_id,
         sample_row_count=request.sample_row_count,
         evaluation_seed=request.evaluation_seed,
+        quality_intent_id=quality_intent.intent_id,
+        training_profile_manifest_path="profiles/training/profile-manifest.json",
+        holdout_profile_manifest_path="profiles/holdout/profile-manifest.json",
         candidates=tuple(results),
         decision=decision,
         recommended_adapter=recommended_adapter,
