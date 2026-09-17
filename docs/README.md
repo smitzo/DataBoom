@@ -24,9 +24,13 @@ each other.
   [Statistical and ML Synthesis Architecture](engineering/statistical-synthesis-architecture.md).
 - Quality metrics, datasets, and release gates:
   [Quality Evaluation and Benchmarks](engineering/quality-evaluation-and-benchmarks.md).
+- GAN research, the current scikit-learn, TensorFlow, and CTGAN provider
+  boundaries, dependency licensing, and experimental readiness:
+  [Neural Synthesis Research](engineering/neural-synthesis-research.md).
 - Local commands: [Local Development](operations/local-development.md).
 - Hosted environment configuration: [Deployment Guide](operations/deployment.md).
 
-`instructions.md` and `AGENTS.md` are repository-level operating instructions,
-not product documentation. `understanding.md` is the backend and systems learning
-log; it records significant design reasoning rather than routine change history.
+`AGENTS.md` is the repository-level operating guide. OpenSpec owns task proposals,
+requirements, designs, implementation checklists, and archived completed changes.
+`understanding.md` is the backend and systems learning log; it records significant
+design reasoning rather than routine change history.

@@ -7,6 +7,10 @@ This document explains how the DataBoom backend processes a request from input t
 ```mermaid
 flowchart TD
     CLI[databoom.cli] --> Ingest[databoom.ingest]
+    MLCLI[databoom.synthesis.cli] --> Split[databoom.synthesis.splitting]
+    MLCLI --> Tournament[databoom.synthesis.tournament]
+    Tournament --> Adapters[databoom.synthesis.adapters]
+    Tournament --> Quality[databoom.synthesis.evaluation]
     API[databoom.api.routes] --> Runs[databoom.api.runs]
     API --> Async[databoom.api.async_jobs]
     API --> State[databoom.api.state]
@@ -63,6 +67,11 @@ flowchart TD
 | `PlanProposal` | `databoom.planning.models` | Persisted draft/approved/rejected plan with safe telemetry and content-addressed identity. |
 | `Planner` | `databoom.planning.planner` | Replaceable interface implemented by deterministic and structured-output planners. |
 | `SourceProfile` | `databoom.profiling.postgres` | Cached source statistics used to shape future generation. |
+| `DatasetContract` | `databoom.synthesis.contracts` | Reviewed single-table feature kinds, nullability, order, and conservative sensitivity classification. |
+| `SplitManifest` | `databoom.synthesis.contracts` | Source and partition fingerprints, ratios, grouping, row counts, and artifact paths. |
+| `SynthesizerCapabilities` | `databoom.synthesis.contracts` | Provider availability, shape, determinism, compute, complexity, dependency, and license declaration. |
+| `ModelManifest` | `databoom.synthesis.contracts` | Checksummed source/model lineage, hyperparameters, transformations, dependency versions, and timings. |
+| `QualityReport` / `TournamentReport` | `databoom.synthesis.contracts` | Independent metric/gate evidence and non-production experimental recommendation. |
 | `StateStore` | `databoom.api.state` | Persistence boundary for sessions, subscriptions, sources, profiles, plans, and runs. |
 
 ## Planning And Review Execution
@@ -285,6 +294,81 @@ Graph-Boom is separate from Table-Boom because graph correctness is endpoint
 validity, label/type consistency, and edge cardinality. It reuses seeds,
 artifact directories, API run metadata, async progress, and artifact downloads,
 but owns its own node/edge contracts and validation.
+
+## Experimental Single-Table Synthesis Execution
+
+```mermaid
+sequenceDiagram
+    participant Operator as Local operator
+    participant Split as synthesis.splitting
+    participant Worker as synthesis.cli/tournament
+    participant Registry as adapters.AdapterRegistry
+    participant Adapter as Empirical, GMM, TensorFlow, or CTGAN adapter
+    participant Eval as synthesis.evaluation
+    participant Disk as Local experiment root
+
+    Operator->>Split: CSV, ratios, seed, optional group columns
+    Split->>Disk: training.csv, validation.csv, holdout.csv
+    Split->>Disk: split-manifest.json with checksums
+    Operator->>Worker: split manifest, DatasetContract, candidates, seeds
+    Worker->>Split: verify partition paths and SHA-256 checksums
+    Worker->>Registry: resolve capabilities without importing ML runtime
+    Worker->>Adapter: fit training partition
+    Adapter->>Disk: model artifact and model-manifest.json
+    Worker->>Adapter: sample fixed row count and seed twice
+    Adapter->>Disk: sample.csv and repeat sample
+    Worker->>Eval: training hashes, holdout, sample, policy
+    Eval->>Disk: quality-report.json
+    Worker->>Disk: tournament-report.json
+```
+
+### Partition Algorithm
+
+`split_csv_dataset` hashes the algorithm version, seed, and a split unit. The
+unit is either the zero-based row index or canonical values from reviewed group
+columns. Hash ranges map to training, validation, or holdout ratios. Grouped rows
+therefore always receive the same partition without shuffling all row indexes in
+memory.
+
+The writer uses temporary CSV files and publishes them only after all partitions
+contain rows. The manifest records source and partition checksums. Tournament
+startup verifies those checksums before fitting any candidate.
+
+### Adapter Loading
+
+`build_default_registry` registers the owned empirical adapter, the optional
+scikit-learn Gaussian-mixture adapter, the owned optional TensorFlow GAN, and the
+optional CTGAN provider wrapper. Importing their wrapper modules does not import
+NumPy, scikit-learn, TensorFlow, pandas, torch, or CTGAN. Each optional adapter
+imports its training runtime inside worker methods only after capability and
+sensitivity-policy checks pass.
+
+The empirical model stores a bounded per-column reservoir. This makes it a cheap
+and deterministic marginal baseline but means its model contains source-derived
+exemplars; it remains a protected local artifact. The Gaussian-mixture adapter
+stores numeric parameters and reversible mixed-type transforms as JSON. The
+TensorFlow adapter stores only its generator in Keras v3 format and loads it in
+safe mode without custom objects. The CTGAN model is a checksummed local pickle
+and is never accepted from an upload endpoint.
+
+### Evaluation And Decision
+
+The evaluator reads CSV artifacts with the standard library and reports:
+
+- structural contract and value checks,
+- per-continuous-column KS and normalized mean error,
+- per-discrete-column total-variation distance,
+- whole-row uniqueness,
+- exact training-row match rate,
+- repeat-sample checksum reproducibility,
+- fit and sample wall time.
+
+Each family produces a separate hard gate. A fidelity pass cannot override an
+exact-copy failure. `production_evidence` remains `not_evaluated`,
+`evidence_complete` remains false, and `release_approved` remains false in this
+first implementation. See
+[Neural Synthesis Research](neural-synthesis-research.md) for the research and
+remaining gates.
 
 ## API Async Run Flow
 

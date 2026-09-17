@@ -26,7 +26,7 @@ For Python modules and execution sequences, see [Low-Level Design](low-level-des
 | 1 | Table-Boom relational foundation and 100k benchmark. | Complete |
 | 2 | 500k scale baseline, API, profiling, async runs, and Docu-Boom. | Complete |
 | 3 | Graph-Boom, assisted planning, prompt telemetry, and plan review. | Complete |
-| 4 | Masker-Boom privacy policies and security hardening. | Next |
+| 4 | Statistical quality foundation, neural experiment boundary, Masker-Boom privacy policies, and security hardening. | In progress |
 | 5 | Production operations, durable artifacts, workers, CI, and releases. | Planned |
 
 The current architecture, including planning and approval, is maintained in the
@@ -48,10 +48,10 @@ Canonical sources:
 
 | Quality stage | Product phase | Outcome | Status |
 | --- | --- | --- | --- |
-| Q0: contracts and measurement | Phase 4 | Profile v2, quality intent, holdout splits, metric registry, and quality report schema. | Next |
-| Q1: statistical synthesis | Phase 4 | Empirical and copula baselines, conditional missingness, seasonality, and source/holdout comparison. | Planned |
-| Q2: controlled populations | Phase 4-5 | Mixtures, clusters, sparsity, tails, international populations, and constraint DSL. | Planned |
-| Q3: model tournament | Phase 5 | Provider-neutral adapters, optional neural candidates, cost estimates, and measured promotion. | Planned |
+| Q0: contracts and measurement | Phase 4 | Profile v2, quality intent, holdout splits, metric registry, and quality report schema. | In progress: grouped splits and first report landed; profile v2 remains |
+| Q1: statistical synthesis | Phase 4 | Empirical and copula baselines, conditional missingness, seasonality, and source/holdout comparison. | In progress: independent empirical baseline landed; copula remains |
+| Q2: controlled populations | Phase 4-5 | Mixtures, clusters, sparsity, tails, international populations, and constraint DSL. | Experimental Gaussian-mixture candidate landed; controlled intent and coverage remain |
+| Q3: model tournament | Phase 5 | Provider-neutral adapters, optional neural candidates, cost estimates, and measured promotion. | Experimental slice: adapter registry, owned TensorFlow GAN, optional CTGAN, and local tournament landed |
 | Q4: native complex shapes | Phase 5 | Subject-first relational, temporal, and graph-native candidates and metrics. | Planned |
 | Q5: privacy and operations | Phase 5 | Privacy attack suite, optional DP, model registry, workers, lineage, and drift monitoring. | Planned |
 
@@ -340,7 +340,13 @@ Recommended commits:
 Goal: establish measured statistical quality, then add Masker-Boom as the
 privacy and masking service layer for sensitive environments.
 
-Current status: next phase.
+Current status: in progress. The first backend-only statistical/neural vertical
+slice provides group-preserving split artifacts, model-lineage contracts, an
+owned empirical baseline, an optional scikit-learn Gaussian-mixture baseline,
+an owned optional TensorFlow GAN, an optional CTGAN adapter, a local worker CLI,
+and an experimental quality tournament. It does not complete profile v2,
+copula/conditional statistical baselines, privacy attacks, calibrated release
+policy, Masker-Boom, or production worker hardening.
 
 Technical objectives:
 

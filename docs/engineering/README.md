@@ -22,6 +22,9 @@ from broad system boundaries toward implementation detail.
 - [Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md):
   fidelity, utility, privacy, performance metrics, benchmark datasets, and
   release gates.
+- [Neural Synthesis Research](neural-synthesis-research.md): GAN and CTGAN
+  research, implemented provider boundary, artifact security, licensing, and
+  production-readiness gaps.
 - [Frontend Development](frontend-development.md): UI phases aligned with backend
   capability.
 - [LLM Planning and Prompt Caching](prompt-caching-and-instructions.md): versioned

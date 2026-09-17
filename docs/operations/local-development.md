@@ -19,6 +19,117 @@ Run checks:
 .venv/bin/python -m ruff check .
 ```
 
+## Experimental Statistical And Neural Worker
+
+The normal installation includes the contracts, deterministic splitter,
+empirical baseline, evaluator, and tournament. It does not install or import
+scikit-learn, TensorFlow, pandas, torch, or CTGAN in FastAPI.
+
+Inspect current provider availability:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli capabilities
+```
+
+Create deterministic partitions. Use `--group-column` for a subject, account,
+device, patient, or another identifier whose rows must not leak across training,
+validation, and holdout:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli split source.csv \
+  --output-dir artifacts/ml/split \
+  --group-column customer_id \
+  --seed split-1
+```
+
+The output directory contains:
+
+- `training.csv`
+- `validation.csv`
+- `holdout.csv`
+- `split-manifest.json`
+
+The manifest records the source checksum, algorithm, ratios, seed, grouping,
+row counts, artifact paths, and partition checksums. Tournament startup verifies
+those files before fitting.
+
+Create a reviewed `DatasetContract` JSON before training. Columns default to
+`restricted`; the current experimental worker accepts only columns explicitly
+marked `non_sensitive`. This is intentionally conservative while the complete
+privacy program is unfinished.
+
+Run the owned empirical baseline:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli tournament \
+  artifacts/ml/split/split-manifest.json \
+  dataset-contract.json \
+  --experiment-root artifacts/ml/empirical-experiment \
+  --candidate empirical-independent \
+  --sample-rows 10000
+```
+
+Install the optional scikit-learn Gaussian-mixture baseline when a classical
+joint candidate is needed:
+
+```bash
+.venv/bin/python -m pip install -e '.[dev,ml-sklearn]'
+```
+
+Install the owned optional TensorFlow GAN only in a dedicated experiment worker:
+
+```bash
+.venv/bin/python -m pip install -e '.[dev,neural-tensorflow]'
+```
+
+Install the optional CTGAN provider only after dependency-license and source
+policy review:
+
+```bash
+.venv/bin/python -m pip install torch \
+  --index-url https://download.pytorch.org/whl/cpu
+.venv/bin/python -m pip install -e '.[dev,neural-ctgan]'
+```
+
+The explicit CPU-wheel step prevents PyPI's default Linux PyTorch resolution
+from downloading an unused CUDA runtime for this CPU-declared adapter. A future
+dedicated GPU worker image should own its CUDA/PyTorch matrix explicitly.
+
+Run any installed candidates with the same experiment settings:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli tournament \
+  artifacts/ml/split/split-manifest.json \
+  dataset-contract.json \
+  --experiment-root artifacts/ml/all-candidates-experiment \
+  --candidate empirical-independent \
+  --candidate sklearn-gaussian-mixture \
+  --candidate tensorflow-gan \
+  --candidate ctgan \
+  --gmm-components 5 \
+  --tensorflow-epochs 100 \
+  --ctgan-epochs 300 \
+  --sample-rows 10000
+```
+
+The worker writes per-candidate model manifests, samples, repeat samples, quality
+reports, and `tournament-report.json`. Every current decision is experimental;
+the report keeps `release_approved=false` even when implemented gates pass.
+
+Security rules:
+
+- run only on approved local CSVs and reviewed non-sensitive columns,
+- protect model directories as source-derived data,
+- load TensorFlow generators only from the checksummed experiment root in safe
+  mode without custom objects,
+- never load an arbitrary CTGAN pickle,
+- do not expose the worker as a public training endpoint,
+- do not interpret an exact-match pass as formal privacy.
+
+For the paper basis, provider license, missing-value transformation, metric
+limits, and production gaps, read
+[Neural Synthesis Research](../engineering/neural-synthesis-research.md).
+
 ## Generate Data
 
 Create a schema file:

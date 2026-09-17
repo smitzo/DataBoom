@@ -370,6 +370,9 @@ docker compose --profile tools run --rm app
 - `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
 - `src/databoom/graph`: Graph-Boom node/edge contracts, deterministic graph generator, graph artifacts, and graph validation.
 - `src/databoom/planning`: planner contracts, deterministic and hosted adapters, versioned prompt packs, cache telemetry, and proposal validation.
+- `src/databoom/synthesis`: source-trained split contracts, provider-neutral
+  adapters, empirical, scikit-learn mixture, owned TensorFlow GAN, and CTGAN
+  candidates, quality evaluation, and the isolated ML worker CLI.
 - `src/databoom/export`: local artifact writers.
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.
@@ -379,10 +382,10 @@ docker compose --profile tools run --rm app
 - `frontend/src/components`: reusable frontend UI components.
 - `frontend/src/data`: shared frontend display data, including roadmap entries.
 - `docs`: product, engineering, and operations documentation.
+- `openspec`: active task requirements/designs and archived completed changes.
 
 ## Docs Guide
 
-- `instructions.md`: project entrypoint and commit discipline.
 - `docs/README.md`: documentation index and separation of concerns.
 - `docs/product/product-family.md`: DataBoom platform products and use-case naming rules.
 - `docs/product/functional-specification.md`: product behavior, users, workflows, and acceptance criteria.
@@ -395,10 +398,15 @@ docker compose --profile tools run --rm app
 - `docs/engineering/optimization-plan.md`: optimization roadmap for engine speed, quality, profiling, blueprints, and observability.
 - `docs/engineering/statistical-synthesis-architecture.md`: scenario/source modes, statistical profiles, model portfolio, selection policy, and ML delivery stages.
 - `docs/engineering/quality-evaluation-and-benchmarks.md`: fidelity, utility, privacy, benchmark datasets, experiment procedure, and release gates.
+- `docs/engineering/neural-synthesis-research.md`: primary GAN research,
+  classical and neural candidate roles, provider licensing, worker isolation,
+  evaluation, and remaining release gates.
 - `docs/engineering/frontend-development.md`: frontend design principles and phased UI plan.
 - `docs/engineering/prompt-caching-and-instructions.md`: prompt caching and Codex/OpenAI instruction strategy.
 - `docs/operations/local-development.md`: backend/frontend setup, CLI, benchmarks, demos, and Docker usage.
 - `docs/operations/phase-history`: completed phase handoffs and verification evidence.
 - `docs/operations/deployment.md`: Render, Supabase, Vercel, and LLM key policy deployment guide.
 - `AGENTS.md`: operating rules for coding agents working in this repo.
+- `openspec/changes`: active OpenSpec proposals, requirements, designs, and task ledgers.
+- `openspec/changes/archive`: completed implementation specifications and evidence.
 - `understanding.md`: explanation log for significant decisions.

@@ -105,6 +105,27 @@ Planned for Masker-Boom in Phase 4.
 4. Masker-Boom applies transformations while preserving primary keys, foreign-key relationships, configured formats, and useful distributions.
 5. Masker-Boom produces masked artifacts plus a privacy and audit report.
 
+### Workflow 8: Evaluate Source-Trained Synthesis Candidates
+
+Experimental backend workflow introduced in Phase 4. It is intentionally local
+and single-table until the privacy and production evidence gates are complete.
+
+1. User supplies an approved CSV and a reviewed dataset contract.
+2. Every column is classified for training eligibility; unclassified columns
+   default to `restricted` and stop the experiment.
+3. The worker deterministically creates training, validation, and untouched
+   holdout partitions, preserving subject groups when group columns are given.
+4. The worker fits the owned empirical baseline and any explicitly installed
+   scikit-learn mixture, owned TensorFlow GAN, or CTGAN candidates through the
+   same adapter contract.
+5. Every candidate samples the same row count using the same evaluation seed.
+6. DataBoom reports structural validity, holdout fidelity, diversity, exact
+   training-row matches, runtime, reproducibility, lineage, and missing evidence.
+7. The tournament can recommend a candidate only for controlled evaluation. It
+   cannot approve a production release while privacy attacks, downstream
+   utility, signed lineage, calibrated thresholds, and hardened worker isolation
+   remain incomplete.
+
 ## Functional Requirements
 
 ### Schema Intake
@@ -174,6 +195,14 @@ The source-trained path should support a portfolio of deterministic,
 statistical, mixture, and optional neural synthesizers. It must select candidates
 through measured fidelity, coverage, utility, privacy, performance, and
 reproducibility gates. No single model is assumed to be best for every dataset.
+
+The first experimental implementation provides deterministic dataset splitting,
+an independent empirical baseline, an optional scikit-learn Gaussian-mixture
+baseline, an owned optional TensorFlow GAN, an optional CTGAN provider,
+machine-readable quality reports, and candidate-failure isolation. The mixture
+and neural candidates provide joint model mechanisms, but the current evaluator
+does not yet provide sufficient joint, relational, temporal, graph-native,
+utility, or formal privacy evidence for production claims.
 
 For international populations, country or locale mixtures must be explicit or
 learned from an approved profile. Locale may control coherent names, addresses,

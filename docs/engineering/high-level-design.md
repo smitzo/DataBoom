@@ -158,6 +158,58 @@ complete model and report lineage. The full design is maintained in
 with gates and datasets in
 [Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md).
 
+### Implemented ML Worker Boundary
+
+The first source-trained implementation is a local worker CLI, not a FastAPI
+route. This preserves the service startup and deterministic product path when
+the optional neural stack is absent.
+
+```mermaid
+flowchart LR
+    CSV[Approved local CSV] --> Split[Deterministic split service]
+    Split --> Train[Training partition]
+    Split --> Validation[Validation partition]
+    Split --> Holdout[Untouched holdout partition]
+    Contract[Reviewed non-sensitive column contract] --> Worker[databoom-ml worker]
+    Train --> Worker
+    Worker --> Empirical[Owned empirical adapter]
+    Worker --> GMM[Optional lazy scikit-learn mixture]
+    Worker --> TensorFlow[Owned optional TensorFlow GAN]
+    Worker --> CTGAN[Optional lazy CTGAN provider]
+    Empirical --> Models[Checksummed local model artifacts]
+    GMM --> Models
+    TensorFlow --> Models
+    CTGAN --> Models
+    Models --> Samples[Fixed-seed candidate samples]
+    Samples --> Evaluate[Dependency-light evaluator]
+    Holdout --> Evaluate
+    Train --> ExactCopy[Exact training-row diagnostic]
+    ExactCopy --> Evaluate
+    Evaluate --> Report[Experimental tournament report]
+    Report --> Human[Human review and next experiment]
+    API[FastAPI web process] -. no training imports .-> Worker
+```
+
+The dataset contract defaults every column to `restricted`. An operator must
+explicitly classify a feature as `non_sensitive` before the experimental worker
+accepts it. This is a conservative temporary policy while Masker-Boom and the
+full privacy attack suite are incomplete.
+
+Model and experiment files remain under an explicit local artifact root. The
+worker records model checksum, dependency versions, provider license,
+transformations, seed, and timings. The empirical and scikit-learn candidates
+store data-only JSON; the TensorFlow candidate stores a Keras v3 generator and
+loads it in safe mode without custom objects. CTGAN model files are Python
+pickles and are therefore treated as executable local artifacts: path
+containment and checksum verification are required before loading, and no
+arbitrary upload/load API exists.
+
+The local CLI is process separation, not production sandboxing. A later worker
+service must add a separate image, identity, resource limits, queue, cancellation,
+signed lineage, durable storage, and restricted filesystem/network access. The
+research and provider decisions are detailed in
+[Neural Synthesis Research](neural-synthesis-research.md).
+
 ## API Run Flow
 
 ```mermaid

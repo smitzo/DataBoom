@@ -717,7 +717,7 @@ Why did the Docker build fail at `python -m pip install .` even though the sourc
 
 ### Answer
 
-The package configuration declares `README.md` as the project readme in `pyproject.toml`. Python build backends validate that metadata while preparing the wheel. The Dockerfile copied `pyproject.toml`, `instructions.md`, and `src`, but it did not copy `README.md`, so Hatchling correctly stopped the build with `OSError: Readme file does not exist: README.md`.
+The package configuration declares `README.md` as the project readme in `pyproject.toml`. Python build backends validate that metadata while preparing the wheel. At the time of this failure, the Dockerfile copied `pyproject.toml`, the then-current repository instruction file, and `src`, but it did not copy `README.md`, so Hatchling correctly stopped the build with `OSError: Readme file does not exist: README.md`.
 
 ### Why This Matters
 
@@ -725,7 +725,7 @@ Docker images should build from the same packaging contract that local installs 
 
 ### Implementation Detail
 
-The Dockerfile now copies `README.md` together with `pyproject.toml` and `instructions.md` before running `pip install .`. This keeps Docker layer caching efficient: dependency and metadata changes invalidate the install layer, while ordinary source changes only invalidate the later source copy and install step.
+The Dockerfile was corrected to copy `README.md` with `pyproject.toml` before running `pip install .`. The former root instruction file was later retired in favor of `AGENTS.md`, canonical docs, and OpenSpec, so it is no longer part of the image. This keeps Docker layer caching efficient: dependency and metadata changes invalidate the install layer, while ordinary source changes only invalidate the later source copy and install step.
 
 ### Follow-Up Notes
 
@@ -2596,10 +2596,16 @@ trained statistical model?
 
 ### Answer
 
-Not yet. The current engine is deterministic and profile-guided, not
-model-trained. It can measure row counts, null rates, distinct counts, ranges,
+The production generator is still deterministic and profile-guided, but Phase 4
+now also includes an isolated experimental source-trained path. That path can fit
+an owned independent empirical baseline and, when explicitly installed, a
+scikit-learn Gaussian mixture, an owned TensorFlow GAN, or a CTGAN provider. It
+compares candidates through a provider-neutral adapter and holdout quality
+report. It does not make the generated output production-approved.
+
+The main engine can measure row counts, null rates, distinct counts, ranges,
 frequent values, and relationship fanout. It then uses those hints during seeded
-generation.
+scenario generation.
 
 That is more informed than unconstrained randomness, but it does not yet learn a
 complete probability distribution. In particular, minimum and maximum values do
@@ -2607,11 +2613,14 @@ not describe where observations are concentrated. Frequent values do not
 describe every category. Independent column hints do not preserve a dependency
 such as income changing with occupation, region, and age.
 
-The next backend step is measurement, not immediately adding a neural network.
-DataBoom first needs a versioned profile that can represent mean, variance,
-quantiles, histograms, skew, tails, missingness, pairwise dependencies, clusters,
-and cross-table statistics. Without those measurements, the project cannot prove
-whether a new model improved output.
+The experimental worker adds only the minimum comparison evidence needed for a
+safe vertical slice: deterministic partitions, basic univariate metrics,
+diversity, exact-copy diagnostics, runtimes, reproducibility, and checksummed
+lineage. The next backend steps still include a versioned profile that represents
+mean, variance, quantiles, histograms, skew, tails, missingness, pairwise
+dependencies, clusters, and cross-table statistics. Without those measurements,
+the project cannot prove that a more complex model improved the important joint
+and shape-specific behavior.
 
 ### Question
 
@@ -2757,3 +2766,118 @@ formal privacy guarantee.
 Formal claims require a verified differentially private mechanism with recorded
 epsilon, delta, clipping, and privacy accounting. Differential privacy also
 reduces some utility, so it must be a reviewed policy and measured tradeoff.
+
+## Decision: isolate source-trained candidates behind an experimental ML worker
+
+### Question
+
+What exactly did Phase 4 add, and why are model-training libraries not loaded by
+the API?
+
+### Answer
+
+The first source-trained slice lives in `databoom.synthesis`. It adds strict
+dataset, split, lineage, policy, metric, and tournament contracts; deterministic
+row-hash or group-preserving CSV partitioning; an owned independent empirical
+baseline; an optional scikit-learn Gaussian-mixture baseline; an owned optional
+TensorFlow GAN; an optional CTGAN provider; and machine-readable evaluation
+artifacts.
+
+The FastAPI process imports only lightweight contracts. Pandas, NumPy, torch,
+scikit-learn, TensorFlow, and CTGAN are imported lazily inside optional adapter
+methods when a local ML worker actually fits or samples a candidate. This
+prevents web startup from inheriting the training stack's memory, binary
+dependencies, failure modes, and attack surface. Production training still
+requires a hardened isolated worker with resource limits and controlled
+artifact storage.
+
+### Question
+
+Why does every dataset column default to `restricted`?
+
+### Answer
+
+Model artifacts and generated samples can retain source information. The first
+worker therefore fails closed: a reviewer must explicitly mark every selected
+column `non_sensitive` before training. This temporary boundary is stricter than
+the final Masker-Boom policy model, but it prevents an experimental GAN command
+from becoming an accidental raw customer-data training path.
+
+### Question
+
+Why are model files checksummed and treated differently from JSON artifacts?
+
+### Answer
+
+The empirical adapter stores bounded source exemplars as JSON. The scikit-learn
+adapter stores only learned numeric mixture parameters and reversible transforms
+as JSON rather than a provider pickle. The TensorFlow adapter stores only its
+generator in Keras v3 format and loads it in safe mode without custom objects.
+The CTGAN provider needs to persist executable Python state, so its local pickle
+is source-derived and trusted-local-only. DataBoom resolves every manifest path
+inside the experiment root and verifies the recorded SHA-256 before loading.
+This blocks path escape and accidental tampering; it does not make an untrusted
+pickle safe. Arbitrary or remotely supplied pickle artifacts must never be
+loaded.
+
+### Question
+
+Can a passing tournament result be released to customers?
+
+### Answer
+
+No. The current report deliberately keeps `release_approved=false`. Its
+experimental thresholds cover basic structure, univariate holdout fidelity,
+diversity, exact training-row copies, performance telemetry, and repeat-sample
+reproducibility. Downstream utility, membership and attribute inference,
+relational and temporal behavior, calibrated production thresholds, signed
+lineage, and hardened worker isolation are still missing production evidence.
+
+The tournament may recommend the simplest passing candidate for controlled
+evaluation. It must not represent that recommendation as anonymity, privacy, or
+production approval.
+
+### Question
+
+Why is CTGAN an optional provider instead of the core owned implementation?
+
+### Answer
+
+CTGAN is a useful mixed-type tabular GAN baseline, but the current upstream
+Python package is an external dependency with its own maturity and license
+conditions. DataBoom pins the reviewed version in an optional dependency group,
+reports its installed version and license in capabilities and model lineage, and
+requires a commercial-license review before deployment. The provider can be
+replaced without changing the split, evaluation, or tournament contracts.
+
+The owned empirical adapter remains the always-available baseline. The
+scikit-learn mixture and owned TensorFlow GAN prove that DataBoom can add
+classical and internally owned neural candidates without coupling the contracts
+or tournament to CTGAN. Later copula, diffusion, temporal, relational, and graph
+candidates must enter through the same evidence and promotion boundary rather
+than bypassing it.
+
+For local CPU validation, PyTorch should be installed from its official CPU
+wheel index before the CTGAN extra. The default Linux PyPI resolution can pull a
+large CUDA runtime even though this adapter does not require a GPU. Production
+GPU images need an explicit driver, CUDA, torch, and container compatibility
+matrix rather than inheriting whichever accelerator packages pip selects.
+
+### Question
+
+Why include both a Gaussian mixture and an owned TensorFlow GAN?
+
+### Answer
+
+They answer different architecture questions. The Gaussian mixture is a
+relatively cheap, inspectable joint baseline. It tests whether modeling several
+encoded columns together improves on independent marginals before neural cost is
+justified. Its JSON artifact also demonstrates that scikit-learn does not require
+loading an executable provider pickle during sampling.
+
+The TensorFlow GAN proves ownership and replaceability of the neural path. It
+uses the same reversible mixed-type transformation, trains a small bounded GAN,
+and stores only the generator. It is not presented as universally better than
+CTGAN: the generic GAN lacks CTGAN's imbalance-aware conditional training, and
+its determinism is best-effort across devices. Both candidates must therefore
+compete against the empirical baseline on the same holdout and hard gates.

@@ -8,11 +8,15 @@ DataBoom is a Python, FastAPI, Typer, PostgreSQL-first data platform. Its catalo
 
 ## Current Phase
 
-Phase 3 is complete: Graph-Boom, provider-neutral assisted planning, versioned prompt packs, cache telemetry, plan review, and approved-plan execution are implemented. Current work starts Phase 4 with statistical quality Stage 0, followed by Masker-Boom privacy policies and security hardening.
+Phase 3 is complete. Phase 4 is active: deterministic/grouped holdout splitting,
+provider-neutral synthesis contracts, an empirical baseline, an optional
+scikit-learn mixture baseline, an owned optional TensorFlow GAN, an optional
+CTGAN provider, and an experimental candidate tournament are implemented.
+Profile v2, copula baselines, privacy attacks, calibrated promotion gates,
+Masker-Boom policies, and worker hardening remain active work.
 
 Before implementation, read:
 
-- `instructions.md`
 - `docs/README.md`
 - `docs/product/functional-specification.md`
 - `docs/engineering/roadmap.md`
@@ -22,6 +26,7 @@ Before implementation, read:
 - `docs/engineering/engineering-standards.md`
 - `docs/engineering/statistical-synthesis-architecture.md`
 - `docs/engineering/quality-evaluation-and-benchmarks.md`
+- `docs/engineering/neural-synthesis-research.md`
 - `docs/engineering/prompt-caching-and-instructions.md`
 - `docs/product/product-reasoning-faq.md`
 - `understanding.md`
@@ -44,6 +49,9 @@ Before implementation, read:
 - Keep statistical and ML implementations behind provider-neutral synthesizer
   adapters and optional dependency groups. Do not load training libraries in the
   FastAPI web process.
+- Treat source-derived model artifacts as sensitive. Reject restricted columns
+  from the experimental worker, verify local model checksums before loading, and
+  never accept untrusted Python model artifacts.
 - Promote model candidates only through documented holdout quality, privacy,
   performance, reproducibility, and operational gates.
 
@@ -119,6 +127,7 @@ Phase 4 should introduce Masker-Boom:
 
 - statistical profile v2 and quality-intent contracts,
 - holdout evaluation, quality reports, and statistical baselines,
+- experimental neural candidates behind the isolated ML worker boundary,
 - privacy policies,
 - masking and hashing,
 - privacy validation,

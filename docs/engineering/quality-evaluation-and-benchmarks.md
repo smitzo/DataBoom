@@ -5,6 +5,32 @@ benchmark datasets, compares model candidates, and decides whether an output may
 be released. It is the verification companion to the
 [Statistical and ML Synthesis Architecture](statistical-synthesis-architecture.md).
 
+## Current Implemented Evidence
+
+The first experimental single-table tournament now implements a deliberately
+small, inspectable subset of this policy:
+
+- deterministic row-hash and subject/group-preserving train, validation, and
+  holdout CSV artifacts with SHA-256 fingerprints,
+- an owned independent empirical baseline, optional scikit-learn
+  Gaussian-mixture baseline, owned optional TensorFlow GAN, and optional CTGAN
+  provider,
+- exact contract/column checks, sample row counts, numeric parsing, and required
+  null checks,
+- numeric Kolmogorov-Smirnov and normalized mean error,
+- categorical total-variation distance,
+- whole-row synthetic uniqueness and exact training-row match rate,
+- fit/sample wall time and repeat-sample checksum evidence,
+- independent structural, fidelity, diversity, exact-copy privacy, and
+  reproducibility gates,
+- a permanent `release_approved=false` decision while production evidence is incomplete.
+
+The implementation does not yet cover quantiles/tails, pairwise or joint
+dependencies, downstream utility, near-neighbor privacy, membership or attribute
+inference, formal DP, peak resource use, or calibrated release thresholds. The
+full research mapping and limitations are in
+[Neural Synthesis Research](neural-synthesis-research.md).
+
 ## Quality Is Multidimensional
 
 There is no honest universal synthetic-data accuracy score. A dataset can match
@@ -503,14 +529,19 @@ It should not promise:
 ## Delivery Checklist
 
 - [ ] Add versioned profile v2 models.
-- [ ] Add grouped and chronological split utilities.
-- [ ] Add metric registry and quality report contract.
+- [x] Add deterministic row and grouped split utilities with fingerprints.
+- [ ] Add chronological split utilities.
+- [x] Add the first metric and quality report contract.
 - [ ] Add controlled statistical fixtures.
-- [ ] Implement univariate and pairwise metrics.
+- [x] Implement first univariate numeric and categorical metrics.
+- [ ] Implement pairwise and joint metrics.
 - [ ] Implement relational and temporal metrics.
-- [ ] Add empirical privacy diagnostics.
-- [ ] Add statistical baseline synthesizer.
-- [ ] Add candidate tournament runner.
+- [ ] Complete empirical privacy diagnostics beyond exact-row matches.
+- [x] Add the independent empirical baseline synthesizer.
+- [x] Add an experimental scikit-learn Gaussian-mixture candidate.
+- [x] Add an owned experimental TensorFlow GAN candidate.
+- [x] Add the optional CTGAN provider candidate.
+- [x] Add the local experimental candidate tournament runner.
 - [ ] Add public dataset download manifests.
 - [ ] Add PR, nightly, and release benchmark jobs.
 - [ ] Calibrate and version acceptance thresholds from measured evidence.

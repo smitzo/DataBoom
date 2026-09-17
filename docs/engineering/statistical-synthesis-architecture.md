@@ -29,9 +29,10 @@ This is deliberately different from selecting the most sophisticated model by
 default. A more complex model can train longer, cost more, memorize records, or
 produce worse data on a small or simple dataset.
 
-## Current Baseline
+## Current Baseline And Experimental Candidate Path
 
-DataBoom does not currently train an ML model. Its present source-profile path
+DataBoom's production generation path remains deterministic and profile-guided.
+Its present source-profile path
 collects:
 
 - row count,
@@ -46,10 +47,33 @@ categorical values, numeric and datetime ranges, and relationship fanout. It
 also uses deterministic domain providers and row contexts to keep related
 identity and locality fields coherent.
 
-This is a useful deterministic and profile-guided baseline. It is not yet a
+This is a useful deterministic and profile-guided production baseline. It is not yet a
 joint-distribution learner. It does not currently learn mean, variance,
 quantiles, covariance, clusters, rare tails, multivariate outliers, seasonality,
 or cross-table conditional distributions.
+
+An experimental single-table source-trained path now exists under
+`databoom.synthesis`:
+
+- deterministic row-hash or group-preserving train/validation/holdout splitting,
+- explicit dataset contracts whose columns are restricted from training by default,
+- an owned independent empirical candidate,
+- an optional lazily imported scikit-learn Gaussian-mixture candidate with a
+  data-only JSON artifact,
+- an owned optional TensorFlow GAN with a Keras v3 generator artifact,
+- an optional lazily imported CTGAN provider with an explicit license boundary,
+- provider-neutral capability and model-lineage manifests,
+- structural, numeric, categorical, diversity, exact-copy, performance, and
+  reproducibility evidence,
+- a local candidate tournament that can recommend further controlled evaluation
+  but can never approve a production release.
+
+This is the first executable Q0-Q3 vertical slice, not completion of those
+quality stages. The Gaussian mixture and GANs can model joint structure, but
+profile v2, copulas, joint metrics, utility evaluation, privacy attacks,
+calibrated thresholds, signed lineage, and hardened worker isolation remain
+required. The implementation and paper-by-paper rationale are documented in
+[Neural Synthesis Research](neural-synthesis-research.md).
 
 ## Two Product Modes
 
@@ -233,18 +257,38 @@ Every model implementation should satisfy one provider-neutral interface:
 
 ```python
 class SynthesizerAdapter(Protocol):
-    name: str
-    capabilities: SynthesizerCapabilities
+    @property
+    def capabilities(self) -> SynthesizerCapabilities: ...
 
-    def fit(self, dataset: TrainingDataset, config: FitConfig) -> ModelArtifact: ...
-    def sample(self, model: ModelArtifact, request: SampleRequest) -> RowBatch: ...
-    def estimate_cost(self, profile: StatisticalProfile) -> CostEstimate: ...
+    def fit(
+        self,
+        training_csv: Path,
+        dataset: DatasetContract,
+        experiment_root: Path,
+        model_dir: Path,
+        config: FitConfig,
+    ) -> ModelManifest: ...
+
+    def sample(
+        self,
+        manifest: ModelManifest,
+        experiment_root: Path,
+        output_path: Path,
+        *,
+        row_count: int,
+        seed: str,
+    ) -> SampleArtifact: ...
 ```
 
 Capabilities must declare supported data shapes, conditional sampling,
 determinism, CPU/GPU needs, incremental fitting, and privacy mechanisms. The
 engine selects adapters by capability; API routes and product names must not
 contain model-specific branches.
+
+The current protocol implements the fit/sample subset needed for the first local
+tournament. Cost estimation, conditional sampling, incremental fitting, model
+registry lookup, and privacy-mechanism declarations are additive follow-up
+contracts.
 
 ## Model Portfolio
 
@@ -511,17 +555,23 @@ API startup.
 
 ## Implementation Sequence
 
+Current delivery is intentionally non-linear because the first vertical slice
+implemented enough Q0 measurement and Q3 adapter plumbing to evaluate one Q1
+baseline, one optional classical joint candidate, and two optional neural
+candidates. This does not skip the remaining gates; it exposes them as explicit
+incomplete evidence.
+
 ### Quality Stage 0: Contracts and Measurement
 
-- add `DataQualityIntent` and versioned profile contracts,
+- add `DataQualityIntent` and versioned profile contracts, `in progress`
 - collect profile v2 statistics,
-- build holdout splitting and dataset fingerprints,
-- add quality report schemas and metric registry,
+- build holdout splitting and dataset fingerprints, `row and grouped split implemented`
+- add quality report schemas and metric registry, `first report and metric set implemented`
 - keep output unchanged while measurement stabilizes.
 
 ### Quality Stage 1: Statistical Synthesis
 
-- implement empirical categorical and quantile sampling,
+- implement empirical categorical and quantile sampling, `bounded independent empirical baseline implemented; quantile model pending`
 - add Gaussian copula candidate,
 - add conditional missingness and datetime seasonality,
 - compare generated output with source and holdout profiles,
@@ -529,7 +579,7 @@ API startup.
 
 ### Quality Stage 2: Mixtures and Controlled Populations
 
-- add cluster and mixture candidates,
+- add cluster and mixture candidates, `experimental Gaussian-mixture candidate implemented; controlled segment intent pending`
 - add zero-inflated, sparse, and tail controls,
 - implement explicit international population mixtures,
 - add constraint DSL and conditional distribution controls,
@@ -537,11 +587,11 @@ API startup.
 
 ### Quality Stage 3: Adapter Tournament
 
-- implement model adapter and capability registry,
-- add conditional GAN/VAE candidates behind optional dependencies,
+- implement model adapter and capability registry, `first fit/sample registry implemented`
+- add conditional GAN/VAE candidates behind optional dependencies, `optional CTGAN provider and owned generic TensorFlow GAN implemented; conditional owned GAN and VAE pending`
 - add diffusion candidates as experimental adapters,
-- train candidates out of process,
-- promote models through benchmark and customer-specific gates.
+- train candidates out of process, `local ML worker CLI implemented; hardened worker pending`
+- promote models through benchmark and customer-specific gates, `experimental recommendation only`.
 
 ### Quality Stage 4: Native Complex Shapes
 
@@ -573,3 +623,8 @@ The architecture is informed by primary research rather than tied to a vendor:
 
 These are candidates and measurement tools, not proof that one implementation
 will be best on every DataBoom workload.
+
+See [Neural Synthesis Research](neural-synthesis-research.md) for the implemented
+Gaussian-mixture, TensorFlow GAN, and CTGAN boundaries, reversible transforms,
+provider licenses, artifact trust rules, current metrics, local commands, and
+remaining production gates.
