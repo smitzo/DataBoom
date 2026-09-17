@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  DataBoom is a Python 3.12, FastAPI, Typer, and PostgreSQL-first synthetic-data
+  platform. Table-Boom, Docu-Boom, and Graph-Boom are active. Statistical and
+  neural synthesis must remain provider-neutral, optional, reproducible, and
+  outside the FastAPI web process. Source-trained candidates require disjoint
+  train, validation, and holdout data and separate fidelity, privacy,
+  performance, and operational gates. Preserve the deterministic generator as
+  the always-available baseline. Use commit labels from AGENTS.md.
+
+rules:
+  proposal:
+    - State non-goals and any dependency or license boundary that affects product use.
+  design:
+    - Include trust boundaries, failure modes, artifact lineage, and worker isolation.
+    - Explain how the design keeps training dependencies out of FastAPI startup.
+  specs:
+    - Use testable MUST requirements and Given-When-Then scenarios.
+    - Never describe synthetic output as anonymous without a formal privacy mechanism.
+  tasks:
+    - Separate contracts, implementation, tests, documentation, and verification.
+    - Keep tasks small enough to map to reviewable backend commits.
