@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import json
+import math
 import sys
 from pathlib import Path
 
@@ -17,6 +19,7 @@ from databoom.synthesis import (
 from databoom.synthesis.adapters.base import SynthesizerUnavailableError
 from databoom.synthesis.adapters.ctgan import CtganAdapter
 from databoom.synthesis.adapters.empirical import IndependentEmpiricalAdapter
+from databoom.synthesis.adapters.gaussian_copula import GaussianCopulaAdapter
 from databoom.synthesis.adapters.sklearn_gmm import SklearnGaussianMixtureAdapter
 from databoom.synthesis.adapters.tensorflow_gan import TensorflowGanAdapter
 from databoom.synthesis.contracts import FitConfig
@@ -110,6 +113,187 @@ def test_training_rejects_restricted_columns(tmp_path: Path) -> None:
             tmp_path / "experiment" / "model",
             FitConfig(seed="0"),
         )
+
+
+def test_gaussian_copula_is_bounded_deterministic_and_restores_nullable_rows(
+    tmp_path: Path,
+) -> None:
+    training = tmp_path / "training.csv"
+    _write_training(training)
+    dataset = _dataset_contract()
+    adapter = GaussianCopulaAdapter()
+    experiment = tmp_path / "experiment"
+
+    manifest = adapter.fit(
+        training,
+        dataset,
+        experiment,
+        experiment / "model",
+        FitConfig(
+            seed="copula-fit",
+            hyperparameters={"sample_size": 25, "regularization": 0.05},
+        ),
+    )
+    first = adapter.sample(
+        manifest,
+        experiment,
+        experiment / "first.csv",
+        row_count=200,
+        seed="copula-sample",
+    )
+    second = adapter.sample(
+        manifest,
+        experiment,
+        experiment / "second.csv",
+        row_count=200,
+        seed="copula-sample",
+    )
+
+    assert first.sha256 == second.sha256
+    assert manifest.artifact_format == "json"
+    assert manifest.dependency_license == "PSF-2.0"
+    assert manifest.transform_metadata["age"]["missingness_index"] == 1
+    assert any("nominal categories" in warning for warning in manifest.warnings)
+    payload = json.loads((experiment / manifest.artifact_path).read_text(encoding="utf-8"))
+    assert payload["training_row_count"] == 100
+    assert payload["retained_row_count"] == 25
+    assert all(len(settings["values"]) <= 25 for settings in payload["columns"].values())
+    with (experiment / "first.csv").open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 200
+    assert tuple(rows[0]) == dataset.column_names
+    assert all(row["age"] == "" or math.isfinite(float(row["age"])) for row in rows)
+    assert {row["segment"] for row in rows} <= {"standard", "premium", "business"}
+
+
+def test_gaussian_copula_preserves_strong_numeric_rank_dependence(tmp_path: Path) -> None:
+    training = tmp_path / "correlated.csv"
+    with training.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=("x", "y"), lineterminator="\n")
+        writer.writeheader()
+        for index in range(500):
+            writer.writerow({"x": index, "y": 3 * index + index % 5})
+    dataset = DatasetContract(
+        name="correlated",
+        columns=(
+            ColumnContract(
+                name="x",
+                kind=ColumnKind.CONTINUOUS,
+                sensitivity=DataSensitivity.NON_SENSITIVE,
+            ),
+            ColumnContract(
+                name="y",
+                kind=ColumnKind.CONTINUOUS,
+                sensitivity=DataSensitivity.NON_SENSITIVE,
+            ),
+        ),
+    )
+    experiment = tmp_path / "experiment"
+    adapter = GaussianCopulaAdapter()
+    manifest = adapter.fit(
+        training,
+        dataset,
+        experiment,
+        experiment / "model",
+        FitConfig(
+            seed="dependence-fit",
+            hyperparameters={"sample_size": 500, "regularization": 0.02},
+        ),
+    )
+    adapter.sample(
+        manifest,
+        experiment,
+        experiment / "sample.csv",
+        row_count=1_000,
+        seed="dependence-sample",
+    )
+    with (experiment / "sample.csv").open("r", encoding="utf-8", newline="") as handle:
+        pairs = [(float(row["x"]), float(row["y"])) for row in csv.DictReader(handle)]
+
+    assert _pearson(pairs) > 0.9
+
+
+def test_gaussian_copula_rejects_tampering_escape_and_invalid_matrix(tmp_path: Path) -> None:
+    training = tmp_path / "training.csv"
+    _write_training(training)
+    dataset = _dataset_contract()
+    adapter = GaussianCopulaAdapter()
+    experiment = tmp_path / "experiment"
+    manifest = adapter.fit(
+        training,
+        dataset,
+        experiment,
+        experiment / "model",
+        FitConfig(seed="copula-fit", hyperparameters={"sample_size": 25}),
+    )
+    model_path = experiment / manifest.artifact_path
+    original = model_path.read_text(encoding="utf-8")
+    model_path.write_text("not JSON", encoding="utf-8")
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        adapter.sample(
+            manifest,
+            experiment,
+            experiment / "tampered.csv",
+            row_count=5,
+            seed="sample",
+        )
+
+    escaped = manifest.model_copy(
+        update={"artifact_path": "../training.csv", "artifact_sha256": sha256_file(training)}
+    )
+    with pytest.raises(ValueError, match="escapes the experiment root"):
+        adapter.sample(
+            escaped,
+            experiment,
+            experiment / "escaped.csv",
+            row_count=5,
+            seed="sample",
+        )
+
+    model_path.write_text(original, encoding="utf-8")
+    payload = json.loads(original)
+    payload["cholesky"] = [[1.0]]
+    model_path.write_text(json.dumps(payload), encoding="utf-8")
+    invalid = manifest.model_copy(update={"artifact_sha256": sha256_file(model_path)})
+    with pytest.raises(ValueError, match="wrong dimensions"):
+        adapter.sample(
+            invalid,
+            experiment,
+            experiment / "invalid.csv",
+            row_count=5,
+            seed="sample",
+        )
+
+
+@pytest.mark.parametrize(
+    ("hyperparameters", "message"),
+    (
+        ({"sample_size": True}, "sample_size must be an integer"),
+        ({"sample_size": 9}, "sample_size must be between"),
+        ({"regularization": float("nan")}, "finite number"),
+        ({"regularization": 0.0}, "greater than 0"),
+        ({"unknown": 1}, "unsupported Gaussian-copula"),
+    ),
+)
+def test_gaussian_copula_rejects_invalid_hyperparameters_before_writing(
+    tmp_path: Path,
+    hyperparameters: dict[str, object],
+    message: str,
+) -> None:
+    training = tmp_path / "training.csv"
+    _write_training(training)
+    experiment = tmp_path / "experiment"
+
+    with pytest.raises(ValueError, match=message):
+        GaussianCopulaAdapter().fit(
+            training,
+            _dataset_contract(),
+            experiment,
+            experiment / "model",
+            FitConfig(seed="fit", hyperparameters=hyperparameters),
+        )
+
+    assert not experiment.exists()
 
 
 def test_ctgan_is_lazy_and_missing_dependency_does_not_break_api(
@@ -355,3 +539,14 @@ def _write_training(path: Path) -> None:
                     "segment": ("standard", "premium", "business")[index % 3],
                 }
             )
+
+
+def _pearson(pairs: list[tuple[float, float]]) -> float:
+    mean_x = math.fsum(left for left, _ in pairs) / len(pairs)
+    mean_y = math.fsum(right for _, right in pairs) / len(pairs)
+    numerator = math.fsum((left - mean_x) * (right - mean_y) for left, right in pairs)
+    denominator = math.sqrt(
+        math.fsum((left - mean_x) ** 2 for left, _ in pairs)
+        * math.fsum((right - mean_y) ** 2 for _, right in pairs)
+    )
+    return numerator / denominator

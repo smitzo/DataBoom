@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from databoom.synthesis.cli import app
@@ -21,9 +22,18 @@ def test_capabilities_command_works_without_neural_extra() -> None:
 
     assert result.exit_code == 0
     assert '"name": "empirical-independent"' in result.stdout
+    assert '"name": "gaussian-copula"' in result.stdout
     assert '"name": "ctgan"' in result.stdout
     assert '"name": "sklearn-gaussian-mixture"' in result.stdout
     assert '"name": "tensorflow-gan"' in result.stdout
+
+
+def test_tournament_help_exposes_bounded_copula_options() -> None:
+    command = get_command(app).commands["tournament"]
+    options = {option for parameter in command.params for option in parameter.opts}
+
+    assert "--copula-sample-size" in options
+    assert "--copula-regularization" in options
 
 
 def test_split_command_writes_manifest(tmp_path: Path) -> None:

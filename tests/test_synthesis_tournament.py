@@ -89,6 +89,62 @@ def test_empirical_tournament_writes_evidence_but_never_approves_release(
     assert (experiment / report.candidates[0].synthetic_profile_manifest_path).is_file()
 
 
+def test_always_available_baselines_share_the_tournament_contract(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    _write_source(source)
+    split_csv_dataset(
+        SplitRequest(source_path=source, output_dir=tmp_path / "split", seed="split-seed")
+    )
+    dataset = DatasetContract(
+        name="base-candidates",
+        columns=(
+            ColumnContract(
+                name="value",
+                kind=ColumnKind.CONTINUOUS,
+                sensitivity=DataSensitivity.NON_SENSITIVE,
+            ),
+            ColumnContract(
+                name="segment",
+                kind=ColumnKind.DISCRETE,
+                sensitivity=DataSensitivity.NON_SENSITIVE,
+            ),
+        ),
+    )
+    experiment = tmp_path / "experiment"
+    report = run_tournament(
+        TournamentRequest(
+            split_manifest_path=tmp_path / "split" / "split-manifest.json",
+            dataset_contract=dataset,
+            experiment_root=experiment,
+            candidates=(
+                CandidateConfig(adapter_name="empirical-independent"),
+                CandidateConfig(
+                    adapter_name="gaussian-copula",
+                    hyperparameters={"sample_size": 100, "regularization": 0.05},
+                ),
+            ),
+            sample_row_count=50,
+            fit_seed="fit",
+            evaluation_seed="evaluation",
+            policy=EvaluationPolicy(
+                maximum_numeric_ks=1.0,
+                maximum_normalized_mean_error=100.0,
+                maximum_categorical_tv=1.0,
+                minimum_synthetic_uniqueness=0.0,
+                maximum_exact_training_match_rate=1.0,
+            ),
+        )
+    )
+
+    assert {candidate.adapter_name for candidate in report.candidates} == {
+        "empirical-independent",
+        "gaussian-copula",
+    }
+    assert all(candidate.status == CandidateStatus.COMPLETED for candidate in report.candidates)
+    assert all(candidate.synthetic_profile_manifest_path for candidate in report.candidates)
+    assert report.release_approved is False
+
+
 def test_exact_copy_privacy_gate_overrides_fidelity(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     with source.open("w", encoding="utf-8", newline="") as handle:
@@ -270,6 +326,10 @@ def test_optional_candidates_share_one_tournament_contract(tmp_path: Path) -> No
             candidates=(
                 CandidateConfig(adapter_name="empirical-independent"),
                 CandidateConfig(
+                    adapter_name="gaussian-copula",
+                    hyperparameters={"sample_size": 100},
+                ),
+                CandidateConfig(
                     adapter_name="sklearn-gaussian-mixture",
                     hyperparameters={"n_components": 2},
                 ),
@@ -302,6 +362,7 @@ def test_optional_candidates_share_one_tournament_contract(tmp_path: Path) -> No
 
     assert {candidate.adapter_name for candidate in report.candidates} == {
         "empirical-independent",
+        "gaussian-copula",
         "sklearn-gaussian-mixture",
         "tensorflow-gan",
         "ctgan",
