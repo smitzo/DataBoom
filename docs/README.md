@@ -24,6 +24,8 @@ each other.
   [Statistical and ML Synthesis Architecture](engineering/statistical-synthesis-architecture.md).
 - Quality metrics, datasets, and release gates:
   [Quality Evaluation and Benchmarks](engineering/quality-evaluation-and-benchmarks.md).
+- Profile v2 quality intent, bounded sampling, dependency summaries, and
+  experiment lineage are owned jointly by those two engineering documents.
 - GAN research, the current scikit-learn, TensorFlow, and CTGAN provider
   boundaries, dependency licensing, and experimental readiness:
   [Neural Synthesis Research](engineering/neural-synthesis-research.md).

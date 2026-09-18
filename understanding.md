@@ -2881,3 +2881,40 @@ and stores only the generator. It is not presented as universally better than
 CTGAN: the generic GAN lacks CTGAN's imbalance-aware conditional training, and
 its determinism is best-effort across devices. Both candidates must therefore
 compete against the empirical baseline on the same holdout and hard gates.
+
+## Decision: combine exact streaming evidence with bounded Profile v2 samples
+
+### Question
+
+Why does Profile v2 not keep every source row or every categorical frequency in
+memory?
+
+### Answer
+
+Profile v2 has two evidence tiers. The worker streams the full CSV to retain the
+exact file checksum, row count, and per-column null counts. It retains only a
+configured number of rows selected by stable SHA-256 priorities for quantiles,
+histograms, skew, Tukey-tail rates, categorical frequencies, missingness
+patterns, and pairwise dependency summaries.
+
+This keeps memory proportional to the reviewed sample bound instead of source
+size. The profile records source and sampled row counts separately, so a sampled
+category count cannot be mistaken for an exact full-table count. The same source,
+contract, intent, seed, and sampling algorithm produce the same profile identity
+and evidence apart from creation time and output path.
+
+### Question
+
+How does Profile v2 change tournament promotion?
+
+### Answer
+
+Each tournament now writes shared training and untouched-holdout profiles once,
+then a separate synthetic profile for every completed candidate. Paths and
+checksums become reusable lineage alongside the existing direct metrics.
+
+The new profiles do not automatically become release gates. Their pairwise and
+tail summaries still need controlled-fixture and public-dataset calibration,
+and privacy and downstream utility remain separate evidence dimensions. Profile
+artifacts are source-derived and must be protected accordingly; statistical
+similarity is not anonymity.

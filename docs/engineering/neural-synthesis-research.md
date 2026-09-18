@@ -326,6 +326,21 @@ every training-eligible column must be explicitly classified:
 }
 ```
 
+Create standalone, checksummed Profile v2 evidence before training:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli profile source.csv \
+  dataset-contract.json \
+  --output-dir artifacts/ml/source-profile \
+  --sample-row-limit 10000 \
+  --seed profile-1
+```
+
+The profiler keeps exact source fingerprints, row counts, and null counts while
+deriving heavier distribution and dependency summaries from a deterministic,
+bounded hash-priority sample. Tournament runs create equivalent training,
+holdout, and per-candidate synthetic profile artifacts automatically.
+
 Run the owned baseline:
 
 ```bash
@@ -408,21 +423,19 @@ only through evidence.
 
 ## Next Research And Engineering Gates
 
-1. Complete profile v2 with quantiles, histograms, skew, tails, missingness, and
-   dependency summaries.
-2. Add a Gaussian copula baseline so every neural candidate competes with both
+1. Add a Gaussian copula baseline so every neural candidate competes with both
    an inspectable dependence model and the current Gaussian mixture.
-3. Add alpha-precision, beta-recall, authenticity, nearest-neighbor, and
+2. Add alpha-precision, beta-recall, authenticity, nearest-neighbor, and
    train-versus-holdout distance diagnostics.
-4. Add downstream train-synthetic/test-real utility with identical preprocessing
+3. Add downstream train-synthetic/test-real utility with identical preprocessing
    and tuning budgets.
-5. Add peak memory, device, package-image, failure, retry, and cancellation
+4. Add peak memory, device, package-image, failure, retry, and cancellation
    telemetry.
-6. Calibrate thresholds with controlled fixtures, UCI Bank Marketing, and UCI
+5. Calibrate thresholds with controlled fixtures, UCI Bank Marketing, and UCI
    Covertype across repeated seeds.
-7. Resolve provider licensing and decide whether to ship CTGAN, isolate it as an
+6. Resolve provider licensing and decide whether to ship CTGAN, isolate it as an
    external provider, or build an internally owned implementation.
-8. Move fitting and deserialization into a hardened worker before any public API
+7. Move fitting and deserialization into a hardened worker before any public API
    orchestrates source-trained runs.
 
 ## Primary References

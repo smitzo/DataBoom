@@ -8,9 +8,11 @@ This document explains how the DataBoom backend processes a request from input t
 flowchart TD
     CLI[databoom.cli] --> Ingest[databoom.ingest]
     MLCLI[databoom.synthesis.cli] --> Split[databoom.synthesis.splitting]
+    MLCLI --> StatsProfile[databoom.synthesis.profiling]
     MLCLI --> Tournament[databoom.synthesis.tournament]
     Tournament --> Adapters[databoom.synthesis.adapters]
     Tournament --> Quality[databoom.synthesis.evaluation]
+    Tournament --> StatsProfile
     API[databoom.api.routes] --> Runs[databoom.api.runs]
     API --> Async[databoom.api.async_jobs]
     API --> State[databoom.api.state]
@@ -68,6 +70,8 @@ flowchart TD
 | `Planner` | `databoom.planning.planner` | Replaceable interface implemented by deterministic and structured-output planners. |
 | `SourceProfile` | `databoom.profiling.postgres` | Cached source statistics used to shape future generation. |
 | `DatasetContract` | `databoom.synthesis.contracts` | Reviewed single-table feature kinds, nullability, order, and conservative sensitivity classification. |
+| `DataQualityIntent` | `databoom.synthesis.contracts` | Reviewed evidence dimensions, protected/weighted columns, and bounded Profile v2 configuration. |
+| `StatisticalProfile` / `ProfileManifest` | `databoom.synthesis.contracts` | Versioned distribution, missingness, dependency, source-fingerprint, path, and checksum evidence. |
 | `SplitManifest` | `databoom.synthesis.contracts` | Source and partition fingerprints, ratios, grouping, row counts, and artifact paths. |
 | `SynthesizerCapabilities` | `databoom.synthesis.contracts` | Provider availability, shape, determinism, compute, complexity, dependency, and license declaration. |
 | `ModelManifest` | `databoom.synthesis.contracts` | Checksummed source/model lineage, hyperparameters, transformations, dependency versions, and timings. |
@@ -302,6 +306,7 @@ sequenceDiagram
     participant Operator as Local operator
     participant Split as synthesis.splitting
     participant Worker as synthesis.cli/tournament
+    participant Profile as synthesis.profiling
     participant Registry as adapters.AdapterRegistry
     participant Adapter as Empirical, GMM, TensorFlow, or CTGAN adapter
     participant Eval as synthesis.evaluation
@@ -312,11 +317,15 @@ sequenceDiagram
     Split->>Disk: split-manifest.json with checksums
     Operator->>Worker: split manifest, DatasetContract, candidates, seeds
     Worker->>Split: verify partition paths and SHA-256 checksums
+    Worker->>Profile: profile training and untouched holdout partitions
+    Profile->>Disk: shared Profile v2 documents and integrity manifests
     Worker->>Registry: resolve capabilities without importing ML runtime
     Worker->>Adapter: fit training partition
     Adapter->>Disk: model artifact and model-manifest.json
     Worker->>Adapter: sample fixed row count and seed twice
     Adapter->>Disk: sample.csv and repeat sample
+    Worker->>Profile: profile candidate sample with the same quality intent
+    Profile->>Disk: candidate synthetic Profile v2 and integrity manifest
     Worker->>Eval: training hashes, holdout, sample, policy
     Eval->>Disk: quality-report.json
     Worker->>Disk: tournament-report.json

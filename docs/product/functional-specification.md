@@ -197,12 +197,15 @@ through measured fidelity, coverage, utility, privacy, performance, and
 reproducibility gates. No single model is assumed to be best for every dataset.
 
 The first experimental implementation provides deterministic dataset splitting,
-an independent empirical baseline, an optional scikit-learn Gaussian-mixture
-baseline, an owned optional TensorFlow GAN, an optional CTGAN provider,
-machine-readable quality reports, and candidate-failure isolation. The mixture
-and neural candidates provide joint model mechanisms, but the current evaluator
-does not yet provide sufficient joint, relational, temporal, graph-native,
-utility, or formal privacy evidence for production claims.
+versioned quality intent and bounded Profile v2 artifacts, an independent
+empirical baseline, an optional scikit-learn Gaussian-mixture baseline, an owned
+optional TensorFlow GAN, an optional CTGAN provider, machine-readable quality
+reports, and candidate-failure isolation. Every tournament retains shared
+training/holdout profiles and one synthetic profile per completed candidate. The
+mixture and neural candidates provide joint model mechanisms, but current profile
+summaries are not calibrated promotion gates and the evaluator does not yet
+provide sufficient relational, temporal, graph-native, utility, or formal
+privacy evidence for production claims.
 
 For international populations, country or locale mixtures must be explicit or
 learned from an approved profile. Locale may control coherent names, addresses,

@@ -58,6 +58,23 @@ Create a reviewed `DatasetContract` JSON before training. Columns default to
 marked `non_sensitive`. This is intentionally conservative while the complete
 privacy program is unfinished.
 
+Create a standalone Profile v2 artifact when inspecting a reviewed source before
+training:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli profile \
+  source.csv \
+  dataset-contract.json \
+  --output-dir artifacts/ml/source-profile \
+  --sample-row-limit 10000 \
+  --seed profile-1
+```
+
+`profile-v2.json` contains exact source fingerprints, row counts, and null counts
+plus distribution and dependency evidence from a deterministic bounded sample.
+`profile-manifest.json` records its relative path and checksum. Re-running without
+`--overwrite` fails instead of silently replacing evidence.
+
 Run the owned empirical baseline:
 
 ```bash
@@ -112,9 +129,10 @@ Run any installed candidates with the same experiment settings:
   --sample-rows 10000
 ```
 
-The worker writes per-candidate model manifests, samples, repeat samples, quality
-reports, and `tournament-report.json`. Every current decision is experimental;
-the report keeps `release_approved=false` even when implemented gates pass.
+The worker writes shared training and holdout Profile v2 artifacts, per-candidate
+model manifests, samples, repeat samples, synthetic profiles, quality reports,
+and `tournament-report.json`. Every current decision is experimental; the report
+keeps `release_approved=false` even when implemented gates pass.
 
 Security rules:
 

@@ -12,6 +12,9 @@ small, inspectable subset of this policy:
 
 - deterministic row-hash and subject/group-preserving train, validation, and
   holdout CSV artifacts with SHA-256 fingerprints,
+- versioned quality intent and Profile v2 evidence with exact row/null counts,
+  deterministic bounded samples, quantiles, histograms, skew, Tukey-tail rates,
+  categorical coverage, missingness patterns, and pairwise dependencies,
 - an owned independent empirical baseline, optional scikit-learn
   Gaussian-mixture baseline, owned optional TensorFlow GAN, and optional CTGAN
   provider,
@@ -23,12 +26,15 @@ small, inspectable subset of this policy:
 - fit/sample wall time and repeat-sample checksum evidence,
 - independent structural, fidelity, diversity, exact-copy privacy, and
   reproducibility gates,
+- shared training/holdout Profile v2 lineage plus a synthetic profile for each
+  completed candidate,
 - a permanent `release_approved=false` decision while production evidence is incomplete.
 
-The implementation does not yet cover quantiles/tails, pairwise or joint
-dependencies, downstream utility, near-neighbor privacy, membership or attribute
-inference, formal DP, peak resource use, or calibrated release thresholds. The
-full research mapping and limitations are in
+The implementation does not yet use Profile v2 quantiles, tails, or dependencies
+as calibrated promotion gates. Downstream utility, near-neighbor privacy,
+membership or attribute inference, formal DP, peak resource use, and calibrated
+release thresholds also remain incomplete. The full research mapping and
+limitations are in
 [Neural Synthesis Research](neural-synthesis-research.md).
 
 ## Quality Is Multidimensional
@@ -528,13 +534,14 @@ It should not promise:
 
 ## Delivery Checklist
 
-- [ ] Add versioned profile v2 models.
+- [x] Add versioned profile v2 models.
 - [x] Add deterministic row and grouped split utilities with fingerprints.
 - [ ] Add chronological split utilities.
 - [x] Add the first metric and quality report contract.
-- [ ] Add controlled statistical fixtures.
+- [x] Add controlled statistical fixtures.
 - [x] Implement first univariate numeric and categorical metrics.
 - [ ] Implement pairwise and joint metrics.
+- [x] Implement first pairwise Profile v2 dependency summaries.
 - [ ] Implement relational and temporal metrics.
 - [ ] Complete empirical privacy diagnostics beyond exact-row matches.
 - [x] Add the independent empirical baseline synthesizer.

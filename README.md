@@ -39,6 +39,10 @@ The current implementation includes Table-Boom relational generation, Docu-Boom 
 - DataBoom workspace with product navigation, live top-20 relational table previews, NoSQL document previews, agent run steps, subscriptions, runs, and artifact downloads.
 - Row-level async progress with generated-row counts, current resource, rows/sec, remaining time, and operation timings.
 - Live PostgreSQL source testing, schema refresh, DDL snapshot storage, and source profiling.
+- Versioned statistical Profile v2 artifacts with deterministic bounded sampling,
+  quantiles, histograms, tails, missingness, dependencies, and checksums.
+- Experimental synthesis tournaments retain shared training/holdout profiles and
+  a separate synthetic profile for every completed candidate.
 - Refreshed relational sources retain schema names, column details, primary keys, foreign keys, unique constraints, and refresh timestamps.
 - Cached source profiles can drive relationship fanout for source-shaped Table-Boom output.
 - 100k-record Phase 1 benchmark.
@@ -370,9 +374,10 @@ docker compose --profile tools run --rm app
 - `src/databoom/generation`: plans, seeds, domain profiles, row generation, and values.
 - `src/databoom/graph`: Graph-Boom node/edge contracts, deterministic graph generator, graph artifacts, and graph validation.
 - `src/databoom/planning`: planner contracts, deterministic and hosted adapters, versioned prompt packs, cache telemetry, and proposal validation.
-- `src/databoom/synthesis`: source-trained split contracts, provider-neutral
-  adapters, empirical, scikit-learn mixture, owned TensorFlow GAN, and CTGAN
-  candidates, quality evaluation, and the isolated ML worker CLI.
+- `src/databoom/synthesis`: source-trained split and Profile v2 contracts,
+  bounded statistical profiling, provider-neutral adapters, empirical,
+  scikit-learn mixture, owned TensorFlow GAN, and CTGAN candidates, quality
+  evaluation, and the isolated ML worker CLI.
 - `src/databoom/export`: local artifact writers.
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.

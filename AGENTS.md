@@ -12,8 +12,10 @@ Phase 3 is complete. Phase 4 is active: deterministic/grouped holdout splitting,
 provider-neutral synthesis contracts, an empirical baseline, an optional
 scikit-learn mixture baseline, an owned optional TensorFlow GAN, an optional
 CTGAN provider, and an experimental candidate tournament are implemented.
-Profile v2, copula baselines, privacy attacks, calibrated promotion gates,
-Masker-Boom policies, and worker hardening remain active work.
+Profile v2 quality-intent contracts, bounded deterministic CSV summaries, and
+tournament profile lineage are implemented. Copula baselines, privacy attacks,
+calibrated promotion gates, Masker-Boom policies, and worker hardening remain
+active work.
 
 Before implementation, read:
 

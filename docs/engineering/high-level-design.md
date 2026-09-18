@@ -132,7 +132,7 @@ The engine is extendable because each product kind owns its input model and gene
 ### Statistical Synthesis Extension Boundary
 
 The current deterministic generator remains the default execution adapter.
-Source-trained synthesis will extend the pipeline through a provider-neutral
+Source-trained synthesis extends the pipeline through a provider-neutral
 `SynthesizerAdapter`, a versioned statistical profile, and a quality gate. It
 must not be embedded directly in API routes or product-name branches.
 
@@ -153,7 +153,9 @@ flowchart LR
 
 Scenario-faithful mode does not require source rows or model fitting.
 Source-faithful mode requires train, validation, and untouched holdout data plus
-complete model and report lineage. The full design is maintained in
+complete model and report lineage. The portable Profile v2 baseline keeps exact
+source, row, and null evidence while bounding distribution/dependency memory
+through deterministic hash-priority sampling. The full design is maintained in
 [Statistical and ML Synthesis Architecture](statistical-synthesis-architecture.md),
 with gates and datasets in
 [Quality Evaluation and Benchmarks](quality-evaluation-and-benchmarks.md).

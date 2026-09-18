@@ -57,6 +57,8 @@ An experimental single-table source-trained path now exists under
 
 - deterministic row-hash or group-preserving train/validation/holdout splitting,
 - explicit dataset contracts whose columns are restricted from training by default,
+- versioned `DataQualityIntent` and Profile v2 artifacts with exact source and
+  missingness evidence plus bounded deterministic distribution summaries,
 - an owned independent empirical candidate,
 - an optional lazily imported scikit-learn Gaussian-mixture candidate with a
   data-only JSON artifact,
@@ -66,11 +68,12 @@ An experimental single-table source-trained path now exists under
 - structural, numeric, categorical, diversity, exact-copy, performance, and
   reproducibility evidence,
 - a local candidate tournament that can recommend further controlled evaluation
-  but can never approve a production release.
+  but can never approve a production release, with shared training/holdout
+  profiles and a separate synthetic profile for each completed candidate.
 
 This is the first executable Q0-Q3 vertical slice, not completion of those
 quality stages. The Gaussian mixture and GANs can model joint structure, but
-profile v2, copulas, joint metrics, utility evaluation, privacy attacks,
+copulas, calibrated joint metrics, utility evaluation, privacy attacks,
 calibrated thresholds, signed lineage, and hardened worker isolation remain
 required. The implementation and paper-by-paper rationale are documented in
 [Neural Synthesis Research](neural-synthesis-research.md).
@@ -563,8 +566,9 @@ incomplete evidence.
 
 ### Quality Stage 0: Contracts and Measurement
 
-- add `DataQualityIntent` and versioned profile contracts, `in progress`
-- collect profile v2 statistics,
+- add `DataQualityIntent` and versioned profile contracts, `implemented`
+- collect bounded Profile v2 numeric, categorical, tail, missingness, and
+  dependency statistics, `portable CSV baseline implemented`
 - build holdout splitting and dataset fingerprints, `row and grouped split implemented`
 - add quality report schemas and metric registry, `first report and metric set implemented`
 - keep output unchanged while measurement stabilizes.
