@@ -76,8 +76,17 @@ def test_empirical_tournament_writes_evidence_but_never_approves_release(
     assert report.candidates[0].status == CandidateStatus.COMPLETED
     assert report.candidates[0].quality_report is not None
     assert report.candidates[0].quality_report.evidence_complete is False
+    assert report.quality_intent_id == "default-tabular-v1"
+    assert report.training_profile_manifest_path == "profiles/training/profile-manifest.json"
+    assert report.holdout_profile_manifest_path == "profiles/holdout/profile-manifest.json"
+    assert report.candidates[0].synthetic_profile_manifest_path == (
+        "empirical-independent/synthetic-profile/profile-manifest.json"
+    )
     assert (experiment / "tournament-report.json").is_file()
     assert (experiment / "empirical-independent" / "quality-report.json").is_file()
+    assert (experiment / report.training_profile_manifest_path).is_file()
+    assert (experiment / report.holdout_profile_manifest_path).is_file()
+    assert (experiment / report.candidates[0].synthetic_profile_manifest_path).is_file()
 
 
 def test_exact_copy_privacy_gate_overrides_fidelity(tmp_path: Path) -> None:
