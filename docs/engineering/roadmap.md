@@ -49,7 +49,7 @@ Canonical sources:
 | Quality stage | Product phase | Outcome | Status |
 | --- | --- | --- | --- |
 | Q0: contracts and measurement | Phase 4 | Profile v2, quality intent, holdout splits, metric registry, and quality report schema. | Core vertical slice landed: bounded Profile v2, grouped splits, and first report/metrics; calibration remains |
-| Q1: statistical synthesis | Phase 4 | Empirical and copula baselines, conditional missingness, seasonality, and source/holdout comparison. | In progress: independent empirical baseline landed; copula remains |
+| Q1: statistical synthesis | Phase 4 | Empirical and copula baselines, conditional missingness, seasonality, and source/holdout comparison. | In progress: independent empirical and owned Gaussian-copula baselines landed; conditional models and calibration remain |
 | Q2: controlled populations | Phase 4-5 | Mixtures, clusters, sparsity, tails, international populations, and constraint DSL. | Experimental Gaussian-mixture candidate landed; controlled intent and coverage remain |
 | Q3: model tournament | Phase 5 | Provider-neutral adapters, optional neural candidates, cost estimates, and measured promotion. | Experimental slice: adapter registry, owned TensorFlow GAN, optional CTGAN, and local tournament landed |
 | Q4: native complex shapes | Phase 5 | Subject-first relational, temporal, and graph-native candidates and metrics. | Planned |
@@ -342,12 +342,12 @@ privacy and masking service layer for sensitive environments.
 
 Current status: in progress. The backend-only statistical/neural vertical slice
 provides group-preserving split artifacts, model-lineage contracts, versioned
-quality intent and bounded Profile v2 evidence, an owned empirical baseline, an
-optional scikit-learn Gaussian-mixture baseline, an owned optional TensorFlow
-GAN, an optional CTGAN adapter, a local worker CLI, and an experimental quality
-tournament. It does not complete copula/conditional statistical baselines,
-privacy attacks, calibrated release policy, Masker-Boom, or production worker
-hardening.
+quality intent and bounded Profile v2 evidence, owned empirical and
+Gaussian-copula baselines, an optional scikit-learn Gaussian-mixture baseline, an
+owned optional TensorFlow GAN, an optional CTGAN adapter, a local worker CLI, and
+an experimental quality tournament. It does not complete conditional
+statistical baselines, privacy attacks, calibrated release policy, Masker-Boom,
+or production worker hardening.
 
 Technical objectives:
 
@@ -367,20 +367,19 @@ Technical objectives:
 
 Recommended commits:
 
-1. `backend: add gaussian copula synthesizer adapter`
-2. `backend: add profile-based joint quality metrics`
-3. `security: add empirical privacy diagnostics`
-4. `test: calibrate quality gates on controlled fixtures`
-5. `backend: add masker-boom policy model`
-6. `backend: detect likely sensitive fields`
-7. `backend: add stable tokenization policy`
-8. `backend: add redaction and synthetic replacement policies`
-9. `backend: preserve masked relationship integrity`
-10. `backend: validate privacy policy compliance`
-11. `security: remove raw values from profiler logs`
-12. `api: expose privacy policy configuration`
-13. `test: cover policy engine edge cases`
-14. `docs: document masker-boom policy format`
+1. `backend: add profile-based joint quality metrics`
+2. `security: add empirical privacy diagnostics`
+3. `test: calibrate quality gates on controlled fixtures`
+4. `backend: add masker-boom policy model`
+5. `backend: detect likely sensitive fields`
+6. `backend: add stable tokenization policy`
+7. `backend: add redaction and synthetic replacement policies`
+8. `backend: preserve masked relationship integrity`
+9. `backend: validate privacy policy compliance`
+10. `security: remove raw values from profiler logs`
+11. `api: expose privacy policy configuration`
+12. `test: cover policy engine edge cases`
+13. `docs: document masker-boom policy format`
 
 ## Phase 5: Production Release and Extensibility
 

@@ -2598,10 +2598,10 @@ trained statistical model?
 
 The production generator is still deterministic and profile-guided, but Phase 4
 now also includes an isolated experimental source-trained path. That path can fit
-an owned independent empirical baseline and, when explicitly installed, a
-scikit-learn Gaussian mixture, an owned TensorFlow GAN, or a CTGAN provider. It
-compares candidates through a provider-neutral adapter and holdout quality
-report. It does not make the generated output production-approved.
+owned independent empirical and Gaussian-copula baselines and, when explicitly
+installed, a scikit-learn Gaussian mixture, an owned TensorFlow GAN, or a CTGAN
+provider. It compares candidates through a provider-neutral adapter and holdout
+quality report. It does not make the generated output production-approved.
 
 The main engine can measure row counts, null rates, distinct counts, ranges,
 frequent values, and relationship fanout. It then uses those hints during seeded
@@ -2613,14 +2613,13 @@ not describe where observations are concentrated. Frequent values do not
 describe every category. Independent column hints do not preserve a dependency
 such as income changing with occupation, region, and age.
 
-The experimental worker adds only the minimum comparison evidence needed for a
-safe vertical slice: deterministic partitions, basic univariate metrics,
-diversity, exact-copy diagnostics, runtimes, reproducibility, and checksummed
-lineage. The next backend steps still include a versioned profile that represents
-mean, variance, quantiles, histograms, skew, tails, missingness, pairwise
-dependencies, clusters, and cross-table statistics. Without those measurements,
-the project cannot prove that a more complex model improved the important joint
-and shape-specific behavior.
+The experimental worker now combines direct comparison metrics with Profile v2:
+exact source and null counts plus bounded deterministic mean, variance,
+quantiles, histograms, skew, tails, missingness, and pairwise dependencies.
+Clusters, cross-table statistics, calibrated joint promotion gates, downstream
+utility, and stronger privacy evidence remain incomplete. Without those
+measurements and calibration, the project cannot prove that a more complex model
+improved the important joint and shape-specific behavior.
 
 ### Question
 
@@ -2778,10 +2777,10 @@ the API?
 
 The first source-trained slice lives in `databoom.synthesis`. It adds strict
 dataset, split, lineage, policy, metric, and tournament contracts; deterministic
-row-hash or group-preserving CSV partitioning; an owned independent empirical
-baseline; an optional scikit-learn Gaussian-mixture baseline; an owned optional
-TensorFlow GAN; an optional CTGAN provider; and machine-readable evaluation
-artifacts.
+row-hash or group-preserving CSV partitioning; owned independent empirical and
+bounded Gaussian-copula baselines; an optional scikit-learn Gaussian-mixture
+baseline; an owned optional TensorFlow GAN; an optional CTGAN provider; and
+machine-readable evaluation artifacts.
 
 The FastAPI process imports only lightweight contracts. Pandas, NumPy, torch,
 scikit-learn, TensorFlow, and CTGAN are imported lazily inside optional adapter
@@ -2850,12 +2849,12 @@ reports its installed version and license in capabilities and model lineage, and
 requires a commercial-license review before deployment. The provider can be
 replaced without changing the split, evaluation, or tournament contracts.
 
-The owned empirical adapter remains the always-available baseline. The
-scikit-learn mixture and owned TensorFlow GAN prove that DataBoom can add
-classical and internally owned neural candidates without coupling the contracts
-or tournament to CTGAN. Later copula, diffusion, temporal, relational, and graph
-candidates must enter through the same evidence and promotion boundary rather
-than bypassing it.
+The owned empirical and Gaussian-copula adapters remain the always-available
+baselines. The scikit-learn mixture and owned TensorFlow GAN prove that DataBoom
+can add classical and internally owned neural candidates without coupling the
+contracts or tournament to CTGAN. Later diffusion, temporal, relational, and
+graph candidates must enter through the same evidence and promotion boundary
+rather than bypassing it.
 
 For local CPU validation, PyTorch should be installed from its official CPU
 wheel index before the CTGAN extra. The default Linux PyPI resolution can pull a
@@ -2880,7 +2879,8 @@ uses the same reversible mixed-type transformation, trains a small bounded GAN,
 and stores only the generator. It is not presented as universally better than
 CTGAN: the generic GAN lacks CTGAN's imbalance-aware conditional training, and
 its determinism is best-effort across devices. Both candidates must therefore
-compete against the empirical baseline on the same holdout and hard gates.
+compete against the empirical and Gaussian-copula baselines on the same holdout
+and hard gates.
 
 ## Decision: combine exact streaming evidence with bounded Profile v2 samples
 
@@ -2918,3 +2918,31 @@ tail summaries still need controlled-fixture and public-dataset calibration,
 and privacy and downstream utility remain separate evidence dimensions. Profile
 artifacts are source-derived and must be protected accordingly; statistical
 similarity is not anonymity.
+
+## Decision: own a bounded Gaussian-copula dependence baseline
+
+### Question
+
+Why add a Gaussian copula when DataBoom already has independent empirical,
+Gaussian-mixture, and neural candidates?
+
+### Answer
+
+The independent empirical adapter preserves bounded marginals but destroys joint
+structure. The mixture and neural adapters model joint behavior through larger
+optional runtimes or more complex transformations. The owned Gaussian copula
+fills the middle: it is always available, standard-library-only, deterministic,
+and directly models latent rank dependence.
+
+Fitting keeps only a configured number of rows selected by stable hash priority.
+It stores bounded empirical marginals, separate nullable indicators, a
+regularized latent correlation matrix, and a verified Cholesky factor as
+checksummed data-only JSON. Sampling draws seeded latent normals and applies the
+recorded inverse marginals, restoring the reviewed CSV order and empty null
+encoding.
+
+This design is intentionally honest about its limits. Frequency-then-lexical
+ordering is only a deterministic approximation for nominal categories, and raw
+marginal values still make the model source-derived. The adapter establishes a
+stronger inspectable baseline; it does not establish anonymity, utility,
+calibration, or production release approval.

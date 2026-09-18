@@ -15,9 +15,9 @@ small, inspectable subset of this policy:
 - versioned quality intent and Profile v2 evidence with exact row/null counts,
   deterministic bounded samples, quantiles, histograms, skew, Tukey-tail rates,
   categorical coverage, missingness patterns, and pairwise dependencies,
-- an owned independent empirical baseline, optional scikit-learn
-  Gaussian-mixture baseline, owned optional TensorFlow GAN, and optional CTGAN
-  provider,
+- owned independent empirical and Gaussian-copula baselines, optional
+  scikit-learn Gaussian-mixture baseline, owned optional TensorFlow GAN, and
+  optional CTGAN provider,
 - exact contract/column checks, sample row counts, numeric parsing, and required
   null checks,
 - numeric Kolmogorov-Smirnov and normalized mean error,
@@ -545,6 +545,7 @@ It should not promise:
 - [ ] Implement relational and temporal metrics.
 - [ ] Complete empirical privacy diagnostics beyond exact-row matches.
 - [x] Add the independent empirical baseline synthesizer.
+- [x] Add the owned bounded Gaussian-copula baseline synthesizer.
 - [x] Add an experimental scikit-learn Gaussian-mixture candidate.
 - [x] Add an owned experimental TensorFlow GAN candidate.
 - [x] Add the optional CTGAN provider candidate.

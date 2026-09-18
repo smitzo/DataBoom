@@ -60,6 +60,8 @@ An experimental single-table source-trained path now exists under
 - versioned `DataQualityIntent` and Profile v2 artifacts with exact source and
   missingness evidence plus bounded deterministic distribution summaries,
 - an owned independent empirical candidate,
+- an owned standard-library Gaussian-copula candidate with bounded empirical
+  marginals and explicit nullable indicators,
 - an optional lazily imported scikit-learn Gaussian-mixture candidate with a
   data-only JSON artifact,
 - an owned optional TensorFlow GAN with a Keras v3 generator artifact,
@@ -72,10 +74,10 @@ An experimental single-table source-trained path now exists under
   profiles and a separate synthetic profile for each completed candidate.
 
 This is the first executable Q0-Q3 vertical slice, not completion of those
-quality stages. The Gaussian mixture and GANs can model joint structure, but
-copulas, calibrated joint metrics, utility evaluation, privacy attacks,
-calibrated thresholds, signed lineage, and hardened worker isolation remain
-required. The implementation and paper-by-paper rationale are documented in
+quality stages. The copula, Gaussian mixture, and GANs can model joint structure,
+but calibrated joint metrics, utility evaluation, privacy attacks, calibrated
+thresholds, signed lineage, and hardened worker isolation remain required. The
+implementation and paper-by-paper rationale are documented in
 [Neural Synthesis Research](neural-synthesis-research.md).
 
 ## Two Product Modes
@@ -576,7 +578,7 @@ incomplete evidence.
 ### Quality Stage 1: Statistical Synthesis
 
 - implement empirical categorical and quantile sampling, `bounded independent empirical baseline implemented; quantile model pending`
-- add Gaussian copula candidate,
+- add Gaussian copula candidate, `owned bounded standard-library adapter implemented`
 - add conditional missingness and datetime seasonality,
 - compare generated output with source and holdout profiles,
 - expose scenario-faithful versus source-faithful mode.
@@ -629,6 +631,6 @@ These are candidates and measurement tools, not proof that one implementation
 will be best on every DataBoom workload.
 
 See [Neural Synthesis Research](neural-synthesis-research.md) for the implemented
-Gaussian-mixture, TensorFlow GAN, and CTGAN boundaries, reversible transforms,
-provider licenses, artifact trust rules, current metrics, local commands, and
-remaining production gates.
+Gaussian-copula, Gaussian-mixture, TensorFlow GAN, and CTGAN boundaries,
+reversible transforms, provider licenses, artifact trust rules, current metrics,
+local commands, and remaining production gates.

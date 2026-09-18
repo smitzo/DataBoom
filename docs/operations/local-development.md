@@ -22,8 +22,8 @@ Run checks:
 ## Experimental Statistical And Neural Worker
 
 The normal installation includes the contracts, deterministic splitter,
-empirical baseline, evaluator, and tournament. It does not install or import
-scikit-learn, TensorFlow, pandas, torch, or CTGAN in FastAPI.
+empirical and Gaussian-copula baselines, evaluator, and tournament. It does not
+install or import scikit-learn, TensorFlow, pandas, torch, or CTGAN in FastAPI.
 
 Inspect current provider availability:
 
@@ -86,6 +86,20 @@ Run the owned empirical baseline:
   --sample-rows 10000
 ```
 
+Run both always-available baselines with bounded copula settings:
+
+```bash
+.venv/bin/python -m databoom.synthesis.cli tournament \
+  artifacts/ml/split/split-manifest.json \
+  dataset-contract.json \
+  --experiment-root artifacts/ml/statistical-experiment \
+  --candidate empirical-independent \
+  --candidate gaussian-copula \
+  --copula-sample-size 10000 \
+  --copula-regularization 0.05 \
+  --sample-rows 10000
+```
+
 Install the optional scikit-learn Gaussian-mixture baseline when a classical
 joint candidate is needed:
 
@@ -120,9 +134,12 @@ Run any installed candidates with the same experiment settings:
   dataset-contract.json \
   --experiment-root artifacts/ml/all-candidates-experiment \
   --candidate empirical-independent \
+  --candidate gaussian-copula \
   --candidate sklearn-gaussian-mixture \
   --candidate tensorflow-gan \
   --candidate ctgan \
+  --copula-sample-size 10000 \
+  --copula-regularization 0.05 \
   --gmm-components 5 \
   --tensorflow-epochs 100 \
   --ctgan-epochs 300 \

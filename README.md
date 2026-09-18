@@ -43,6 +43,8 @@ The current implementation includes Table-Boom relational generation, Docu-Boom 
   quantiles, histograms, tails, missingness, dependencies, and checksums.
 - Experimental synthesis tournaments retain shared training/holdout profiles and
   a separate synthetic profile for every completed candidate.
+- An owned standard-library Gaussian-copula candidate preserves bounded empirical
+  marginals, nullable indicators, and regularized latent rank dependence.
 - Refreshed relational sources retain schema names, column details, primary keys, foreign keys, unique constraints, and refresh timestamps.
 - Cached source profiles can drive relationship fanout for source-shaped Table-Boom output.
 - 100k-record Phase 1 benchmark.
@@ -375,9 +377,9 @@ docker compose --profile tools run --rm app
 - `src/databoom/graph`: Graph-Boom node/edge contracts, deterministic graph generator, graph artifacts, and graph validation.
 - `src/databoom/planning`: planner contracts, deterministic and hosted adapters, versioned prompt packs, cache telemetry, and proposal validation.
 - `src/databoom/synthesis`: source-trained split and Profile v2 contracts,
-  bounded statistical profiling, provider-neutral adapters, empirical,
-  scikit-learn mixture, owned TensorFlow GAN, and CTGAN candidates, quality
-  evaluation, and the isolated ML worker CLI.
+  bounded statistical profiling, provider-neutral adapters, empirical, owned
+  Gaussian-copula, scikit-learn mixture, owned TensorFlow GAN, and CTGAN
+  candidates, quality evaluation, and the isolated ML worker CLI.
 - `src/databoom/export`: local artifact writers.
 - `src/databoom/validation`: validation report logic.
 - `tests`: backend test suite.

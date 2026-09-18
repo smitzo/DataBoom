@@ -26,8 +26,8 @@ each other.
   [Quality Evaluation and Benchmarks](engineering/quality-evaluation-and-benchmarks.md).
 - Profile v2 quality intent, bounded sampling, dependency summaries, and
   experiment lineage are owned jointly by those two engineering documents.
-- GAN research, the current scikit-learn, TensorFlow, and CTGAN provider
-  boundaries, dependency licensing, and experimental readiness:
+- Copula and GAN research, the current owned Gaussian-copula, scikit-learn,
+  TensorFlow, and CTGAN boundaries, dependency licensing, and experimental readiness:
   [Neural Synthesis Research](engineering/neural-synthesis-research.md).
 - Local commands: [Local Development](operations/local-development.md).
 - Hosted environment configuration: [Deployment Guide](operations/deployment.md).

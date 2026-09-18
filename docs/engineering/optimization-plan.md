@@ -226,16 +226,16 @@ Focus on profile-driven generation.
 1. Persist source profile snapshots. `complete`
 2. Add current profile hint models. `complete`
 3. Use top values, ranges, and null rates during value generation. `complete`
-4. Add versioned profile v2 statistics and holdout split contracts.
-5. Add quality report schema without changing generated output.
-6. Add controlled statistical fixtures that prove metric correctness.
+4. Add versioned profile v2 statistics and holdout split contracts. `complete`
+5. Add quality report schema without changing generated output. `complete`
+6. Add controlled statistical fixtures that prove metric correctness. `initial set complete`
 
 ### Statistical Synthesis Batch
 
 Focus on repeatability and productization.
 
-1. Add empirical categorical and quantile samplers.
-2. Add a Gaussian copula candidate behind the synthesizer adapter.
+1. Add empirical categorical and quantile samplers. `independent empirical baseline complete; quantile sampler pending`
+2. Add a Gaussian copula candidate behind the synthesizer adapter. `complete`
 3. Add conditional missingness and temporal seasonality.
 4. Evaluate every candidate against the deterministic baseline and holdout.
 5. Introduce mixture models for clusters, sparse values, and tails.

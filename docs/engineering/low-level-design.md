@@ -345,20 +345,23 @@ startup verifies those checksums before fitting any candidate.
 
 ### Adapter Loading
 
-`build_default_registry` registers the owned empirical adapter, the optional
-scikit-learn Gaussian-mixture adapter, the owned optional TensorFlow GAN, and the
-optional CTGAN provider wrapper. Importing their wrapper modules does not import
-NumPy, scikit-learn, TensorFlow, pandas, torch, or CTGAN. Each optional adapter
-imports its training runtime inside worker methods only after capability and
-sensitivity-policy checks pass.
+`build_default_registry` registers the owned empirical and Gaussian-copula
+adapters, the optional scikit-learn Gaussian-mixture adapter, the owned optional
+TensorFlow GAN, and the optional CTGAN provider wrapper. Importing their wrapper
+modules does not import NumPy, scikit-learn, TensorFlow, pandas, torch, or CTGAN.
+Each optional adapter imports its training runtime inside worker methods only
+after capability and sensitivity-policy checks pass.
 
 The empirical model stores a bounded per-column reservoir. This makes it a cheap
 and deterministic marginal baseline but means its model contains source-derived
 exemplars; it remains a protected local artifact. The Gaussian-mixture adapter
 stores numeric parameters and reversible mixed-type transforms as JSON. The
-TensorFlow adapter stores only its generator in Keras v3 format and loads it in
-safe mode without custom objects. The CTGAN model is a checksummed local pickle
-and is never accepted from an upload endpoint.
+Gaussian-copula adapter stores a bounded hash-priority sample of marginals plus
+regularized correlation and Cholesky matrices in data-only JSON; it models
+nullable columns with separate missingness features. The TensorFlow adapter
+stores only its generator in Keras v3 format and loads it in safe mode without
+custom objects. The CTGAN model is a checksummed local pickle and is never
+accepted from an upload endpoint.
 
 ### Evaluation And Decision
 

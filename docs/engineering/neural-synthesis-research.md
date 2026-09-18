@@ -21,14 +21,15 @@ The current order is:
 
 1. create deterministic train, validation, and untouched holdout artifacts,
 2. fit the owned independent empirical baseline,
-3. fit the optional scikit-learn Gaussian-mixture joint baseline when installed,
-4. fit the owned optional TensorFlow GAN and optional CTGAN provider only when
+3. fit the owned bounded Gaussian-copula joint baseline,
+4. fit the optional scikit-learn Gaussian-mixture joint baseline when installed,
+5. fit the owned optional TensorFlow GAN and optional CTGAN provider only when
    their dependencies and source policy are approved,
-5. sample each candidate with the same row count and evaluation seed,
-6. evaluate structural validity, fidelity, diversity, exact-copy exposure,
+6. sample each candidate with the same row count and evaluation seed,
+7. evaluate structural validity, fidelity, diversity, exact-copy exposure,
    performance, and reproducibility separately,
-7. recommend the simplest candidate that passes every implemented hard gate,
-8. keep the recommendation experimental until missing utility, privacy attack,
+8. recommend the simplest candidate that passes every implemented hard gate,
+9. keep the recommendation experimental until missing utility, privacy attack,
    signing, worker-isolation, and threshold-calibration evidence is complete.
 
 A GAN is therefore one competitor. It never bypasses schema rules, privacy
@@ -58,7 +59,26 @@ problems:
 - a discriminator loss does not say whether business constraints, privacy, or
   downstream analytics are acceptable.
 
-## Why A Gaussian Mixture Is The First Joint Classical Candidate
+## Why DataBoom Owns A Gaussian-Copula Baseline
+
+`GaussianCopulaAdapter` is the always-available joint baseline between independent
+sampling and optional ML runtimes. It retains a deterministic hash-priority row
+sample, fits empirical continuous and frequency-then-lexical discrete marginals,
+maps their ranks into latent normal features, regularizes the correlation matrix,
+and verifies a finite Cholesky factor.
+
+Nullable columns receive separate missingness features, so sampling can restore
+empty CSV nulls while retaining measured missingness associations. The model is
+data-only JSON and contains at most the configured sample bound of raw marginal
+values per column. Those reviewed values remain source-derived and sensitive even
+though the artifact cannot execute code.
+
+Frequency-then-lexical ordering is deterministic, but it does not make a nominal
+category ordinal. The adapter is therefore an inspectable rank-dependence
+baseline, not a universal categorical model, privacy mechanism, or production
+promotion claim.
+
+## Why A Gaussian Mixture Is Another Joint Classical Candidate
 
 Independent empirical sampling is cheap and deterministic, but it samples each
 column separately and therefore cannot preserve joint structure. The optional
@@ -133,8 +153,9 @@ The standalone package currently declares BUSL-1.1 and pre-alpha status in its
 package metadata. This is an engineering and product constraint, not a footnote.
 DataBoom therefore keeps CTGAN optional and records the provider license in every
 manifest. Commercial distribution requires a separate licensing decision. The
-core splitter, contracts, empirical baseline, Gaussian-mixture adapter,
-TensorFlow adapter, evaluator, and tournament do not depend on that package.
+core splitter, contracts, empirical and Gaussian-copula baselines,
+Gaussian-mixture adapter, TensorFlow adapter, evaluator, and tournament do not
+depend on that package.
 
 ## Why We Do Not Implement A Generic GAN From Scratch First
 
@@ -256,7 +277,9 @@ restricted network/filesystem access.
 
 ## Model Artifact Security
 
-The empirical and Gaussian-mixture artifacts are data-only JSON. The TensorFlow
+The empirical, Gaussian-copula, and Gaussian-mixture artifacts are data-only JSON.
+The copula artifact still contains bounded raw marginal values, so it needs the
+same protected source-derived storage as the empirical artifact. The TensorFlow
 candidate stores a Keras v3 generator and loads it in safe mode without custom
 objects. CTGAN is persisted with Python pickle because the provider model is a
 Python object graph. Pickle can execute code during loading. SHA-256 proves that
@@ -406,8 +429,8 @@ driver, torch, and image versions.
 
 ## Candidate Portfolio Beyond The Current Adapters
 
-The empirical, Gaussian-mixture, TensorFlow GAN, and CTGAN adapters establish a
-comparison boundary; they are not the endpoint.
+The empirical, Gaussian-copula, Gaussian-mixture, TensorFlow GAN, and CTGAN
+adapters establish a comparison boundary; they are not the endpoint.
 
 | Candidate | Research basis | What it may improve | Why it is not automatic |
 | --- | --- | --- | --- |
@@ -423,19 +446,17 @@ only through evidence.
 
 ## Next Research And Engineering Gates
 
-1. Add a Gaussian copula baseline so every neural candidate competes with both
-   an inspectable dependence model and the current Gaussian mixture.
-2. Add alpha-precision, beta-recall, authenticity, nearest-neighbor, and
+1. Add alpha-precision, beta-recall, authenticity, nearest-neighbor, and
    train-versus-holdout distance diagnostics.
-3. Add downstream train-synthetic/test-real utility with identical preprocessing
+2. Add downstream train-synthetic/test-real utility with identical preprocessing
    and tuning budgets.
-4. Add peak memory, device, package-image, failure, retry, and cancellation
+3. Add peak memory, device, package-image, failure, retry, and cancellation
    telemetry.
-5. Calibrate thresholds with controlled fixtures, UCI Bank Marketing, and UCI
+4. Calibrate thresholds with controlled fixtures, UCI Bank Marketing, and UCI
    Covertype across repeated seeds.
-6. Resolve provider licensing and decide whether to ship CTGAN, isolate it as an
+5. Resolve provider licensing and decide whether to ship CTGAN, isolate it as an
    external provider, or build an internally owned implementation.
-7. Move fitting and deserialization into a hardened worker before any public API
+6. Move fitting and deserialization into a hardened worker before any public API
    orchestrates source-trained runs.
 
 ## Primary References
