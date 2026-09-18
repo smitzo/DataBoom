@@ -158,6 +158,14 @@ def tournament_command(
     fit_seed: Annotated[str, typer.Option("--fit-seed")] = "fit-0",
     evaluation_seed: Annotated[str, typer.Option("--evaluation-seed")] = "evaluation-0",
     ctgan_epochs: Annotated[int, typer.Option("--ctgan-epochs", min=1)] = 300,
+    copula_sample_size: Annotated[
+        int,
+        typer.Option("--copula-sample-size", min=10, max=100_000),
+    ] = 10_000,
+    copula_regularization: Annotated[
+        float,
+        typer.Option("--copula-regularization", min=0.000_001, max=1.0),
+    ] = 0.05,
     gmm_components: Annotated[int, typer.Option("--gmm-components", min=1, max=64)] = 5,
     tensorflow_epochs: Annotated[int, typer.Option("--tensorflow-epochs", min=1)] = 100,
     overwrite: Annotated[bool, typer.Option("--overwrite")] = False,
@@ -168,6 +176,10 @@ def tournament_command(
     names = candidates or ["empirical-independent"]
     hyperparameters = {
         "ctgan": {"epochs": ctgan_epochs},
+        "gaussian-copula": {
+            "sample_size": copula_sample_size,
+            "regularization": copula_regularization,
+        },
         "sklearn-gaussian-mixture": {"n_components": gmm_components},
         "tensorflow-gan": {"epochs": tensorflow_epochs},
     }
