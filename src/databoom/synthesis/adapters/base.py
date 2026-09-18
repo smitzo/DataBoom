@@ -71,11 +71,13 @@ def build_default_registry() -> AdapterRegistry:
 
     from databoom.synthesis.adapters.ctgan import CtganAdapter
     from databoom.synthesis.adapters.empirical import IndependentEmpiricalAdapter
+    from databoom.synthesis.adapters.gaussian_copula import GaussianCopulaAdapter
     from databoom.synthesis.adapters.sklearn_gmm import SklearnGaussianMixtureAdapter
     from databoom.synthesis.adapters.tensorflow_gan import TensorflowGanAdapter
 
     registry = AdapterRegistry()
     registry.register(IndependentEmpiricalAdapter())
+    registry.register(GaussianCopulaAdapter())
     registry.register(SklearnGaussianMixtureAdapter())
     registry.register(TensorflowGanAdapter())
     registry.register(CtganAdapter())
